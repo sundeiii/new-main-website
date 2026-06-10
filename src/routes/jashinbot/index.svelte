@@ -145,7 +145,7 @@
 				osu! commands powered by <a href="https://github.com/tosuapp/tosu" target="_blank" rel="noopener" class="text-ocean-800 dark:text-ocean-200 underline underline-offset-2 hover:text-ocean-600 dark:hover:text-ocean-400 transition-colors">tosu</a> and the osu! API v2.
 			</p>
 			<div class="flex gap-3 flex-wrap">
-				<a
+				
 					href="https://twitch.tv/sundeiiii_"
 					target="_blank"
 					rel="noopener"
@@ -153,7 +153,7 @@
 				>
 					<span>📺</span> watch stream
 				</a>
-				<a
+				
 					href="https://osu.ppy.sh/users/sodanator"
 					target="_blank"
 					rel="noopener"
@@ -208,7 +208,7 @@
 					<div class="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-6 px-5 py-4 {i % 2 === 0 ? 'bg-white dark:bg-ocean-900' : 'bg-ocean-50 dark:bg-ocean-950'}">
 						<div class="flex-shrink-0 w-full sm:w-64">
 							<code class="text-sm text-ocean-800 dark:text-ocean-200 font-cascadia">
-								{cmd.cmd}{cmd.args ? ' <span class="text-ocean-500">' + cmd.args + '</span>' : ''}
+								{@html cmd.cmd + (cmd.args ? ` <span class="text-ocean-500 dark:text-ocean-500">${cmd.args}</span>` : '')}
 							</code>
 						</div>
 						<div class="flex-1 flex flex-col gap-1">
