@@ -144,24 +144,24 @@
 				twitch bot running on <a href="https://twitch.tv/sundeiiii_" target="_blank" rel="noopener" class="text-ocean-800 dark:text-ocean-200 underline underline-offset-2 hover:text-ocean-600 dark:hover:text-ocean-400 transition-colors">sundeiiii_</a>'s stream.
 				osu! commands powered by <a href="https://github.com/tosuapp/tosu" target="_blank" rel="noopener" class="text-ocean-800 dark:text-ocean-200 underline underline-offset-2 hover:text-ocean-600 dark:hover:text-ocean-400 transition-colors">tosu</a> and the osu! API v2.
 			</p>
-			<div class="flex gap-3 flex-wrap">
-				
-					href="https://twitch.tv/sundeiiii_"
-					target="_blank"
-					rel="noopener"
-					class="inline-flex items-center gap-2 px-4 py-2 bg-ocean-600 hover:bg-ocean-700 dark:bg-ocean-700 dark:hover:bg-ocean-600 text-white rounded transition-colors text-sm font-medium"
-				>
-					<span>📺</span> watch stream
-				</a>
-				
-					href="https://osu.ppy.sh/users/sodanator"
-					target="_blank"
-					rel="noopener"
-					class="inline-flex items-center gap-2 px-4 py-2 border border-ocean-300 dark:border-ocean-700 hover:border-ocean-500 dark:hover:border-ocean-500 text-ocean-800 dark:text-ocean-200 rounded transition-colors text-sm font-medium"
-				>
-					<span>🎵</span> osu! profile
-				</a>
-			</div>
+            <div class="flex gap-3 flex-wrap">
+                
+                    href="https://twitch.tv/sundeiiii_"
+                    target="_blank"
+                    rel="noopener"
+                    class="inline-flex items-center gap-2 px-4 py-2 bg-ocean-600 hover:bg-ocean-700 dark:bg-ocean-700 dark:hover:bg-ocean-600 text-white rounded transition-colors text-sm font-medium"
+                >
+                    <span>📺</span> watch stream
+                </a>
+                
+                    href="https://osu.ppy.sh/users/sodanator"
+                    target="_blank"
+                    rel="noopener"
+                    class="inline-flex items-center gap-2 px-4 py-2 border border-ocean-300 dark:border-ocean-700 hover:border-ocean-500 dark:hover:border-ocean-500 text-ocean-800 dark:text-ocean-200 rounded transition-colors text-sm font-medium"
+                >
+                    <span>🎵</span> osu! profile
+                </a>
+            </div>
 		</div>
 
 		<!-- Features -->
