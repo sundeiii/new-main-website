@@ -145,7 +145,7 @@
 				osu! commands powered by <a href="https://github.com/tosuapp/tosu" target="_blank" rel="noopener" class="text-ocean-800 dark:text-ocean-200 underline underline-offset-2 hover:text-ocean-600 dark:hover:text-ocean-400 transition-colors">tosu</a> and the osu! API v2.
 			</p>
             <div class="flex gap-3 flex-wrap">
-                
+                <a
                     href="https://twitch.tv/sundeiiii_"
                     target="_blank"
                     rel="noopener"
@@ -153,7 +153,7 @@
                 >
                     <span>📺</span> watch stream
                 </a>
-                
+                <a
                     href="https://osu.ppy.sh/users/sodanator"
                     target="_blank"
                     rel="noopener"
