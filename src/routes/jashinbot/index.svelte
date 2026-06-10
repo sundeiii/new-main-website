@@ -206,11 +206,11 @@
 			<div class="flex flex-col gap-0 border border-ocean-200 dark:border-ocean-800 rounded-lg overflow-hidden">
 				{#each commands[activeCategory] as cmd, i}
 					<div class="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-6 px-5 py-4 {i % 2 === 0 ? 'bg-white dark:bg-ocean-900' : 'bg-ocean-50 dark:bg-ocean-950'}">
-						<div class="flex-shrink-0 w-full sm:w-64">
-							<code class="text-sm text-ocean-800 dark:text-ocean-200 font-cascadia">
-								{@html cmd.cmd + (cmd.args ? ` <span class="text-ocean-500 dark:text-ocean-500">${cmd.args}</span>` : '')}
-							</code>
-						</div>
+                        <div class="flex-shrink-0 w-full sm:w-64">
+                            <code class="text-sm text-ocean-800 dark:text-ocean-200 font-cascadia">
+                                {@html cmd.cmd + (cmd.args ? ` <span class="text-ocean-500 dark:text-ocean-500">${cmd.args}</span>` : '')}
+                            </code>
+                        </div>
 						<div class="flex-1 flex flex-col gap-1">
 							<p class="text-sm text-ocean-700 dark:text-ocean-400">{cmd.desc}</p>
 							{#if cmd.example}
