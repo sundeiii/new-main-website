@@ -52,7 +52,7 @@
 							<span class="font-medium text-ocean-900 dark:text-ocean-100">{skin.name}</span>
 							<span class="text-sm text-ocean-500 dark:text-ocean-500">by {skin.author}</span>
 						</div>
-						
+						<a
 							href={skin.download}
 							target="_blank"
 							rel="noopener"
