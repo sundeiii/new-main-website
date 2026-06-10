@@ -17,7 +17,7 @@
 			author: '-Sc4rYSaiyajin-',
 			image: '/skins/BlooXoo/preview.jpg',
 			download: '/skins/- 『BlooXoo』 - (sundei edit).osk',
-		},
+		}
 		// add more here
 	];
 </script>
