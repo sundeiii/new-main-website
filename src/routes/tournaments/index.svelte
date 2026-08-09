@@ -63,7 +63,10 @@
 				{ name: 'Royal Danish osu! Cup 2026', role: 'referee', link: 'https://osu.ppy.sh/community/forums/topics/2217906?n=1', hosts: [{ name: 'Isita', id: 13973026 }, { name: 'jas_', id: 16681798 }], banner: 'https://sundei.ee/tournaments/danish-osu-2026.png'}, 
 				{ name: 'Canadian Draft Cup 2026', role: 'referee/streamer', link: 'https://osu.ppy.sh/community/forums/topics/2217995?n=1', hosts: [{ name: 'LumenLogic', id: 8171404 }], banner: 'https://sundei.ee/tournaments/cdc2026-banner.png'}, 
 				{ name: 'Rektygon\'s United States Tournament 2', role: 'referee/streamer', link: 'https://osu.ppy.sh/community/forums/topics/2221491?n=1', hosts: [{ name: 'rektygon', id: 7813296 }], banner: 'https://sundei.ee/tournaments/rust2-banner.png'}, 
+				{ name: 'UNICON 2026 osu! Tournament', role: 'referee/streamer/developer', link: 'https://osu.ppy.sh/community/forums/topics/2214930?n=1', hosts: [{ name: 'Joyy', id: 14084526 }, { name: 'waywern2012', id: 5870453 }], banner: 'https://sundei.ee/tournaments/unicon2026-summer.png' },
+				{ name: 'All-American Auction House 5', role: 'referee', link: 'https://osu.ppy.sh/community/forums/topics/2210768?n=1', hosts: [{ name: 'ROB_', id: 12455868 }, { name: 'Pezz', id: 10651106 }], banner: 'https://sundei.ee/tournaments/AAAH5.png' },
 				{ name: 'Pringle Purrfect Cup 2', role: 'referee', link: 'https://osu.ppy.sh/community/forums/topics/2211583?n=1', hosts: [{ name: 'pingle enjoyer', id: 32558109 }, { name: 'D I O', id: 3958619 }], banner: 'https://sundei.ee/tournaments/ppc2-banner.png'}, 
+				{ name: 'National Dutch Championship 2026', role: 'referee/streamer', link: 'https://osu.ppy.sh/community/forums/topics/2232832?n=1', hosts: [{ name: 'Lilily', id: 6502403 }], banner: 'https://sundei.ee/tournaments/NDC2026.png' },
 			]
 		}
 	];
