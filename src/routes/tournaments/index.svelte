@@ -66,6 +66,8 @@
 				{ name: 'UNICON 2026 osu! Tournament', role: 'referee/streamer/developer', link: 'https://osu.ppy.sh/community/forums/topics/2214930?n=1', hosts: [{ name: 'Joyy', id: 14084526 }, { name: 'waywern2012', id: 5870453 }], banner: 'https://sundei.ee/tournaments/unicon2026-summer.png' },
 				{ name: 'All-American Auction House 5', role: 'referee', link: 'https://osu.ppy.sh/community/forums/topics/2210768?n=1', hosts: [{ name: 'ROB_', id: 12455868 }, { name: 'Pezz', id: 10651106 }], banner: 'https://sundei.ee/tournaments/AAAH5.png' },
 				{ name: 'Pringle Purrfect Cup 2', role: 'referee', link: 'https://osu.ppy.sh/community/forums/topics/2211583?n=1', hosts: [{ name: 'pingle enjoyer', id: 32558109 }, { name: 'D I O', id: 3958619 }], banner: 'https://sundei.ee/tournaments/ppc2-banner.png'}, 
+				{ name: 'centaurea x TipiLAN 2026', role: 'referee/streamer/LAN helper', link: 'https://centaurea.ee/events/dc2c0566-49e0-4089-9443-ac2b1c52f3bb', hosts: [{ name: 'Slay', id: 7093124 }, { name: 'cedru', id: 10162611 }, { name: 'uwuchaoz', id: 14624925 }, { name: 'MEGAHELLO', id: 11155994 }], banner: 'https://sundei.ee/tournaments/centaurea-tipilan.png' },
+				{ name: 'estonian duo cup 2026', role: 'host/referee/streamer', link: 'https://centaurea.ee/events/1564f3e6-2d2b-45d6-8990-a9e0b2a75588', hosts: [{ name: 'sodanator', id: 28827755 } ], banner: 'https://sundei.ee/tournaments/edc.png' },
 				{ name: 'National Dutch Championship 2026', role: 'referee/streamer', link: 'https://osu.ppy.sh/community/forums/topics/2232832?n=1', hosts: [{ name: 'Lilily', id: 6502403 }], banner: 'https://sundei.ee/tournaments/NDC2026.png' },
 			]
 		}
