@@ -7,9 +7,9 @@
 
 <svelte:head>
   <title>hivemind</title>
-  <meta name="og:title" content="hivemind" />
+  <meta property="og:title" content="hivemind" />
   <meta name="description" content="thanks for boosting my mood <3" />
-  <meta name="og:description" content="thanks for boosting my mood <3" />
+  <meta property="og:description" content="thanks for boosting my mood <3" />
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f0f5" />
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#281c21" />
 </svelte:head>

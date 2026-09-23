@@ -17,13 +17,8 @@
 	let darkMode: boolean | null = null;
 
 	function toggleDarkMode() {
-		darkMode = !darkMode;
+		darkMode = !isDark();
 		localStorage.setItem('dark-mode', darkMode ? 'dark' : 'light');
-		if (darkMode) {
-			document.documentElement.classList.add('dark');
-		} else {
-			document.documentElement.classList.remove('dark');
-		}
 		applyTheme(document.hasFocus());
 	}
 
@@ -85,9 +80,27 @@
 		{ name: 'mono', light: '#f5f5f5', dark: '#1a1a1a', lightBlur: '#f0f0f0', darkBlur: '#181818', accent: '#888888' }
 	];
 
-	let currentTheme = themes[0];
+	// Secret theme: type `tf` in the browser console to unlock it.
+	const transTheme = {
+		name: 'trans', light: '#fdf1f5', dark: '#1f1c2a', lightBlur: '#f7f1f4', darkBlur: '#1c1a24', accent: '#F5A9B8',
+		swatch: 'linear-gradient(#5BCEFA 0 20%, #F5A9B8 20% 40%, #FFFFFF 40% 60%, #F5A9B8 60% 80%, #5BCEFA 80%)'
+	};
+	let transUnlocked = false;
+	let transToast = false;
+	$: visibleThemes = transUnlocked ? [...themes, transTheme] : themes;
+	const swatch = (theme: { accent: string; swatch?: string }) => `background: ${theme.swatch ?? theme.accent}`;
 
-	function setTheme(theme: typeof themes[0]) {
+	function unlockTrans() {
+		transUnlocked = true;
+		localStorage.setItem('trans-unlocked', '1');
+		setTheme(transTheme);
+		transToast = true;
+		setTimeout(() => (transToast = false), 4000);
+	}
+
+	let currentTheme: typeof themes[0] & { swatch?: string } = themes[0];
+
+	function setTheme(theme: typeof currentTheme) {
 		currentTheme = theme;
 		localStorage.setItem('site-theme', theme.name);
 		applyTheme(true);
@@ -112,6 +125,8 @@
 
 	function applyTheme(focused: boolean) {
 		const t = currentTheme;
+		document.documentElement.classList.toggle('dark', isDark());
+		document.documentElement.classList.toggle('trans', t.name === 'trans');
 		document.body.className = `motion-safe:transition-colors motion-safe:duration-300`;
 		if (isDark()) {
 			document.body.style.backgroundColor = focused ? t.dark : t.darkBlur;
@@ -160,27 +175,42 @@
 		ready = true;
 
 		// Load saved theme
+		transUnlocked = localStorage.getItem('trans-unlocked') === '1';
 		const savedTheme = localStorage.getItem('site-theme');
 		if (savedTheme) {
-			const found = themes.find(t => t.name === savedTheme);
+			const found = [...themes, ...(transUnlocked ? [transTheme] : [])].find(t => t.name === savedTheme);
 			if (found) currentTheme = found;
 		}
 
+		// `tf` in the home page terminal toggles the trans theme.
+		window.addEventListener('trans-theme', (e) => {
+			if ((e as CustomEvent<boolean>).detail) unlockTrans();
+			else setTheme(themes[0]);
+		});
+
+		// Bonus: typing `tf` in the browser devtools console does it too.
+		Object.defineProperty(window, 'tf', {
+			configurable: true,
+			get() {
+				unlockTrans();
+				console.log('%c trans rights are human rights ', 'background: linear-gradient(90deg, #5BCEFA, #F5A9B8, #FFFFFF, #F5A9B8, #5BCEFA); color: #1f1c2a; font-weight: bold; padding: 4px 8px; border-radius: 4px;');
+				return 'trans theme unlocked :3 (find it in the theme picker)';
+			}
+		});
+
 		// Load dark mode preference
 		const savedDarkMode = localStorage.getItem('dark-mode');
-		if (savedDarkMode === 'dark') {
-			darkMode = true;
-			document.documentElement.classList.add('dark');
-		} else if (savedDarkMode === 'light') {
-			darkMode = false;
-			document.documentElement.classList.remove('dark');
-		}
+		if (savedDarkMode === 'dark') darkMode = true;
+		else if (savedDarkMode === 'light') darkMode = false;
 
 		applyTheme(true);
 
 		// Listen for system color scheme changes
 		window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-			if (darkMode === null) applyTheme(document.hasFocus());
+			if (darkMode === null) {
+				darkMode = null; // re-run isDarkMode for the toggle icon
+				applyTheme(document.hasFocus());
+			}
 		});
 
 		onblur = () => applyTheme(false);
@@ -205,6 +235,18 @@
 </script>
 
 <svelte:window on:click={handleClickOutside} on:keydown={handleKeydown} />
+
+<!-- Link preview defaults (Discord, Twitter, …). Pages add their own og:title/description;
+     blog posts set their banner as og:image, so skip the default image there. -->
+<svelte:head>
+	<meta property="og:site_name" content="sundei" />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="https://sundei.ee{$page.url.pathname}" />
+	{#if !$page.url.pathname.startsWith('/blog/')}
+		<meta property="og:image" content="https://sundei.ee/favicon.png" />
+	{/if}
+	<meta name="twitter:card" content="summary" />
+</svelte:head>
 
 <GradientMesh />
 <CursorTrail />
@@ -243,6 +285,22 @@
 	>
 		you found a secret! 🥚
 	</div>
+{/if}
+
+<!-- tf egg -->
+{#if transToast}
+	<div
+		class="fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-full font-cascadia text-sm shadow-lg text-[#1f1c2a]"
+		style="background: linear-gradient(90deg, #5BCEFA, #F5A9B8, #FFFFFF, #F5A9B8, #5BCEFA)"
+		in:fly={{ y: 20, duration: 200 }}
+		out:fade={{ duration: 300 }}
+	>
+		🏳️‍⚧️ trans rights! theme unlocked :3
+	</div>
+{/if}
+
+{#if currentTheme.name === 'trans'}
+	<div class="trans-stripe fixed top-0 left-0 right-0 h-[3px] z-[60] pointer-events-none" aria-hidden="true" />
 {/if}
 
 <nav class="border-b border-ocean-300 dark:border-ocean-700 sticky top-0 backdrop-blur-md z-50">
@@ -303,7 +361,7 @@
 				<button
 					on:click={() => themeOpen = !themeOpen}
 					class="w-5 h-5 rounded-full ring-2 ring-ocean-400 dark:ring-ocean-600 hover:ring-ocean-600 dark:hover:ring-ocean-400 transition-all"
-					style="background-color: {currentTheme.accent}"
+					style={swatch(currentTheme)}
 					aria-label="Change theme"
 				/>
 				{#if themeOpen}
@@ -311,11 +369,11 @@
 						class="absolute right-0 top-full mt-2 bg-ocean-100 dark:bg-ocean-900 border border-ocean-300 dark:border-ocean-700 rounded-lg p-2 flex gap-1.5 shadow-lg z-50"
 						transition:slide={{ duration: 150 }}
 					>
-						{#each themes as theme}
+						{#each visibleThemes as theme}
 							<button
 								on:click={() => setTheme(theme)}
 								class="w-6 h-6 rounded-full transition-all {currentTheme.name === theme.name ? 'ring-2 ring-ocean-900 dark:ring-ocean-100 scale-110' : 'hover:scale-110 ring-1 ring-ocean-300 dark:ring-ocean-700'}"
-								style="background-color: {theme.accent}"
+								style={swatch(theme)}
 								aria-label="{theme.name} theme"
 								title={theme.name}
 							/>
@@ -389,11 +447,11 @@
 					</div>
 					<span class="text-ocean-600 dark:text-ocean-500 text-xs mb-2 block">theme</span>
 					<div class="flex gap-2">
-						{#each themes as theme}
+						{#each visibleThemes as theme}
 							<button
 								on:click={() => setTheme(theme)}
 								class="w-7 h-7 rounded-full transition-all {currentTheme.name === theme.name ? 'ring-2 ring-ocean-900 dark:ring-ocean-100 scale-110' : 'ring-1 ring-ocean-300 dark:ring-ocean-700 hover:scale-110'}"
-								style="background-color: {theme.accent}"
+								style={swatch(theme)}
 								aria-label="{theme.name} theme"
 							/>
 						{/each}
@@ -474,3 +532,14 @@
 		</div>
 	</div>
 </footer>
+
+<style>
+	.trans-stripe {
+		background: linear-gradient(90deg, #5bcefa 0 20%, #f5a9b8 20% 40%, #ffffff 40% 60%, #f5a9b8 60% 80%, #5bcefa 80%);
+	}
+
+	:global(html.trans ::selection) {
+		background: #f5a9b8;
+		color: #1f1c2a;
+	}
+</style>

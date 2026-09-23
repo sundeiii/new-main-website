@@ -1,6 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
 	content: ['./src/**/*.{html,js,svelte,ts}'],
+	// The site has its own dark mode toggle, so dark: variants follow the .dark class on <html>
+	// rather than the OS setting.
+	darkMode: 'class',
 	theme: {
 		extend: {
 			fontFamily: {

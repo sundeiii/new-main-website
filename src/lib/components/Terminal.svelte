@@ -7,11 +7,12 @@
 	let inputEl: HTMLInputElement;
 	let terminalEl: HTMLDivElement;
 
-	const commands: Record<string, { description: string; action: (args?: string) => string | { text: string; html: boolean } }> = {
+	const commands: Record<string, { description: string; hidden?: boolean; action: (args?: string) => string | { text: string; html: boolean } }> = {
 		help: {
 			description: 'show available commands',
 			action: () => {
 				const lines = Object.entries(commands)
+					.filter(([, cmd]) => !cmd.hidden)
 					.map(([name, cmd]) => `  <span class="text-ocean-green">${name.padEnd(12)}</span> <span class="text-ocean-400 dark:text-ocean-400">${cmd.description}</span>`)
 					.join('\n');
 				return { text: `available commands:\n${lines}`, html: true };
@@ -155,6 +156,28 @@
 			action: () => {
 				setTimeout(() => goto('/typing'), 500);
 				return 'navigating to /typing...';
+			}
+		},
+		tf: {
+			description: 'secret :3',
+			hidden: true,
+			action: () => {
+				// The layout owns the theme; it listens for this and toggles the trans theme.
+				const on = !document.documentElement.classList.contains('trans');
+				window.dispatchEvent(new CustomEvent('trans-theme', { detail: on }));
+				const flag = ['#5BCEFA', '#F5A9B8', '#FFFFFF', '#F5A9B8', '#5BCEFA']
+					.map((c) => `<span style="color: ${c}">██████</span>`)
+					.join('');
+				return on
+					? {
+							text: [
+								flag,
+								'<span style="color: #F5A9B8">trans rights are human rights 🏳️‍⚧️</span>',
+								'<span class="text-ocean-400">theme unlocked :3 (type tf again to switch back)</span>'
+							].join('\n'),
+							html: true
+						}
+					: 'back to the regular theme. the trans theme stays in the theme picker :3';
 			}
 		},
 		reaction: {

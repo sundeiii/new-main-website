@@ -36,9 +36,9 @@
 
 <svelte:head>
 	<title>{post.title} - blog</title>
-	<meta name="og:title" content="{post.title}" />
+	<meta property="og:title" content="{post.title}" />
 	<meta name="description" content="{post.excerpt}" />
-	<meta name="og:description" content="{post.excerpt}" />
+	<meta property="og:description" content="{post.excerpt}" />
 	<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f0f5" />
 	<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#281c21" />
 </svelte:head>
