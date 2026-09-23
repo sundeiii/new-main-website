@@ -10,7 +10,7 @@
 	import Terminal from '$lib/components/Terminal.svelte';
 	import OsuTooltip from '$lib/components/OsuTooltip.svelte';
 	import { getCodeData } from '$lib/rpcUtils';
-	import { useLanyard } from 'sk-lanyard';
+	import { lanyard } from '$lib/lanyard';
 	import { onMount, onDestroy } from 'svelte';
 
 	// ── types ──────────────────────────────────────────────────────────────
@@ -25,7 +25,7 @@
 	interface LanyardData { discord_user: DiscordUser; discord_status: 'online' | 'idle' | 'dnd' | 'offline'; activities: Activity[]; spotify: SpotifyData | null; }
 
 	// ── lanyard ────────────────────────────────────────────────────────────
-	const store = useLanyard({ method: 'ws', id: '1113690068113170484' });
+	const store = lanyard;
 	$: d = $store as unknown as LanyardData | null;
 	$: codeData = getCodeData($store);
 
@@ -84,7 +84,6 @@
 	$: timeFormatter = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', timeZone: timeZoneToggle ? timeZone : undefined });
 	$: dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: timeZoneToggle ? timeZone : undefined });
 	let now = new Date();
-	setInterval(() => { now = new Date(); }, 100);
 	$: date = dateFormatter.format(now);
 	$: time = timeFormatter.format(now);
 	$: displayCity = timeZoneToggle
@@ -123,6 +122,7 @@
 		isPaused: boolean;
 		progressMs: number;
 		track: SpotifyApi.TrackObjectFull | null;
+		fetchedAt?: number;
 	}
 
 	let nowPlaying: NowPlayingResponse | null = null;
@@ -144,7 +144,9 @@
 			const d: NowPlayingResponse = await r.json();
 			nowPlaying = d;
 			if (d.track) {
-				nowPlayingStarted = Date.now();
+				// The response may have sat in Vercel's cache for a few seconds; count from when
+				// Spotify was actually asked (never later than now, in case clocks disagree).
+				nowPlayingStarted = Math.min(d.fetchedAt ?? Date.now(), Date.now());
 				nowPlayingTime = d.progressMs ?? 0;
 			}
 		} catch {
@@ -235,7 +237,11 @@
 		}
 	}
 
+	let clockId: ReturnType<typeof setInterval>;
+
 	onMount(async () => {
+		clockId = setInterval(() => { now = new Date(); }, 500);
+
 		try {
 			const r = await fetch('/api/recent-tracks');
 			if (r.ok) lastPlayedTrack = await r.json();
@@ -267,6 +273,7 @@
 	});
 
 	onDestroy(() => {
+		clearInterval(clockId);
 		clearInterval(nowPlayingPollId);
 		clearInterval(nowPlayingTickId);
 	});
@@ -274,9 +281,9 @@
 
 <svelte:head>
 	<title>portfolio</title>
-	<meta name="og:title" content="portfolio" />
+	<meta property="og:title" content="portfolio" />
 	<meta name="description" content="a collection of various things" />
-	<meta name="og:description" content="a collection of various things" />
+	<meta property="og:description" content="a collection of various things" />
 	<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f0f5" />
 	<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#281c21" />
 </svelte:head>

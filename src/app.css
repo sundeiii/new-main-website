@@ -17,11 +17,12 @@
 html {
 	scrollbar-color: hsla(0, 0%, 100%, 0.289) transparent;
 	scrollbar-width: thin;
-	cursor: none;
 }
 
+/* The yellow dot is a real cursor image, so the OS draws it with no lag. The cyan trail is
+   drawn separately by CursorTrail.svelte. */
 *, *::before, *::after {
-	cursor: none !important;
+	cursor: url('/cursor.svg') 32 32, auto !important;
 }
 
 ::-webkit-scrollbar {

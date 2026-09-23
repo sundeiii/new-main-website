@@ -12,7 +12,7 @@
 </script>
 
 {#if visible}
-	<div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none" aria-hidden="true">
+	<div class="mesh fixed inset-0 -z-10 overflow-hidden pointer-events-none" aria-hidden="true">
 		<div class="mesh-layer layer-1"></div>
 		<div class="mesh-layer layer-2"></div>
 		<div class="mesh-layer layer-3"></div>
@@ -21,12 +21,20 @@
 {/if}
 
 <style>
+	.mesh {
+		contain: strict;
+	}
+
 	.mesh-layer {
 		position: absolute;
 		inset: -50%;
 		width: 200%;
 		height: 200%;
 		opacity: 0.15;
+		/* Keep each layer on its own GPU layer so the animation only moves an
+		   already-painted texture instead of repainting 4x-viewport gradients. */
+		will-change: transform;
+		backface-visibility: hidden;
 	}
 
 	:global(.dark) .mesh-layer {
@@ -59,6 +67,35 @@
 
 	:global(.dark) .layer-3 {
 		opacity: 0.07;
+	}
+
+	/* Secret trans theme (type `tf` in the console) */
+	:global(.trans) .layer-1 {
+		background:
+			radial-gradient(ellipse 80% 50% at 20% 30%, #5BCEFA 0%, transparent 50%),
+			radial-gradient(ellipse 60% 80% at 80% 20%, #F5A9B8 0%, transparent 50%),
+			radial-gradient(ellipse 70% 60% at 70% 80%, #5BCEFA 0%, transparent 50%);
+	}
+
+	:global(.trans) .layer-2 {
+		background:
+			radial-gradient(ellipse 50% 70% at 30% 70%, #F5A9B8 0%, transparent 50%),
+			radial-gradient(ellipse 80% 40% at 60% 40%, #FFFFFF 0%, transparent 50%),
+			radial-gradient(ellipse 60% 60% at 10% 50%, #5BCEFA 0%, transparent 50%);
+	}
+
+	:global(.trans) .layer-3 {
+		background:
+			radial-gradient(ellipse 40% 80% at 50% 10%, #F5A9B8 0%, transparent 50%),
+			radial-gradient(ellipse 70% 50% at 90% 60%, #5BCEFA 0%, transparent 50%);
+	}
+
+	:global(.trans) .mesh-layer {
+		opacity: 0.28;
+	}
+
+	:global(.dark.trans) .mesh-layer {
+		opacity: 0.16;
 	}
 
 	/* Subtle noise texture to break up banding */

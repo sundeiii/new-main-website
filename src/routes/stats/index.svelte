@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { useLanyard } from 'sk-lanyard';
-	import { onMount } from 'svelte';
+	import { lanyard } from '$lib/lanyard';
+	import { onMount, onDestroy } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 	import { BUILD_TIMESTAMP } from '$lib/buildtime';
 
 	let mounted = false;
 
-	const data = useLanyard({ method: 'ws', id: '1113690068113170484' });
+	const data = lanyard;
 	
 	// Site uptime - automatically set from build time
 	const siteStartDate = BUILD_TIMESTAMP;
@@ -22,7 +22,9 @@
 	}
 	
 	updateUptime();
-	setInterval(updateUptime, 60000);
+	let uptimeId: ReturnType<typeof setInterval>;
+	onMount(() => { uptimeId = setInterval(updateUptime, 60000); });
+	onDestroy(() => clearInterval(uptimeId));
 
 
 
@@ -207,9 +209,9 @@
 
 <svelte:head>
 	<title>stats</title>
-	<meta name="og:title" content="stats" />
+	<meta property="og:title" content="stats" />
 	<meta name="description" content="various statistics and metrics" />
-	<meta name="og:description" content="various statistics and metrics" />
+	<meta property="og:description" content="various statistics and metrics" />
 	<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f0f5" />
 	<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#281c21" />
 </svelte:head>

@@ -4,9 +4,7 @@
 
 	let canvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D | null;
-	let animFrame: number;
-	let mouseX = -100;
-	let mouseY = -100;
+	let animFrame = 0;
 
 	interface TrailPoint {
 		x: number;
@@ -18,24 +16,30 @@
 	const trailLife = 300; // how long trail stays (ms)
 
 	function handleMouseMove(e: MouseEvent) {
-		mouseX = e.clientX;
-		mouseY = e.clientY;
+		const mouseX = e.clientX;
+		const mouseY = e.clientY;
 		const now = performance.now();
 
 		const last = points[points.length - 1];
 		if (!last || Math.hypot(mouseX - last.x, mouseY - last.y) > 1) {
 			points.push({ x: mouseX, y: mouseY, time: now });
 		}
+
+		// The loop sleeps while the mouse is still; wake it up.
+		if (!animFrame) animFrame = requestAnimationFrame(animate);
 	}
 
 	function animate() {
+		animFrame = 0;
 		if (!ctx || !canvas) return;
 		const now = performance.now();
 
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-		// Remove expired points
-		points = points.filter(p => now - p.time < trailLife);
+		// Remove expired points (oldest are at the front)
+		let expired = 0;
+		while (expired < points.length && now - points[expired].time >= trailLife) expired++;
+		if (expired) points.splice(0, expired);
 
 		// Draw trail with smooth fade from tail to head
 		// Strategy: draw progressively shorter sub-paths from tail→head,
@@ -61,14 +65,17 @@
 				ctx!.lineTo(last.x, last.y);
 			}
 
-			// Single trail layer — clean, no glow
+			// Single trail layer — clean, no glow. Blue/pink stripes in the secret trans theme.
+			const trans = document.documentElement.classList.contains('trans');
 			for (let s = 0; s < steps; s++) {
 				const startFrac = s / steps;
 				const startIdx = Math.floor(startFrac * (points.length - 2));
 				const alpha = 0.07;
 
 				drawSubPath(startIdx);
-				ctx.strokeStyle = `rgba(0, 240, 255, ${alpha})`;
+				ctx.strokeStyle = trans
+					? (s % 2 ? `rgba(245, 169, 184, ${alpha * 1.4})` : `rgba(91, 206, 250, ${alpha * 1.4})`)
+					: `rgba(0, 240, 255, ${alpha})`;
 				ctx.lineWidth = 5;
 				ctx.lineCap = 'round';
 				ctx.lineJoin = 'round';
@@ -76,28 +83,9 @@
 			}
 		}
 
-		// Cursor dot — bright yellow, large
-		if (mouseX > 0 && mouseY > 0) {
-			ctx.beginPath();
-			ctx.arc(mouseX, mouseY, 30, 0, Math.PI * 2);
-			const glowGrad = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 30);
-			glowGrad.addColorStop(0, 'rgba(255, 245, 70, 0.4)');
-			glowGrad.addColorStop(0.35, 'rgba(255, 225, 30, 0.12)');
-			glowGrad.addColorStop(1, 'rgba(255, 220, 0, 0)');
-			ctx.fillStyle = glowGrad;
-			ctx.fill();
-
-			ctx.beginPath();
-			ctx.arc(mouseX, mouseY, 10, 0, Math.PI * 2);
-			const dotGrad = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 10);
-			dotGrad.addColorStop(0, 'rgba(255, 255, 150, 1)');
-			dotGrad.addColorStop(0.5, 'rgba(255, 240, 50, 0.95)');
-			dotGrad.addColorStop(1, 'rgba(255, 215, 0, 0.4)');
-			ctx.fillStyle = dotGrad;
-			ctx.fill();
-		}
-
-		animFrame = requestAnimationFrame(animate);
+		// Once the trail has faded there is nothing changing on screen, so stop
+		// redrawing until the next mousemove instead of repainting every frame.
+		animFrame = points.length ? requestAnimationFrame(animate) : 0;
 	}
 
 	function resize() {
@@ -112,7 +100,7 @@
 		ctx = canvas.getContext('2d');
 		resize();
 
-		window.addEventListener('mousemove', handleMouseMove);
+		window.addEventListener('mousemove', handleMouseMove, { passive: true });
 		window.addEventListener('resize', resize);
 
 		animate();

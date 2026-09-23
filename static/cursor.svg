@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+	<defs>
+		<radialGradient id="glow">
+			<stop offset="0" stop-color="rgb(255,245,70)" stop-opacity="0.4" />
+			<stop offset="0.35" stop-color="rgb(255,225,30)" stop-opacity="0.12" />
+			<stop offset="1" stop-color="rgb(255,220,0)" stop-opacity="0" />
+		</radialGradient>
+		<radialGradient id="dot">
+			<stop offset="0" stop-color="rgb(255,255,150)" stop-opacity="1" />
+			<stop offset="0.5" stop-color="rgb(255,240,50)" stop-opacity="0.95" />
+			<stop offset="1" stop-color="rgb(255,215,0)" stop-opacity="0.4" />
+		</radialGradient>
+	</defs>
+	<circle cx="32" cy="32" r="30" fill="url(#glow)" />
+	<circle cx="32" cy="32" r="10" fill="url(#dot)" />
+</svg>
