@@ -38,8 +38,8 @@ export const PATCH: RequestHandler = async ({ request }) => {
 
 	await ensureTable();
 	const [result]: any = await pool.query(
-		'UPDATE tournaments SET year = ?, name = ?, role = ?, link = ?, banner = ?, badge = ?, hosts = ? WHERE id = ?',
-		[t.year, t.name, t.role, t.link, t.banner, t.badge, JSON.stringify(t.hosts), body.id]
+		'UPDATE tournaments SET year = ?, name = ?, role = ?, link = ?, banner = ?, badge = ?, hosts = ?, tier = ?, region = ?, memory = ? WHERE id = ?',
+		[t.year, t.name, t.role, t.link, t.banner, t.badge, JSON.stringify(t.hosts), t.tier, t.region, t.memory, body.id]
 	);
 	if (result.affectedRows === 0) return json({ error: 'Tournament not found' }, 404);
 	return json({ ...t, id: body.id });

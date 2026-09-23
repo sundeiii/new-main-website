@@ -1,4 +1,5 @@
 import { pool } from '$lib/server/db';
+import { addColumns } from '$lib/server/migrate';
 import { tournamentSeed, type Tournament, type TournamentYear } from '$lib/tournamentSeed';
 
 let tableReady: Promise<unknown> | null = null;
@@ -19,6 +20,8 @@ export function ensureTable() {
 				created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
 		)
+		// Added after the first version; older tables get them here.
+		.then(() => addColumns('tournaments', { tier: 'VARCHAR(50) NULL', region: 'VARCHAR(100) NULL', memory: 'VARCHAR(300) NULL' }))
 		.catch((e) => {
 			tableReady = null;
 			throw e;
@@ -31,7 +34,19 @@ function fromRow(row: any): Tournament {
 	try {
 		hosts = JSON.parse(row.hosts || '[]');
 	} catch {}
-	return { id: row.id, year: row.year, name: row.name, role: row.role, link: row.link, banner: row.banner, badge: row.badge, hosts };
+	return {
+		id: row.id,
+		year: row.year,
+		name: row.name,
+		role: row.role,
+		link: row.link,
+		banner: row.banner,
+		badge: row.badge,
+		hosts,
+		tier: row.tier ?? null,
+		region: row.region ?? null,
+		memory: row.memory ?? null
+	};
 }
 
 /**
@@ -64,6 +79,9 @@ export function cleanTournament(input: any): Tournament | string {
 		link: str(input?.link),
 		banner: str(input?.banner) || null,
 		badge: str(input?.badge) || null,
+		tier: str(input?.tier) || null,
+		region: str(input?.region) || null,
+		memory: str(input?.memory) || null,
 		hosts: Array.isArray(input?.hosts)
 			? input.hosts
 					.map((h: any) => ({ name: str(h?.name), id: Number(h?.id) }))
@@ -72,6 +90,7 @@ export function cleanTournament(input: any): Tournament | string {
 	};
 	if (!t.year || !t.name || !t.role || !t.link) return 'year, name, role and link are required';
 	if (t.year.length > 20 || t.name.length > 200 || t.role.length > 100) return 'year, name or role is too long';
+	if ((t.tier?.length ?? 0) > 50 || (t.region?.length ?? 0) > 100 || (t.memory?.length ?? 0) > 300) return 'tier, region or memory is too long';
 	for (const url of [t.link, t.banner, t.badge]) {
 		if (url && (url.length > 500 || !/^https?:\/\//.test(url))) return `not a valid http(s) url: ${url}`;
 	}
@@ -82,8 +101,8 @@ export async function insertTournament(t: Tournament) {
 	await ensureTable();
 	const [[{ next }]]: any = await pool.query('SELECT COALESCE(MAX(position), -1) + 1 AS next FROM tournaments WHERE year = ?', [t.year]);
 	const [result]: any = await pool.query(
-		'INSERT INTO tournaments (year, name, role, link, banner, badge, hosts, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-		[t.year, t.name, t.role, t.link, t.banner, t.badge, JSON.stringify(t.hosts), next]
+		'INSERT INTO tournaments (year, name, role, link, banner, badge, hosts, position, tier, region, memory) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+		[t.year, t.name, t.role, t.link, t.banner ?? null, t.badge ?? null, JSON.stringify(t.hosts), next, t.tier ?? null, t.region ?? null, t.memory ?? null]
 	);
 	return result.insertId as number;
 }

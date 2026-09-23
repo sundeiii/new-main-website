@@ -14,6 +14,7 @@
 	import type { TournamentYear } from '$lib/tournamentSeed';
 	import { fade, fly } from 'svelte/transition';
 	import Tooltip from '$lib/components/Tooltip.svelte';
+	import { countryName, flagUrl } from '$lib/flags';
 	
 	export let tournaments: TournamentYear[];
 
@@ -31,10 +32,13 @@
 		} catch {}
 	}
 	
-	function flagUrl(code: string) {
-		const codepoints = [...code.toUpperCase()].map(c => (0x1F1E6 + c.charCodeAt(0) - 65).toString(16)).join('-');
-		return `https://osu.ppy.sh/assets/images/flags/${codepoints}.svg`;
-	}
+	// Filter chips from the words used in roles ("referee/streamer" → referee, streamer).
+	$: roleWords = [...new Set(tournaments.flatMap((t) => t.events.flatMap((e) => e.role.split('/').map((r) => r.trim().toLowerCase()))))].filter(Boolean);
+	let roleFilter = '';
+	$: shownYears = tournaments
+		.map((t) => ({ ...t, events: roleFilter ? t.events.filter((e) => e.role.toLowerCase().split('/').map((r) => r.trim()).includes(roleFilter)) : t.events }))
+		.filter((t) => t.events.length);
+	$: total = tournaments.reduce((n, t) => n + t.events.length, 0);
 
 	onMount(() => {
 		const allHosts = tournaments.flatMap(t => t.events.flatMap(e => e.hosts || []));
@@ -57,14 +61,29 @@
 	<div class="flex flex-col gap-7 max-w-3xl">
 		<div in:fly={{ y: -20, duration: 400 }}>
 			<h1 class="text-ocean-900 dark:text-ocean-100">tournament staffing</h1>
-			<p class="text-ocean-700 dark:text-ocean-400">osu! tournaments I've helped staff</p>
+			<p class="text-ocean-700 dark:text-ocean-400">osu! tournaments I've helped staff · {total} and counting</p>
 		</div>
 
-	{#each tournaments as { year, events }, i}
+		{#if roleWords.length > 1}
+			<div class="flex flex-wrap gap-1.5 text-xs" in:fly={{ y: -10, duration: 400, delay: 50 }}>
+				{#each ['', ...roleWords] as word}
+					<button
+						on:click={() => (roleFilter = word)}
+						class="px-2.5 py-1 rounded-full border transition-colors {roleFilter === word
+							? 'bg-ocean-700 dark:bg-ocean-300 text-ocean-100 dark:text-ocean-900 border-transparent'
+							: 'border-ocean-300 dark:border-ocean-700 text-ocean-700 dark:text-ocean-400 hover:border-ocean-500'}"
+					>
+						{word || 'all'}
+					</button>
+				{/each}
+			</div>
+		{/if}
+
+	{#each shownYears as { year, events }, i (year)}
 		<div in:fly={{ y: 20, duration: 400, delay: 100 + (i * 100) }}>
 			<h2 class="text-ocean-900 dark:text-ocean-100 text-2xl mb-3">{year}</h2>
 			<p class="text-ocean-700 dark:text-ocean-400 text-sm mb-4">
-				{events.length} tournament{events.length !== 1 ? 's' : ''} staffed
+				{events.length} tournament{events.length !== 1 ? 's' : ''}{roleFilter ? ` as ${roleFilter}` : ' staffed'}
 			</p>
 			<div class="flex flex-col gap-3">
 				{#each events as event}
@@ -81,67 +100,73 @@
 							/>
 							<div class="absolute inset-0 bg-black/60 dark:bg-black/70 transition-colors duration-300 group-hover:bg-black/40 dark:group-hover:bg-black/50" />
 						{/if}
-						<a 
-							href={event.link}
-							target="_blank"
-							rel="noopener noreferrer"
-							class="block relative p-4"
-						>
-							<div class="flex items-start gap-4">
-								{#if event.badge}
-									<div class="flex-shrink-0">
-										<img 
-											src={event.badge} 
-											alt="{event.name} badge" 
-											loading="lazy"
-											decoding="async"
-											class="w-20 h-20 object-contain rounded"
-											on:error={e => e.target.style.display = 'none'}
-										/>
-									</div>
-								{/if}
-								<div class="flex-1 min-w-0">
-									<h3 class="{event.banner ? 'text-white' : 'text-ocean-900 dark:text-ocean-100'} font-medium hover:underline mb-1">
-										{event.name}
-									</h3>
-									<p class="{event.banner ? 'text-white/70' : 'text-ocean-700 dark:text-ocean-400'} text-sm">
-										{event.role}
-									</p>
-									{#if event.hosts?.length}
-										<div class="flex items-center gap-2 mt-2 flex-wrap">
-											<span class="{event.banner ? 'text-white/60' : 'text-ocean-600 dark:text-ocean-500'} text-xs">hosted by</span>
-											{#each event.hosts as host, hi}
-												<a 
-													href="https://osu.ppy.sh/users/{host.id}" 
-													target="_blank" 
-													rel="noopener noreferrer"
-													class="relative inline-flex items-center gap-1.5 rounded-md pr-2 hover:brightness-110 transition-all"
-													style="background: {hostProfiles[host.id]?.cover_url ? `url(${hostProfiles[host.id].cover_url}) center/cover` : 'linear-gradient(135deg, #334155, #1e293b)'};"
-													on:click|stopPropagation
-												>
-													<div class="absolute inset-0 bg-black/50 rounded-md"></div>
-													<img 
-														src="https://a.ppy.sh/{host.id}" 
-														alt={host.name}
-														class="relative w-7 h-7 rounded-l-md object-cover"
+						<!-- Not an <a> around everything: the host chips are links, and links can't be
+							 nested (browsers split them when parsing the server HTML). The title's link is
+							 stretched over the card instead, and the chips sit above it. -->
+						<div class="relative p-4 {event.badge ? 'pr-28' : ''}">
+							{#if event.badge}
+								<img
+									src={event.badge}
+									alt="{event.name} badge"
+									loading="lazy"
+									decoding="async"
+									class="absolute top-3 right-3 w-20 h-16 object-contain object-right-top pointer-events-none drop-shadow"
+									on:error={(e) => (e.currentTarget.style.display = 'none')}
+								/>
+							{/if}
+							<h3 class="{event.banner ? 'text-white' : 'text-ocean-900 dark:text-ocean-100'} font-medium mb-1">
+								<a
+									href={event.link}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="hover:underline after:absolute after:inset-0"
+								>
+									{event.name}
+								</a>
+							</h3>
+							<p class="{event.banner ? 'text-white/70' : 'text-ocean-700 dark:text-ocean-400'} text-sm flex flex-wrap items-center gap-1.5">
+								{event.role}
+								{#each [{ icon: '✦', text: event.tier }, { icon: '📍', text: event.region }].filter((t) => t.text) as tag}
+									<span
+										class="inline-flex items-center gap-1 text-xs leading-none px-2 py-1 rounded-full border {event.banner
+											? 'border-white/30 bg-black/30 text-white/90'
+											: 'border-ocean-300 dark:border-ocean-600 bg-ocean-100 dark:bg-ocean-800 text-ocean-700 dark:text-ocean-300'}"
+									>
+										<span class="text-[10px] opacity-80">{tag.icon}</span>{tag.text}
+									</span>
+								{/each}
+							</p>
+							{#if event.memory}
+								<p class="{event.banner ? 'text-white/80' : 'text-ocean-700 dark:text-ocean-300'} text-xs italic mt-1.5">“{event.memory}”</p>
+							{/if}
+							{#if event.hosts?.length}
+								<div class="flex items-center gap-2 mt-2 flex-wrap">
+									<span class="{event.banner ? 'text-white/60' : 'text-ocean-600 dark:text-ocean-500'} text-xs">hosted by</span>
+									{#each event.hosts as host}
+										<a
+											href="https://osu.ppy.sh/users/{host.id}"
+											target="_blank"
+											rel="noopener noreferrer"
+											class="relative z-10 inline-flex items-center gap-1.5 rounded-md pr-2 hover:brightness-110 transition-all"
+											style="background: {hostProfiles[host.id]?.cover_url ? `url(${hostProfiles[host.id].cover_url}) center/cover` : 'linear-gradient(135deg, #334155, #1e293b)'};"
+										>
+											<div class="absolute inset-0 bg-black/50 rounded-md"></div>
+											<img src="https://a.ppy.sh/{host.id}" alt={host.name} class="relative w-7 h-7 rounded-l-md object-cover" />
+											<span class="relative text-white text-xs font-medium drop-shadow-sm">{host.name}</span>
+											{#if hostProfiles[host.id]?.country_code}
+												<Tooltip text={hostProfiles[host.id].country_name || countryName(hostProfiles[host.id].country_code)}>
+													<img
+														src={flagUrl(hostProfiles[host.id].country_code)}
+														alt={hostProfiles[host.id].country_name || countryName(hostProfiles[host.id].country_code)}
+														class="h-3.5 w-auto"
 													/>
-													<span class="relative text-white text-xs font-medium drop-shadow-sm">{host.name}</span>
-													{#if hostProfiles[host.id]?.country_code}
-														<Tooltip text={hostProfiles[host.id].country_name || hostProfiles[host.id].country_code}>
-															<img 
-																src={flagUrl(hostProfiles[host.id].country_code)}
-																alt={hostProfiles[host.id].country_name || hostProfiles[host.id].country_code}
-																class="h-3.5 w-auto"
-															/>
-														</Tooltip>
-													{/if}
-												</a>
-											{/each}
-										</div>
-									{/if}
+												</Tooltip>
+											{/if}
+										</a>
+									{/each}
 								</div>
-							</div>
-						</a>
+							{/if}
+						</div>
 					</div>
 				{/each}
 			</div>

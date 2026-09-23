@@ -15,12 +15,25 @@
 	let error = '';
 
 	// Form state: editingId null = adding a new one.
-	const blank = () => ({ year: String(new Date().getFullYear()), name: '', role: 'referee', link: '', banner: '', badge: '', hosts: [{ name: '', id: '' }] });
+	const blank = () => ({
+		year: String(new Date().getFullYear()),
+		name: '',
+		role: 'referee',
+		link: '',
+		banner: '',
+		badge: '',
+		tier: '',
+		region: '',
+		memory: '',
+		hosts: [] as { name: string; id: string }[]
+	});
 	let form = blank();
 	let editingId: number | null = null;
 	let formEl: HTMLElement;
 
 	$: years = [...new Set(tournaments.map((t) => t.year))].sort().reverse();
+	$: tiers = [...new Set(tournaments.map((t) => t.tier).filter(Boolean))] as string[];
+	$: regions = [...new Set(tournaments.map((t) => t.region).filter(Boolean))] as string[];
 	$: roles = [...new Set(['referee', 'streamer', 'commentator', 'playtester', ...tournaments.map((t) => t.role)])];
 	$: groups = years.map((year) => ({ year, events: tournaments.filter((t) => t.year === year) }));
 
@@ -56,6 +69,26 @@
 	// Accepts a plain id or a pasted osu! profile link.
 	const parseOsuId = (v: string | number) => Number(String(v).match(/(\d+)\/?(?:[a-z]+)?\/?$/)?.[1] ?? v);
 
+	// Host lookup: username, id or profile link → the player's current name and id.
+	let hostQuery = '';
+	let hostLookingUp = false;
+	async function addHost() {
+		const q = hostQuery.trim();
+		if (!q) return;
+		hostLookingUp = true;
+		error = '';
+		try {
+			const player = await adminApi(`/api/admin/osu-player?q=${encodeURIComponent(q)}`, 'GET', undefined, onUnauthorized);
+			if (form.hosts.some((h) => Number(h.id) === player.id)) error = `${player.name} is already a host`;
+			else form.hosts = [...form.hosts, { name: player.name, id: String(player.id) }];
+			hostQuery = '';
+		} catch (e) {
+			error = (e as Error).message;
+		} finally {
+			hostLookingUp = false;
+		}
+	}
+
 	function payload() {
 		return {
 			...form,
@@ -83,7 +116,10 @@
 			link: t.link,
 			banner: t.banner ?? '',
 			badge: t.badge ?? '',
-			hosts: t.hosts.length ? t.hosts.map((h) => ({ name: h.name, id: String(h.id) })) : [{ name: '', id: '' }]
+			tier: t.tier ?? '',
+			region: t.region ?? '',
+			memory: t.memory ?? '',
+			hosts: t.hosts.map((h) => ({ name: h.name, id: String(h.id) }))
 		};
 		formEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	}
@@ -155,6 +191,22 @@
 			<label for="t-name" class={fieldLabel}>name</label>
 			<input id="t-name" bind:value={form.name} required maxlength="200" class={field} />
 		</div>
+		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+			<div>
+				<label for="t-tier" class={fieldLabel}>tier (optional, e.g. badged, open rank, 4 digit)</label>
+				<input id="t-tier" bind:value={form.tier} list="t-tiers" maxlength="50" class={field} />
+				<datalist id="t-tiers">{#each tiers as t}<option value={t} />{/each}</datalist>
+			</div>
+			<div>
+				<label for="t-region" class={fieldLabel}>region (optional, e.g. world, estonia, nordic)</label>
+				<input id="t-region" bind:value={form.region} list="t-regions" maxlength="100" class={field} />
+				<datalist id="t-regions">{#each regions as r}<option value={r} />{/each}</datalist>
+			</div>
+		</div>
+		<div>
+			<label for="t-memory" class={fieldLabel}>memory (optional, one line shown on the card)</label>
+			<input id="t-memory" bind:value={form.memory} maxlength="300" placeholder="that one grand final that went to tiebreaker…" class={field} />
+		</div>
 		<div>
 			<label for="t-link" class={fieldLabel}>link (forum post)</label>
 			<input id="t-link" bind:value={form.link} type="url" required placeholder="https://osu.ppy.sh/community/forums/topics/…" class={field} />
@@ -183,15 +235,26 @@
 		{/if}
 
 		<div class="flex flex-col gap-2">
-			<span class={fieldLabel}>hosts (osu! id or profile link)</span>
+			<span class={fieldLabel}>hosts</span>
+			<div class="flex gap-2">
+				<input
+					bind:value={hostQuery}
+					on:keydown={(e) => e.key === 'Enter' && (e.preventDefault(), addHost())}
+					placeholder="username, id or profile link → enter"
+					aria-label="find host on osu!"
+					class={field}
+				/>
+				<button type="button" on:click={addHost} class={primary} disabled={hostLookingUp || !hostQuery.trim()}>{hostLookingUp ? 'finding…' : 'add'}</button>
+			</div>
 			{#each form.hosts as host, i}
-				<div class="flex gap-2">
+				<div class="flex gap-2 items-center">
+					{#if String(host.id).trim()}<img src="https://a.ppy.sh/{parseOsuId(host.id)}" alt="" class="w-8 h-8 rounded shrink-0" />{/if}
 					<input bind:value={host.name} placeholder="name" aria-label="host name" class={field} />
 					<input bind:value={host.id} placeholder="osu! id or profile url" aria-label="host osu id" class={field} />
 					<button type="button" on:click={() => (form.hosts = form.hosts.filter((_, j) => j !== i))} class={subtle} aria-label="remove host">✕</button>
 				</div>
 			{/each}
-			<div><button type="button" on:click={() => (form.hosts = [...form.hosts, { name: '', id: '' }])} class={subtle}>+ host</button></div>
+			<div><button type="button" on:click={() => (form.hosts = [...form.hosts, { name: '', id: '' }])} class="{subtle} !text-xs">+ add manually</button></div>
 		</div>
 
 		<div><button type="submit" class={primary} disabled={busy}>{busy ? 'saving…' : editingId === null ? 'add tournament' : 'save changes'}</button></div>
@@ -216,7 +279,7 @@
 						<div class="flex-1 min-w-0">
 							<div class="text-ocean-900 dark:text-ocean-100 text-sm truncate">{t.name}</div>
 							<div class="text-ocean-600 dark:text-ocean-400 text-xs truncate">
-								{t.role}{t.hosts.length ? ` · ${t.hosts.map((h) => h.name).join(', ')}` : ''}{t.badge ? ' · 🏅' : ''}
+								{t.role}{t.tier ? ` · ${t.tier}` : ''}{t.region ? ` · ${t.region}` : ''}{t.hosts.length ? ` · ${t.hosts.map((h) => h.name).join(', ')}` : ''}{t.badge ? ' · 🏅' : ''}{t.memory ? ' · 💭' : ''}
 							</div>
 						</div>
 						<button on:click={() => startEdit(t)} class={subtle}>edit</button>

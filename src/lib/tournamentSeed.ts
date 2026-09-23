@@ -15,6 +15,9 @@ export interface Tournament {
 	banner?: string | null;
 	badge?: string | null;
 	hosts: TournamentHost[];
+	tier?: string | null; // e.g. "badged", "open rank", "4 digit"
+	region?: string | null; // e.g. "world", "estonia"
+	memory?: string | null; // one little memory or fact
 }
 
 export interface TournamentYear {
