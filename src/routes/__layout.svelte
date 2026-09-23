@@ -160,7 +160,8 @@
 	const footerExtraLinks = [
 		{ href: '/now', label: 'now' },
 		{ href: '/projects', label: 'projects' },
-		{ href: '/changelog', label: 'changelog' }
+		{ href: '/changelog', label: 'changelog' },
+		{ href: '/rss.xml', label: 'rss' }
 	];
 
 	function isActive(linkHref: string, currentPath: string): boolean {
@@ -245,16 +246,15 @@
 
 <svelte:window on:click={handleClickOutside} on:keydown={handleKeydown} />
 
-<!-- Link preview defaults (Discord, Twitter, …). Pages add their own og:title/description;
-     blog posts set their banner as og:image, so skip the default image there. -->
+<!-- Link preview defaults (Discord, Twitter, …). Pages add their own og:title/description,
+     and posts/events/projects their banner as og:image. There's deliberately no default image,
+     and "summary" makes Discord show a page's image as a small thumbnail instead of a big one. -->
 <svelte:head>
 	<meta property="og:site_name" content="sundei" />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="https://sundei.ee{$page.url.pathname}" />
-	{#if !$page.url.pathname.startsWith('/blog/')}
-		<meta property="og:image" content="https://sundei.ee/favicon.png" />
-	{/if}
 	<meta name="twitter:card" content="summary" />
+	<link rel="alternate" type="application/rss+xml" title="sundei" href="/rss.xml" />
 </svelte:head>
 
 <GradientMesh />

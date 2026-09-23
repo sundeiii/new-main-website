@@ -40,6 +40,16 @@
 		.filter((t) => t.events.length);
 	$: total = tournaments.reduce((n, t) => n + t.events.length, 0);
 
+	// Summary numbers for the top of the page.
+	$: allEvents = tournaments.flatMap((t) => t.events);
+	$: roleCounts = roleWords
+		.map((word) => ({ word, count: allEvents.filter((e) => e.role.toLowerCase().split('/').map((r) => r.trim()).includes(word)).length }))
+		.sort((a, b) => b.count - a.count);
+	$: hostIds = [...new Set(allEvents.flatMap((e) => (e.hosts ?? []).map((h) => h.id)))];
+	// Host countries arrive as the osu! profiles load in the browser.
+	$: hostCountries = new Set(hostIds.map((id) => hostProfiles[id]?.country_code).filter(Boolean));
+	$: badges = allEvents.filter((e) => e.badge).length;
+
 	onMount(() => {
 		const allHosts = tournaments.flatMap(t => t.events.flatMap(e => e.hosts || []));
 		const uniqueIds = [...new Set(allHosts.map(h => h.id))];
@@ -61,7 +71,22 @@
 	<div class="flex flex-col gap-7 max-w-3xl">
 		<div in:fly={{ y: -20, duration: 400 }}>
 			<h1 class="text-ocean-900 dark:text-ocean-100">tournament staffing</h1>
-			<p class="text-ocean-700 dark:text-ocean-400">osu! tournaments I've helped staff · {total} and counting</p>
+			<p class="text-ocean-700 dark:text-ocean-400">osu! tournaments I've helped staff</p>
+		</div>
+
+		<div class="flex flex-wrap gap-2 text-sm" in:fly={{ y: -10, duration: 400, delay: 30 }}>
+			{#each [
+				{ value: total, label: 'tournaments' },
+				...roleCounts.slice(0, 3).map((r) => ({ value: r.count, label: `as ${r.word}` })),
+				{ value: hostIds.length, label: 'hosts worked with' },
+				...(hostCountries.size ? [{ value: hostCountries.size, label: 'host countries' }] : []),
+				...(badges ? [{ value: badges, label: badges === 1 ? 'badge' : 'badges' }] : [])
+			] as stat}
+				<div class="px-3 py-2 rounded-lg border border-ocean-300 dark:border-ocean-700">
+					<span class="text-ocean-900 dark:text-ocean-100 text-lg">{stat.value}</span>
+					<span class="text-ocean-600 dark:text-ocean-400 text-xs ml-1">{stat.label}</span>
+				</div>
+			{/each}
 		</div>
 
 		{#if roleWords.length > 1}
