@@ -1,12 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 	
-	let mounted = false;
 	
-	onMount(() => {
-		mounted = true;
-	});
 	
 	// You can add images here or fetch from an API/CMS
 	const images = [
@@ -29,9 +24,6 @@
 
 	let selectedImage: typeof images[0] | null = null;
 	
-	onMount(() => {
-		mounted = true;
-	});
 </script>
 
 <svelte:head>
@@ -44,47 +36,45 @@
 </svelte:head>
 
 <section class="p-8 sm:p-12 lg:p-24 lg:py-16 font-cascadia">
-	{#if mounted}
-		<div class="flex flex-col gap-7">
-			<div in:fly={{ y: -20, duration: 400 }}>
-				<h1 class="text-ocean-900 dark:text-ocean-100">gallery</h1>
-				<p class="text-ocean-700 dark:text-ocean-400">photos and visual works</p>
-			</div>
-
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" in:fade={{ duration: 400, delay: 100 }}>
-			{#each images as image}
-				<button
-					class="group relative aspect-square overflow-hidden rounded border border-ocean-300 dark:border-ocean-700 hover:border-ocean-500 dark:hover:border-ocean-500 transition-colors"
-					on:click={() => selectedImage = image}
-				>
-					<img 
-						src={image.src} 
-						alt={image.alt}
-						loading="lazy"
-						decoding="async"
-						class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-					/>
-					<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-						<div class="absolute bottom-0 left-0 right-0 p-4">
-							<p class="text-white font-medium">{image.title}</p>
-							<p class="text-white/80 text-sm">
-								{new Date(image.date).toLocaleDateString('en-US', { 
-									month: 'short', 
-									day: 'numeric', 
-									year: 'numeric' 
-								})}
-							</p>
-						</div>
-					</div>
-				</button>
-			{:else}
-				<div class="col-span-full text-ocean-700 dark:text-ocean-400">
-					No images yet. Coming soon!
-				</div>
-			{/each}
+	<div class="flex flex-col gap-7">
+		<div in:fly={{ y: -20, duration: 400 }}>
+			<h1 class="text-ocean-900 dark:text-ocean-100">gallery</h1>
+			<p class="text-ocean-700 dark:text-ocean-400">photos and visual works</p>
 		</div>
+
+		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" in:fade={{ duration: 400, delay: 100 }}>
+		{#each images as image}
+			<button
+				class="group relative aspect-square overflow-hidden rounded border border-ocean-300 dark:border-ocean-700 hover:border-ocean-500 dark:hover:border-ocean-500 transition-colors"
+				on:click={() => selectedImage = image}
+			>
+				<img 
+					src={image.src} 
+					alt={image.alt}
+					loading="lazy"
+					decoding="async"
+					class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+				/>
+				<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+					<div class="absolute bottom-0 left-0 right-0 p-4">
+						<p class="text-white font-medium">{image.title}</p>
+						<p class="text-white/80 text-sm">
+							{new Date(image.date).toLocaleDateString('en-US', { 
+								month: 'short', 
+								day: 'numeric', 
+								year: 'numeric' 
+							})}
+						</p>
+					</div>
+				</div>
+			</button>
+		{:else}
+			<div class="col-span-full text-ocean-700 dark:text-ocean-400">
+				No images yet. Coming soon!
+			</div>
+		{/each}
 	</div>
-	{/if}
+	</div>
 </section>
 
 <!-- Lightbox Modal -->

@@ -1,12 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 
-	let mounted = false;
 
-	onMount(() => {
-		mounted = true;
-	});
 
 	const lastUpdated = 'February 2026';
 
@@ -50,7 +45,6 @@
 	<title>now</title>
 </svelte:head>
 
-{#if mounted}
 <section
 	class="p-8 sm:p-12 lg:p-24 lg:py-16 font-cascadia"
 	in:fade={{ duration: 200 }}
@@ -96,4 +90,3 @@
 		</div>
 	</div>
 </section>
-{/if}

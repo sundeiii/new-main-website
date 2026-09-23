@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 
-	let mounted = false;
 	let entries: any[] = [];
 	let loading = true;
 	let error = '';
@@ -68,7 +67,6 @@
 	}
 
 	onMount(async () => {
-		mounted = true;
 		// Restore name from localStorage
 		const savedName = localStorage.getItem('guestbook-name');
 		if (savedName) nameInput = savedName;
@@ -106,7 +104,6 @@
 	<title>guestbook</title>
 </svelte:head>
 
-{#if mounted}
 <section 
 	class="p-8 sm:p-12 lg:p-24 lg:py-16 font-cascadia"
 	in:fade={{ duration: 200 }}
@@ -218,4 +215,3 @@
 		{/if}
 	</div>
 </section>
-{/if}
