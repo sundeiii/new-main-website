@@ -40,6 +40,21 @@
 		.filter((t) => t.events.length);
 	$: total = tournaments.reduce((n, t) => n + t.events.length, 0);
 
+	// One colour per role, so "referee/streamer" reads as two tags at a glance.
+	const roleColors: Record<string, string> = {
+		referee: '#8FA1B3',
+		streamer: '#B48EAD',
+		commentator: '#EBCB8B',
+		caster: '#EBCB8B',
+		playtester: '#A3BE8C',
+		host: '#BF616A',
+		developer: '#96B5B4',
+		mappooler: '#D08770',
+		designer: '#D08770'
+	};
+	const roleColor = (role: string) => roleColors[role] ?? '#A7ADBA';
+	const rolesOf = (role: string) => role.split('/').map((r) => r.trim().toLowerCase()).filter(Boolean);
+
 	// Summary numbers for the top of the page.
 	$: allEvents = tournaments.flatMap((t) => t.events);
 	$: roleCounts = roleWords
@@ -151,7 +166,14 @@
 								</a>
 							</h3>
 							<p class="{event.banner ? 'text-white/70' : 'text-ocean-700 dark:text-ocean-400'} text-sm flex flex-wrap items-center gap-1.5">
-								{event.role}
+								{#each rolesOf(event.role) as r}
+									<span
+										class="text-xs leading-none px-2 py-1 rounded-full border"
+										style="color: {event.banner ? '#fff' : roleColor(r)}; border-color: {roleColor(r)}; background: {roleColor(r)}{event.banner ? '55' : '1f'};"
+									>
+										{r}
+									</span>
+								{/each}
 								{#each [{ icon: '✦', text: event.tier }, { icon: '📍', text: event.region }].filter((t) => t.text) as tag}
 									<span
 										class="inline-flex items-center gap-1 text-xs leading-none px-2 py-1 rounded-full border {event.banner
