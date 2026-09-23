@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { adminApi, danger, field, primary, subtle } from './styles';
+	import { stampById } from '$lib/stamps';
 
 	export let onUnauthorized: () => void;
 
@@ -9,6 +10,7 @@
 		name: string;
 		message: string;
 		created_at: string;
+		stamp?: string | null;
 	}
 
 	let entries: Entry[] = [];
@@ -148,7 +150,10 @@
 						</div>
 					{:else}
 						<div class="flex flex-wrap items-baseline justify-between gap-2">
-							<span class="text-ocean-900 dark:text-ocean-100 text-sm font-medium">{entry.name}</span>
+							<span class="text-ocean-900 dark:text-ocean-100 text-sm font-medium">
+								{#if stampById(entry.stamp)}<span title={stampById(entry.stamp)?.label}>{stampById(entry.stamp)?.emoji}</span>{/if}
+								{entry.name}
+							</span>
 							<span class="text-ocean-500 text-xs">{formatDate(entry.created_at)}</span>
 						</div>
 						<p class="text-ocean-700 dark:text-ocean-300 text-sm mt-1 whitespace-pre-wrap break-words">{entry.message}</p>

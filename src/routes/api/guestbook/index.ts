@@ -1,6 +1,11 @@
 import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { pool } from '$lib/server/db';
+import { addColumns, once } from '$lib/server/migrate';
+import { stampById } from '$lib/stamps';
+
+// The stamp column was added after launch; older tables get it the first time someone posts.
+const ensureStampColumn = once(() => addColumns('guestbook', { stamp: 'VARCHAR(20) NULL' }));
 
 // Posts per IP per window. IPs are stored only as salted hashes, in their own table, so the
 // guestbook table (and its exports) never contain them.
@@ -43,7 +48,7 @@ export async function GET() {
 
 export async function POST({ request, clientAddress }: any) {
 	try {
-		const { name, message, website } = await request.json();
+		const { name, message, website, stamp } = await request.json();
 
 		// Honeypot: the form has a hidden "website" field people never see, so only bots fill it.
 		if (website) {
@@ -88,7 +93,7 @@ export async function POST({ request, clientAddress }: any) {
 		// Rate limit per IP, so changing the name doesn't get around it
 		await ensureRateTable();
 		const ipHash = hashIp(String(clientAddress || 'unknown'));
-		const [[{ count }]] = await pool.query(
+		const [[{ count }]]: any = await pool.query(
 			'SELECT COUNT(*) AS count FROM guestbook_rate WHERE ip_hash = ? AND created_at > NOW() - INTERVAL ? MINUTE',
 			[ipHash, IP_WINDOW_MINUTES]
 		);
@@ -116,11 +121,14 @@ export async function POST({ request, clientAddress }: any) {
 		// Keep the table tiny: drop entries older than a day.
 		pool.query('DELETE FROM guestbook_rate WHERE created_at < NOW() - INTERVAL 1 DAY').catch(() => {});
 
+		await ensureStampColumn();
+		const stampId = stampById(stamp)?.id ?? null;
+
 		const id = uuidv4();
 		const createdAt = new Date();
 		await pool.query(
-			'INSERT INTO guestbook (id, name, message, created_at) VALUES (?, ?, ?, ?)',
-			[id, cleanName, cleanMessage, createdAt]
+			'INSERT INTO guestbook (id, name, message, created_at, stamp) VALUES (?, ?, ?, ?, ?)',
+			[id, cleanName, cleanMessage, createdAt, stampId]
 		);
 		const [rows] = await pool.query('SELECT * FROM guestbook WHERE id = ?', [id]);
 		const newEntry = rows[0];

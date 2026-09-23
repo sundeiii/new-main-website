@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
+	import { STAMPS, stampById } from '$lib/stamps';
+
+	let stamp = '';
 
 	let entries: any[] = [];
 	let loading = true;
@@ -43,6 +46,7 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					website,
+					stamp: stamp || null,
 					name: nameInput.trim(),
 					message: messageInput.trim()
 				})
@@ -52,6 +56,7 @@
 				const newEntry = await response.json();
 				entries = [newEntry, ...entries];
 				messageInput = '';
+				stamp = '';
 				submitSuccess = true;
 				setTimeout(() => submitSuccess = false, 3000);
 			} else {
@@ -144,6 +149,24 @@
 					class="flex-1 bg-transparent border border-ocean-300 dark:border-ocean-700 rounded px-3 py-2 text-sm text-ocean-900 dark:text-ocean-100 placeholder-ocean-500 dark:placeholder-ocean-600 focus:outline-none focus:border-ocean-500 dark:focus:border-ocean-400"
 				/>
 			</div>
+			<!-- Stamp picker -->
+			<div class="flex flex-wrap items-center gap-1" role="radiogroup" aria-label="pick a stamp">
+				<span class="text-ocean-500 dark:text-ocean-600 text-xs mr-1">stamp:</span>
+				{#each STAMPS as s}
+					<button
+						type="button"
+						role="radio"
+						aria-checked={stamp === s.id}
+						title={s.label}
+						on:click={() => (stamp = stamp === s.id ? '' : s.id)}
+						class="w-8 h-8 rounded border text-base transition-all {stamp === s.id
+							? 'border-ocean-600 dark:border-ocean-300 bg-ocean-200 dark:bg-ocean-800 scale-110 -rotate-6'
+							: 'border-transparent hover:border-ocean-300 dark:hover:border-ocean-700 opacity-60 hover:opacity-100'}"
+					>
+						{s.emoji}
+					</button>
+				{/each}
+			</div>
 			<!-- Honeypot: hidden from people and screen readers; bots that fill every field get rejected -->
 			<div class="absolute -left-[9999px] w-px h-px overflow-hidden" aria-hidden="true">
 				<label>website <input bind:value={website} type="text" name="website" tabindex="-1" autocomplete="off" /></label>
@@ -194,10 +217,20 @@
 		{:else}
 			<div class="space-y-3">
 				{#each entries as entry, i}
-					<div 
-						class="border border-ocean-300 dark:border-ocean-700 rounded px-4 py-3 hover:border-ocean-400 dark:hover:border-ocean-600 transition-colors"
+					<div
+						class="relative border border-ocean-300 dark:border-ocean-700 rounded px-4 py-3 {stampById(entry.stamp) ? 'pr-16' : ''} hover:border-ocean-400 dark:hover:border-ocean-600 transition-colors"
 						in:fly={{ y: 15, duration: 200, delay: 150 + i * 30 }}
 					>
+						{#if stampById(entry.stamp)}
+							<span
+								class="absolute top-2 right-3 w-9 h-9 flex items-center justify-center text-lg rounded border-2 border-dashed border-ocean-400/60 dark:border-ocean-600/60"
+								style="transform: rotate({((entry.id?.charCodeAt(0) ?? 0) % 21) - 10}deg)"
+								title={stampById(entry.stamp)?.label}
+								aria-label="stamp: {stampById(entry.stamp)?.label}"
+							>
+								{stampById(entry.stamp)?.emoji}
+							</span>
+						{/if}
 						<div class="flex items-baseline gap-2 mb-1">
 							<span class="text-ocean-900 dark:text-ocean-100 text-sm font-medium">
 								{entry.name}
