@@ -95,7 +95,7 @@
 				...roleCounts.slice(0, 3).map((r) => ({ value: r.count, label: `as ${r.word}` })),
 				{ value: hostIds.length, label: 'hosts worked with' },
 				...(hostCountries.size ? [{ value: hostCountries.size, label: 'host countries' }] : []),
-				...(badges ? [{ value: badges, label: badges === 1 ? 'badge' : 'badges' }] : [])
+				...(badges ? [{ value: badges, label: badges === 1 ? 'badged tournament' : 'badged tournaments' }] : [])
 			] as stat}
 				<div class="px-3 py-2 rounded-lg border border-ocean-300 dark:border-ocean-700">
 					<span class="text-ocean-900 dark:text-ocean-100 text-lg">{stat.value}</span>
