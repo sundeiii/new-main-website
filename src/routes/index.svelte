@@ -175,12 +175,7 @@
 	}
 
 	let nowPlaying: NowPlayingResponse | null = null;
-	// For the "currently" box: now playing if live, otherwise the last track.
-	$: listeningTo = nowPlaying?.track && nowPlaying.isPlayingNow && !nowPlaying.isPaused
-		? { live: true, text: `${romanizedSong || nowPlaying.track.name} – ${romanizedArtist || artistNames(nowPlaying.track.artists)}` }
-		: lastPlayedTrack?.track
-			? { live: false, text: `${romanizedLastSong || lastPlayedTrack.track.name} – ${romanizedLastArtist || artistNames(lastPlayedTrack.track.artists)}` }
-			: null;
+	// For the "currently" box (listening is already shown in the now playing card).
 	$: playing = visibleActivities.find((a: Activity) => a.type === 0)?.name ?? '';
 	let nowPlayingTime = 0;
 	let nowPlayingStarted = 0;
@@ -373,7 +368,7 @@
 			<p class="text-ocean-700 dark:text-ocean-400 max-w-xl -mt-3">{intro}</p>
 		{/if}
 		<!-- "currently" box: all pulled from things the site already knows -->
-		{#if homeSettings.showCurrently && (listeningTo || workingOn || playing || happening || nextUp)}
+		{#if homeSettings.showCurrently && (workingOn || playing || happening || nextUp)}
 			<div class="-mt-2 border border-ocean-300 dark:border-ocean-700 rounded-lg px-4 py-3 text-sm flex flex-col gap-1.5 max-w-xl">
 				<span class="text-[11px] uppercase tracking-widest text-ocean-500">currently</span>
 				{#if happening}
@@ -381,9 +376,6 @@
 						<span class="relative flex w-2 h-2 shrink-0"><span class="absolute inset-0 rounded-full bg-ocean-green animate-ping opacity-75" /><span class="relative w-2 h-2 rounded-full bg-ocean-green" /></span>
 						at {happening.title}{happening.location ? ` · ${happening.location}` : ''}
 					</a>
-				{/if}
-				{#if listeningTo}
-					<div class="flex gap-2 min-w-0"><span class="shrink-0">🎧</span><span class="text-ocean-600 dark:text-ocean-400 shrink-0">{listeningTo.live ? 'listening to' : 'last listened to'}</span><span class="text-ocean-800 dark:text-ocean-200 truncate">{listeningTo.text}</span></div>
 				{/if}
 				{#if playing}
 					<div class="flex gap-2 min-w-0"><span class="shrink-0">🎮</span><span class="text-ocean-600 dark:text-ocean-400 shrink-0">playing</span><span class="text-ocean-800 dark:text-ocean-200 truncate">{playing}</span></div>
