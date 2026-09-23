@@ -4,13 +4,15 @@
 	// Rendered per request (not prerendered) so the intro and project list edited in /admin
 	// show up without a redeploy.
 	export const load: Load = async ({ fetch }) => {
-		const [home, projects, events, buttons] = await Promise.all([
+		const [home, projects, events, buttons, posts, nowPage] = await Promise.all([
 			fetch('/api/site/home').then((r) => (r.ok ? r.json() : null)).catch(() => null),
 			fetch('/api/blog?kind=project').then((r) => (r.ok ? r.json() : [])).catch(() => []),
 			fetch('/api/blog?kind=event').then((r) => (r.ok ? r.json() : [])).catch(() => []),
-			fetch('/api/site/buttons').then((r) => (r.ok ? r.json() : null)).catch(() => null)
+			fetch('/api/site/buttons').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+			fetch('/api/blog').then((r) => (r.ok ? r.json() : [])).catch(() => []),
+			fetch('/api/site/now').then((r) => (r.ok ? r.json() : null)).catch(() => null)
 		]);
-		return { props: { home, projectPages: projects, events, buttons } };
+		return { props: { home, projectPages: projects, events, buttons, posts, nowPage } };
 	};
 </script>
 
@@ -25,6 +27,17 @@
 	export let projectPages: { slug: string; title: string; excerpt: string }[];
 	export let events: { slug: string; title: string; date: string; endDate: string | null; location: string | null }[];
 	export let buttons: import('$lib/siteSettings').ButtonsSettings | null;
+	export let posts: { slug: string; title: string; date: string; excerpt: string; banner: string | null }[];
+	export let nowPage: import('$lib/siteSettings').NowSettings | null;
+
+	// "latest": newest blog post or event that has already started.
+	$: latest = [
+		...posts.map((p) => ({ ...p, href: `/blog/${p.slug}`, kind: 'post' })),
+		...events.filter((e) => eventTiming(e) !== 'upcoming').map((e: any) => ({ ...e, href: `/events/${e.slug}`, kind: 'event' }))
+	].sort((a, b) => b.date.localeCompare(a.date))[0];
+
+	// "working on" comes from the first matching section of the /now page.
+	$: workingOn = (nowPage ?? settingDefaults.now).sections.find((sec) => /work|build|mak/i.test(sec.title))?.items[0];
 	import { daysBetween, eventTiming, today } from '$lib/dates';
 	import { settingDefaults } from '$lib/siteSettings';
 
@@ -162,6 +175,13 @@
 	}
 
 	let nowPlaying: NowPlayingResponse | null = null;
+	// For the "currently" box: now playing if live, otherwise the last track.
+	$: listeningTo = nowPlaying?.track && nowPlaying.isPlayingNow && !nowPlaying.isPaused
+		? { live: true, text: `${romanizedSong || nowPlaying.track.name} – ${romanizedArtist || artistNames(nowPlaying.track.artists)}` }
+		: lastPlayedTrack?.track
+			? { live: false, text: `${romanizedLastSong || lastPlayedTrack.track.name} – ${romanizedLastArtist || artistNames(lastPlayedTrack.track.artists)}` }
+			: null;
+	$: playing = visibleActivities.find((a: Activity) => a.type === 0)?.name ?? '';
 	let nowPlayingTime = 0;
 	let nowPlayingStarted = 0;
 	let nowPlayingPollId: ReturnType<typeof setInterval>;
@@ -352,23 +372,49 @@
 		{#if intro}
 			<p class="text-ocean-700 dark:text-ocean-400 max-w-xl -mt-3">{intro}</p>
 		{/if}
-		{#if happening}
-			<a href="/events/{happening.slug}" class="-mt-4 self-start inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full border border-ocean-green/60 text-ocean-800 dark:text-ocean-200 hover:bg-ocean-green/10">
-				<span class="relative flex w-2 h-2"><span class="absolute inset-0 rounded-full bg-ocean-green animate-ping opacity-75" /><span class="relative w-2 h-2 rounded-full bg-ocean-green" /></span>
-				currently at {happening.title}{happening.location ? ` · ${happening.location}` : ''}
-			</a>
-		{:else if nextUp}
-			<a href="/events/{nextUp.slug}" class="-mt-4 self-start text-sm text-ocean-600 dark:text-ocean-400 hover:underline">
-				📅 next up: {nextUp.title} {daysBetween(today(), nextUp.date) === 1 ? 'tomorrow' : `in ${daysBetween(today(), nextUp.date)} days`}
+		<!-- "currently" box: all pulled from things the site already knows -->
+		{#if homeSettings.showCurrently && (listeningTo || workingOn || playing || happening || nextUp)}
+			<div class="-mt-2 border border-ocean-300 dark:border-ocean-700 rounded-lg px-4 py-3 text-sm flex flex-col gap-1.5 max-w-xl">
+				<span class="text-[11px] uppercase tracking-widest text-ocean-500">currently</span>
+				{#if happening}
+					<a href="/events/{happening.slug}" class="flex items-center gap-2 text-ocean-800 dark:text-ocean-200 hover:underline">
+						<span class="relative flex w-2 h-2 shrink-0"><span class="absolute inset-0 rounded-full bg-ocean-green animate-ping opacity-75" /><span class="relative w-2 h-2 rounded-full bg-ocean-green" /></span>
+						at {happening.title}{happening.location ? ` · ${happening.location}` : ''}
+					</a>
+				{/if}
+				{#if listeningTo}
+					<div class="flex gap-2 min-w-0"><span class="shrink-0">🎧</span><span class="text-ocean-600 dark:text-ocean-400 shrink-0">{listeningTo.live ? 'listening to' : 'last listened to'}</span><span class="text-ocean-800 dark:text-ocean-200 truncate">{listeningTo.text}</span></div>
+				{/if}
+				{#if playing}
+					<div class="flex gap-2 min-w-0"><span class="shrink-0">🎮</span><span class="text-ocean-600 dark:text-ocean-400 shrink-0">playing</span><span class="text-ocean-800 dark:text-ocean-200 truncate">{playing}</span></div>
+				{/if}
+				{#if workingOn}
+					<a href="/now" class="flex gap-2 min-w-0 hover:underline"><span class="shrink-0">🔨</span><span class="text-ocean-600 dark:text-ocean-400 shrink-0">working on</span><span class="text-ocean-800 dark:text-ocean-200 truncate">{workingOn}</span></a>
+				{/if}
+				{#if !happening && nextUp}
+					<a href="/events/{nextUp.slug}" class="flex gap-2 min-w-0 hover:underline"><span class="shrink-0">📅</span><span class="text-ocean-600 dark:text-ocean-400 shrink-0">next event</span><span class="text-ocean-800 dark:text-ocean-200 truncate">{nextUp.title} · {daysBetween(today(), nextUp.date) === 1 ? 'tomorrow' : `in ${daysBetween(today(), nextUp.date)} days`}</span></a>
+				{/if}
+			</div>
+		{/if}
+
+		<!-- newest post or event -->
+		{#if homeSettings.showLatest && latest}
+			<a href={latest.href} class="group -mt-2 flex items-center gap-3 border border-ocean-300 dark:border-ocean-700 rounded-lg p-2 pr-4 max-w-xl hover:border-ocean-500 transition-colors">
+				{#if latest.banner}<img src={latest.banner} alt="" loading="lazy" class="w-20 h-12 object-cover rounded shrink-0" />{/if}
+				<div class="min-w-0 text-sm">
+					<div class="text-ocean-500 text-[11px] uppercase tracking-widest">latest {latest.kind === 'event' ? 'event' : 'post'}</div>
+					<div class="text-ocean-900 dark:text-ocean-100 truncate group-hover:underline">{latest.title}</div>
+					{#if latest.excerpt}<div class="text-ocean-600 dark:text-ocean-400 text-xs truncate">{latest.excerpt}</div>{/if}
+				</div>
 			</a>
 		{/if}
 		<!-- wip / projects / links, edited in /admin → pages → home -->
-		{#each [{ title: 'wip', items: homeSettings.wip }, { title: 'projects', items: projectList }, { title: 'links', items: homeSettings.links }] as group}
+		{#each [{ key: 'wip', title: homeSettings.titles.wip, items: homeSettings.wip }, { key: 'projects', title: homeSettings.titles.projects, items: projectList }, { key: 'links', title: homeSettings.titles.links, items: homeSettings.links }] as group}
 			{#if group.items.length}
 				<div>
 					<h1 class="text-ocean-900 dark:text-ocean-100">
 						{group.title}
-						{#if group.title === 'projects' && projectPages.length}<a href="/projects" class="text-xs text-ocean-600 dark:text-ocean-400 hover:underline ml-1">all →</a>{/if}
+						{#if group.key === 'projects' && projectPages.length}<a href="/projects" class="text-xs text-ocean-600 dark:text-ocean-400 hover:underline ml-1">all →</a>{/if}
 					</h1>
 					<ul class="list-disc list-inside text-ocean-800 dark:text-ocean-blue">
 						{#each group.items as item}
@@ -379,7 +425,7 @@
 			{/if}
 		{/each}
 		<div>
-			<h1 class="text-ocean-900 dark:text-ocean-100">friends</h1>
+			<h1 class="text-ocean-900 dark:text-ocean-100">{homeSettings.titles.friends}</h1>
 			<!-- 88×31 buttons, edited in /admin → pages → buttons -->
 			<div class="flex flex-wrap gap-1 mt-2">
 				{#each buttonWall.items as b}

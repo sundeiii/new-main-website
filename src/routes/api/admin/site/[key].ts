@@ -25,7 +25,21 @@ const clean: { [K in keyof SiteSettings]: (v: any) => SiteSettings[K] } = {
 				const href = str(l?.href, 300);
 				return str(l?.name, 60) && /^(https?:\/\/|mailto:|\/(?!\/))/.test(href) ? { name: str(l.name, 60), href, description: str(l?.description, 150) } : null;
 			});
-		return { intro: str(v?.intro, 1000), wip: homeLinks(v?.wip), projects: homeLinks(v?.projects), links: homeLinks(v?.links) };
+		const title = (t: unknown, fallback: string) => str(t, 40) || fallback;
+		return {
+			intro: str(v?.intro, 1000),
+			wip: homeLinks(v?.wip),
+			projects: homeLinks(v?.projects),
+			links: homeLinks(v?.links),
+			titles: {
+				wip: title(v?.titles?.wip, 'wip'),
+				projects: title(v?.titles?.projects, 'projects'),
+				links: title(v?.titles?.links, 'links'),
+				friends: title(v?.titles?.friends, 'friends')
+			},
+			showCurrently: v?.showCurrently !== false,
+			showLatest: v?.showLatest !== false
+		};
 	},
 	now: (v) => ({
 		updated: str(v?.updated, 50),
@@ -97,6 +111,7 @@ const clean: { [K in keyof SiteSettings]: (v: any) => SiteSettings[K] } = {
 				str(l?.name, 40) ? { name: str(l.name, 40), color: /^#[0-9a-f]{3,8}$/i.test(str(l?.color, 9)) ? str(l.color, 9) : '#888888' } : null
 			),
 			interests: list(v?.interests, 30, (i) => str(i, 60) || null),
+			software: list(v?.software, 40, (s) => (str(s?.label, 40) && str(s?.value, 100) ? { label: str(s.label, 40), value: str(s.value, 100), sub: str(s?.sub, 150) } : null)),
 			links: list(v?.links, 20, (l) => {
 				const u = str(l?.url, 300);
 				return str(l?.label, 40) && /^(https?:\/\/|mailto:)/.test(u) ? { label: str(l.label, 40), url: u } : null;

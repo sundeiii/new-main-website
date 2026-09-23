@@ -245,10 +245,21 @@
 				<label for="p-intro" class={fieldLabel}>intro (shown under your name on the home page)</label>
 				<textarea id="p-intro" bind:value={home.intro} rows="3" maxlength="1000" class={field} />
 			</div>
+			<div class="flex flex-wrap gap-4 text-sm text-ocean-700 dark:text-ocean-300">
+				<label class="flex items-center gap-2"><input type="checkbox" bind:checked={home.showCurrently} /> show the "currently" box (listening / playing / working on / next event)</label>
+				<label class="flex items-center gap-2"><input type="checkbox" bind:checked={home.showLatest} /> show your latest post or event</label>
+			</div>
+			<div>
+				<span class={fieldLabel}>"{home.titles.friends}" heading (the 88×31 buttons)</span>
+				<input bind:value={home.titles.friends} placeholder="friends" aria-label="buttons heading" class="{field} sm:!w-64" />
+			</div>
 			{#each homeLists as list}
 				<div class="flex flex-col gap-2">
 					<div class="flex items-center justify-between gap-2">
-						<span class={fieldLabel}>{list.title}</span>
+						<div class="flex items-center gap-2 min-w-0">
+							<input bind:value={home.titles[list.key]} placeholder={list.key} aria-label="{list.key} heading" class="{field} !w-56 !py-1 font-medium" />
+							<span class="text-xs text-ocean-500 truncate">{list.key === 'projects' ? 'leave the list empty to show your /projects pages' : 'heading on the home page'}</span>
+						</div>
 						{#if list.key === 'projects'}<button on:click={useProjectPages} class="{subtle} !text-xs">fill from my project pages</button>{/if}
 					</div>
 					{#each home[list.key] as item, i}

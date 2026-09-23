@@ -13,6 +13,12 @@ export interface HomeSettings {
 	/** If empty, the home page lists your /projects pages instead. */
 	projects: HomeLink[];
 	links: HomeLink[];
+	/** Section headings on the home page. */
+	titles: { wip: string; projects: string; links: string; friends: string };
+	/** The "currently" box (listening / working on / playing / next event). */
+	showCurrently: boolean;
+	/** The "latest" card with your newest post or event. */
+	showLatest: boolean;
 }
 
 export interface NowSection {
@@ -121,6 +127,8 @@ export interface AboutSettings {
 	languages: { name: string; color: string }[];
 	interests: string[];
 	links: { label: string; url: string }[];
+	/** Software & setup for /uses (label e.g. "editor", value e.g. "VS Code"). */
+	software: { label: string; value: string; sub: string }[];
 }
 
 /** Alternative "who?" text for visitors with the secret theme unlocked (empty = normal text). */
@@ -157,7 +165,10 @@ export const settingDefaults: SiteSettings = {
 			{ name: 'twitter', href: 'https://twitter.com/deprivedsundei', description: '' },
 			{ name: 'github', href: 'https://github.com/rayuii', description: '' },
 			{ name: 'email', href: 'mailto:sundei@sundei.ee', description: '' }
-		]
+		],
+		titles: { wip: 'wip', projects: 'projects', links: 'links', friends: 'friends' },
+		showCurrently: true,
+		showLatest: true
 	},
 	now: {
 		updated: 'February 2026',
@@ -249,6 +260,11 @@ export const settingDefaults: SiteSettings = {
 			{ label: 'twitter', url: 'https://twitter.com/deprivedsundei' },
 			{ label: 'github', url: 'https://github.com/rayuii' },
 			{ label: 'email', url: 'mailto:sundei@sundei.ee' }
+		],
+		software: [
+			{ label: 'os', value: 'Windows 11', sub: '' },
+			{ label: 'editor', value: 'VS Code', sub: '' },
+			{ label: 'design', value: 'Figma', sub: '' }
 		]
 	},
 	aboutAlt: { bio: '' }
