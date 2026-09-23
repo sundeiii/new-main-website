@@ -472,7 +472,9 @@
 </nav>
 
 {#key $page.url.pathname}
+	<!-- flex-1: fills the leftover height so the footer stays at the bottom of short pages -->
 	<main 
+		class="flex-1"
 		in:fly={{ y: 8, duration: ready ? 300 : 0, delay: ready ? 100 : 0, easing: cubicOut }}
 		out:fade={{ duration: ready ? 150 : 0 }}
 	>
