@@ -1,22 +1,4 @@
-let cachedToken: { token: string; expires: number } | null = null;
-
-async function getToken(): Promise<string> {
-	if (cachedToken && Date.now() < cachedToken.expires) return cachedToken.token;
-	const res = await fetch('https://osu.ppy.sh/oauth/token', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			client_id: Number(process.env.OSU_CLIENT_ID),
-			client_secret: process.env.OSU_CLIENT_SECRET,
-			grant_type: 'client_credentials',
-			scope: 'public'
-		})
-	});
-	const data = await res.json();
-	if (!data.access_token) throw new Error('Failed to get osu! token');
-	cachedToken = { token: data.access_token, expires: Date.now() + (data.expires_in - 60) * 1000 };
-	return cachedToken.token;
-}
+import { getOsuToken as getToken } from '$lib/server/osuApi';
 
 export async function GET({ url }: any) {
 	const username = url.searchParams.get('u');

@@ -1,10 +1,7 @@
 <script lang="ts">
+	import { countryName, flagUrl } from '$lib/flags';
 	export let osuUser: any;
 
-	function flagUrl(code: string): string {
-		const codepoints = [...code.toUpperCase()].map(c => (0x1F1E6 + c.charCodeAt(0) - 65).toString(16)).join('-');
-		return `https://osu.ppy.sh/assets/images/flags/${codepoints}.svg`;
-	}
 </script>
 
 <div class="rounded-lg overflow-hidden shadow-xl border border-ocean-300 dark:border-ocean-700">
@@ -25,7 +22,8 @@
 				{#if osuUser.country_code}
 					<img
 						src={flagUrl(osuUser.country_code)}
-						alt={osuUser.country_code}
+						alt={countryName(osuUser.country_code)}
+						title={countryName(osuUser.country_code)}
 						class="w-5 h-auto flex-shrink-0 drop-shadow"
 					/>
 				{/if}
