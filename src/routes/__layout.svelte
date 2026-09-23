@@ -152,14 +152,14 @@
 		{ href: '/events', label: 'events' },
 		{ href: '/gallery', label: 'gallery' },
 		{ href: '/music', label: 'music' },
-		{ href: '/guestbook', label: 'guestbook' },
-		{ href: '/activities', label: 'activities' }
+		{ href: '/guestbook', label: 'guestbook' }
 	];
 
 	// Smaller pages that only get a spot in the footer.
 	const footerExtraLinks = [
 		{ href: '/now', label: 'now' },
 		{ href: '/projects', label: 'projects' },
+		{ href: '/uses', label: 'uses' },
 		{ href: '/changelog', label: 'changelog' },
 		{ href: '/rss.xml', label: 'rss' }
 	];

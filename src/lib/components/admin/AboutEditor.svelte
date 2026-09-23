@@ -71,6 +71,20 @@
 	{/each}
 
 	<div class="flex flex-col gap-2">
+		<span class={fieldLabel}>software & setup (shown on /uses)</span>
+		{#each about.software as sw, i}
+			<div class="flex flex-wrap sm:flex-nowrap gap-2">
+				<input bind:value={sw.label} placeholder="what (e.g. browser)" aria-label="label" class="{field} sm:!w-36" />
+				<input bind:value={sw.value} placeholder="name (e.g. Firefox)" aria-label="name" class={field} />
+				<input bind:value={sw.sub} placeholder="details (optional)" aria-label="details" class={field} />
+				<button on:click={() => (about.software = move(about.software, i, -1))} class={subtle} aria-label="move up">▲</button>
+				<button on:click={() => (about.software = about.software.filter((_, j) => j !== i))} class={danger} aria-label="remove">✕</button>
+			</div>
+		{/each}
+		<div><button on:click={() => (about.software = [...about.software, { label: '', value: '', sub: '' }])} class={subtle}>+ software</button></div>
+	</div>
+
+	<div class="flex flex-col gap-2">
 		<span class={fieldLabel}>languages & tools</span>
 		<div class="flex flex-wrap gap-2">
 			{#each about.languages as lang, i}
