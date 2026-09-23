@@ -1,19 +1,21 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { isAdmin } from '$lib/server/adminAuth';
-import { getPost, renderMarkdown } from '$lib/server/blog';
+import { getPost, isKind, renderMarkdown } from '$lib/server/blog';
 
-// One post with its markdown rendered to HTML. Drafts are only visible to the logged-in admin.
-export const GET: RequestHandler = async ({ params, request }) => {
+// One post, event or project (?kind=, default post) with its markdown rendered to HTML.
+// Drafts are only visible to the logged-in admin.
+export const GET: RequestHandler = async ({ params, request, url }) => {
+	const kind = url.searchParams.get('kind') || 'post';
 	try {
-		const post = await getPost(params.slug, { includeDrafts: isAdmin(request) });
+		const post = isKind(kind) ? await getPost(params.slug, kind, { includeDrafts: isAdmin(request) }) : null;
 		if (post) {
 			const { content, ...rest } = post;
 			return new Response(JSON.stringify({ ...rest, html: renderMarkdown(content) }), {
 				headers: { 'Content-Type': 'application/json' }
 			});
 		}
-	} catch (error) {
-		console.error('Failed to load blog post:', error);
+	} catch (error: any) {
+		if (error?.code !== 'ER_NO_SUCH_TABLE') console.error('Failed to load post:', error);
 	}
-	return new Response(JSON.stringify({ error: 'Post not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+	return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
 };

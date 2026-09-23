@@ -8,8 +8,13 @@
 
 	export let onUnauthorized: () => void;
 
+	type Kind = 'post' | 'event' | 'project';
+
 	interface Post {
 		id?: number;
+		kind: Kind;
+		location: string | null;
+		link: string | null;
 		slug: string;
 		title: string;
 		excerpt: string;
@@ -23,6 +28,14 @@
 	const today = () => new Date().toISOString().slice(0, 10);
 	const slugify = (s: string) =>
 		s.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 100);
+
+	const kinds: { value: Kind; label: string; path: string }[] = [
+		{ value: 'post', label: 'blog posts', path: '/blog' },
+		{ value: 'event', label: 'events', path: '/events' },
+		{ value: 'project', label: 'projects', path: '/projects' }
+	];
+	const pathOf = (p: { kind: Kind; slug: string }) => `${kinds.find((k) => k.value === p.kind)?.path ?? '/blog'}/${p.slug}`;
+	let kindFilter: Kind = 'post';
 
 	let posts: Post[] = [];
 	let loading = true;
@@ -66,6 +79,7 @@
 
 	$: if (draft && !slugTouched) draft.slug = slugify(draft.title);
 	$: previewHtml = draft ? (marked.parse(draft.content || '', { async: false, gfm: true, breaks: true }) as string) : '';
+	$: shown = posts.filter((p) => (p.kind ?? 'post') === kindFilter);
 	$: words = draft ? draft.content.trim().split(/\s+/).filter(Boolean).length : 0;
 
 	async function load() {
@@ -80,13 +94,13 @@
 	}
 
 	function newPost() {
-		draft = { slug: '', title: '', excerpt: '', banner: '', content: '', published: false, date: today() };
+		draft = { kind: kindFilter, location: '', link: '', slug: '', title: '', excerpt: '', banner: '', content: '', published: false, date: today() };
 		slugTouched = false;
 		error = saved = '';
 	}
 
 	function edit(post: Post) {
-		draft = { ...post, banner: post.banner ?? '' };
+		draft = { ...post, kind: post.kind ?? 'post', banner: post.banner ?? '', location: post.location ?? '', link: post.link ?? '' };
 		slugTouched = true;
 		error = saved = '';
 	}
@@ -98,7 +112,7 @@
 		error = saved = '';
 		try {
 			const result: Post = draft.id ? await api('PATCH', draft) : await api('POST', draft);
-			draft = { ...result, banner: result.banner ?? '' };
+			draft = { ...result, banner: result.banner ?? '', location: result.location ?? '', link: result.link ?? '' };
 			slugTouched = true;
 			saved = draft.published ? 'saved & published' : 'saved as draft';
 			await load();
@@ -141,32 +155,47 @@
 	{#if error}<p class="text-red-600 dark:text-red-400 text-sm">{error}</p>{/if}
 
 	{#if !draft}
-		<div class="flex items-center justify-between">
-			<span class="text-ocean-600 dark:text-ocean-400 text-sm">{posts.length} posts</span>
-			<button on:click={newPost} class={primary}>+ new post</button>
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<div class="flex gap-1">
+				{#each kinds as k}
+					<button
+						on:click={() => (kindFilter = k.value)}
+						class="px-3 py-1 text-sm rounded {kindFilter === k.value ? 'bg-ocean-600 text-white' : 'text-ocean-600 dark:text-ocean-400 hover:bg-ocean-200 dark:hover:bg-ocean-800'}"
+					>
+						{k.label} ({posts.filter((p) => (p.kind ?? 'post') === k.value).length})
+					</button>
+				{/each}
+			</div>
+			<button on:click={newPost} class={primary}>+ new {kindFilter}</button>
 		</div>
 
 		{#if loading}
 			<p class="text-ocean-600 dark:text-ocean-400 text-sm">loading…</p>
 		{:else}
 			<div class="flex flex-col gap-2">
-				{#each posts as post (post.id)}
+				{#each shown as post (post.id)}
 					<div class="border border-ocean-300 dark:border-ocean-700 rounded p-3 flex items-center gap-3">
 						{#if post.banner}<img src={post.banner} alt="" loading="lazy" class="w-20 h-12 object-cover rounded hidden sm:block" />{/if}
 						<div class="flex-1 min-w-0">
 							<div class="text-ocean-900 dark:text-ocean-100 text-sm truncate">{post.title}</div>
 							<div class="text-xs text-ocean-600 dark:text-ocean-400">
-								{post.date} · /blog/{post.slug} ·
+								{post.date} · {pathOf(post)} ·
 								<span class={post.published ? 'text-ocean-green' : 'text-ocean-yellow'}>{post.published ? 'published' : 'draft'}</span>
 							</div>
 						</div>
-						<a href="/blog/{post.slug}" target="_blank" class={subtle}>view</a>
+						<a href={pathOf(post)} target="_blank" class={subtle}>view</a>
 						<button on:click={() => edit(post)} class={subtle}>edit</button>
 						<button on:click={() => remove(post)} class={danger} disabled={busy}>delete</button>
 					</div>
 				{:else}
 					<p class="text-ocean-600 dark:text-ocean-400 text-sm">
-						no posts written here yet. your welcome post is a hand-written page, so it doesn't show up in this list, but it stays on the blog.
+						{#if kindFilter === 'post'}
+							no posts written here yet. your welcome post is a hand-written page, so it doesn't show up in this list, but it stays on the blog.
+						{:else if kindFilter === 'event'}
+							no events yet. add LANs and meetups here; upcoming ones show a countdown on /events.
+						{:else}
+							no project pages yet. each one gets its own page on /projects with a screenshot and a link.
+						{/if}
 					</p>
 				{/each}
 			</div>
@@ -177,7 +206,7 @@
 			<button on:click={() => { draft = null; load(); }} class={subtle}>← all posts</button>
 			<div class="flex flex-wrap items-center gap-2">
 				{#if saved}<span class="text-ocean-green text-sm">{saved}</span>{/if}
-				{#if draft.id}<a href="/blog/{draft.slug}" target="_blank" class={subtle}>view ↗</a>{/if}
+				{#if draft.id}<a href={pathOf(draft)} target="_blank" class={subtle}>view ↗</a>{/if}
 				<button on:click={() => save()} class={subtle} disabled={busy}>{busy ? 'saving…' : 'save'}</button>
 				{#if draft.published}
 					<button on:click={() => save(false)} class={subtle} disabled={busy}>unpublish</button>
@@ -187,26 +216,48 @@
 			</div>
 		</div>
 
+		<div class="flex gap-1">
+			{#each kinds as k}
+				<button
+					on:click={() => draft && (draft.kind = k.value)}
+					class="px-3 py-1 text-xs rounded {draft.kind === k.value ? 'bg-ocean-600 text-white' : 'border border-ocean-300 dark:border-ocean-600 text-ocean-600 dark:text-ocean-400'}"
+				>
+					{k.value}
+				</button>
+			{/each}
+		</div>
+
 		<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 			<div class="sm:col-span-2">
 				<label for="b-title" class={fieldLabel}>title</label>
 				<input id="b-title" bind:value={draft.title} maxlength="200" class={field} />
 			</div>
 			<div>
-				<label for="b-date" class={fieldLabel}>date</label>
+				<label for="b-date" class={fieldLabel}>{draft.kind === 'event' ? 'event date' : 'date'}</label>
 				<input id="b-date" type="date" bind:value={draft.date} class={field} />
 			</div>
 		</div>
 		<div>
-			<label for="b-slug" class={fieldLabel}>url: /blog/{draft.slug || '…'}</label>
+			<label for="b-slug" class={fieldLabel}>url: {pathOf({ kind: draft.kind, slug: draft.slug || '…' })}</label>
 			<input id="b-slug" bind:value={draft.slug} on:input={() => (slugTouched = true)} class={field} />
 		</div>
+		{#if draft.kind === 'event'}
+			<div>
+				<label for="b-location" class={fieldLabel}>location</label>
+				<input id="b-location" bind:value={draft.location} maxlength="200" placeholder="e.g. TipiLAN, Tallinn" class={field} />
+			</div>
+		{:else if draft.kind === 'project'}
+			<div>
+				<label for="b-link" class={fieldLabel}>link (repo or live site)</label>
+				<input id="b-link" type="url" bind:value={draft.link} placeholder="https://github.com/…" class={field} />
+			</div>
+		{/if}
 		<div>
-			<label for="b-excerpt" class={fieldLabel}>excerpt (shown on the blog list)</label>
+			<label for="b-excerpt" class={fieldLabel}>{draft.kind === 'project' ? 'one-line description' : 'excerpt (shown on the list)'}</label>
 			<input id="b-excerpt" bind:value={draft.excerpt} maxlength="500" class={field} />
 		</div>
 		<div>
-			<label for="b-banner" class={fieldLabel}>banner image url (optional)</label>
+			<label for="b-banner" class={fieldLabel}>{draft.kind === 'project' ? 'screenshot url (optional)' : 'banner image url (optional)'}</label>
 			<div class="flex gap-2">
 				<input id="b-banner" type="url" bind:value={draft.banner} class={field} />
 				<UploadButton folder="blog" maxSize={2400} on:uploaded={(e) => draft && (draft.banner = e.detail)} on:error={(e) => (error = e.detail)} />

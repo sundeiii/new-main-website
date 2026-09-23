@@ -148,10 +148,19 @@
 		//{ href: '/stats', label: 'stats' },
 		{ href: '/blog', label: 'blog' },
 		{ href: '/tournaments', label: 'tournaments' },
+		{ href: '/osu', label: 'osu!' },
+		{ href: '/events', label: 'events' },
 		{ href: '/gallery', label: 'gallery' },
 		{ href: '/music', label: 'music' },
 		{ href: '/guestbook', label: 'guestbook' },
 		{ href: '/activities', label: 'activities' }
+	];
+
+	// Smaller pages that only get a spot in the footer.
+	const footerExtraLinks = [
+		{ href: '/now', label: 'now' },
+		{ href: '/projects', label: 'projects' },
+		{ href: '/changelog', label: 'changelog' }
 	];
 
 	function isActive(linkHref: string, currentPath: string): boolean {
@@ -486,7 +495,7 @@
 			<div class="flex flex-col gap-1.5 text-sm">
 				<span class="text-ocean-900 dark:text-ocean-200 text-xs font-medium mb-1">pages</span>
 				<div class="flex flex-wrap gap-x-4 gap-y-1">
-					{#each navLinks as link}
+					{#each [...navLinks, ...footerExtraLinks] as link}
 						<a 
 							href={link.href}
 						class="text-ocean-600 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 transition-colors text-xs"

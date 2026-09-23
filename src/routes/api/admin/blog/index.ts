@@ -21,12 +21,12 @@ export const POST: RequestHandler = async ({ request }) => {
 	await ensureTable();
 	try {
 		const [result]: any = await pool.query(
-			'INSERT INTO blog_posts (slug, title, excerpt, banner, content, published, date) VALUES (?, ?, ?, ?, ?, ?, ?)',
-			[post.slug, post.title, post.excerpt, post.banner, post.content, post.published, post.date]
+			'INSERT INTO blog_posts (kind, slug, title, excerpt, banner, content, published, date, location, link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+			[post.kind, post.slug, post.title, post.excerpt, post.banner, post.content, post.published, post.date, post.location, post.link]
 		);
 		return json({ ...post, id: result.insertId }, 201);
 	} catch (e) {
-		if (duplicateSlug(e)) return json({ error: `a post with the url /blog/${post.slug} already exists` }, 409);
+		if (duplicateSlug(e)) return json({ error: `something already uses the url slug "${post.slug}"` }, 409);
 		throw e;
 	}
 };
@@ -42,13 +42,13 @@ export const PATCH: RequestHandler = async ({ request }) => {
 	await ensureTable();
 	try {
 		const [result]: any = await pool.query(
-			'UPDATE blog_posts SET slug = ?, title = ?, excerpt = ?, banner = ?, content = ?, published = ?, date = ? WHERE id = ?',
-			[post.slug, post.title, post.excerpt, post.banner, post.content, post.published, post.date, body.id]
+			'UPDATE blog_posts SET kind = ?, slug = ?, title = ?, excerpt = ?, banner = ?, content = ?, published = ?, date = ?, location = ?, link = ? WHERE id = ?',
+			[post.kind, post.slug, post.title, post.excerpt, post.banner, post.content, post.published, post.date, post.location, post.link, body.id]
 		);
 		if (result.affectedRows === 0) return json({ error: 'Post not found' }, 404);
 		return json({ ...post, id: body.id });
 	} catch (e) {
-		if (duplicateSlug(e)) return json({ error: `a post with the url /blog/${post.slug} already exists` }, 409);
+		if (duplicateSlug(e)) return json({ error: `something already uses the url slug "${post.slug}"` }, 409);
 		throw e;
 	}
 };

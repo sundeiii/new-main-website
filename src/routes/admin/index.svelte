@@ -3,10 +3,11 @@
 	import BlogAdmin from '$lib/components/admin/BlogAdmin.svelte';
 	import GuestbookAdmin from '$lib/components/admin/GuestbookAdmin.svelte';
 	import MediaAdmin from '$lib/components/admin/MediaAdmin.svelte';
+	import PagesAdmin from '$lib/components/admin/PagesAdmin.svelte';
 	import TournamentsAdmin from '$lib/components/admin/TournamentsAdmin.svelte';
 	import { field, primary, subtle } from '$lib/components/admin/styles';
 
-	const tabs = ['blog', 'tournaments', 'guestbook', 'media'] as const;
+	const tabs = ['blog', 'pages', 'tournaments', 'guestbook', 'media'] as const;
 	let activeTab: typeof tabs[number] = 'blog';
 
 	let checking = true;
@@ -57,7 +58,7 @@
 		<div class="flex items-start justify-between gap-4">
 			<div>
 				<h1 class="text-ocean-900 dark:text-ocean-100">admin panel</h1>
-				<p class="text-ocean-700 dark:text-ocean-400">manage the blog, tournaments, guestbook and images</p>
+				<p class="text-ocean-700 dark:text-ocean-400">manage the blog, pages, tournaments, guestbook and images</p>
 			</div>
 			{#if loggedIn}<button on:click={logOut} class={subtle}>log out</button>{/if}
 		</div>
@@ -92,6 +93,8 @@
 
 			{#if activeTab === 'blog'}
 				<BlogAdmin onUnauthorized={sessionExpired} />
+			{:else if activeTab === 'pages'}
+				<PagesAdmin onUnauthorized={sessionExpired} />
 			{:else if activeTab === 'tournaments'}
 				<TournamentsAdmin onUnauthorized={sessionExpired} />
 			{:else if activeTab === 'guestbook'}

@@ -1,8 +1,20 @@
 <script context="module" lang="ts">
-	export const prerender = true;
+	import type { Load } from '@sveltejs/kit';
+
+	// Rendered per request (not prerendered) so the intro and project list edited in /admin
+	// show up without a redeploy.
+	export const load: Load = async ({ fetch }) => {
+		const [home, projects] = await Promise.all([
+			fetch('/api/site/home').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+			fetch('/api/blog?kind=project').then((r) => (r.ok ? r.json() : [])).catch(() => [])
+		]);
+		return { props: { intro: home?.intro ?? '', projectPages: projects } };
+	};
 </script>
 
 <script lang="ts">
+	export let intro: string;
+	export let projectPages: { slug: string; title: string; excerpt: string }[];
 	import Branch from '$lib/components/Branch.svelte';
 	import Language from '$lib/components/Language.svelte';
 	import ProjectItem from '$lib/components/ProjectItem.svelte';
@@ -280,8 +292,8 @@
 </script>
 
 <svelte:head>
-	<title>portfolio</title>
-	<meta property="og:title" content="portfolio" />
+	<title>sundei ^_^</title>
+	<meta property="og:title" content="my website :3" />
 	<meta name="description" content="a collection of various things" />
 	<meta property="og:description" content="a collection of various things" />
 	<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f0f5" />
@@ -313,6 +325,9 @@
 			</h1>
 		</div>
 
+		{#if intro}
+			<p class="text-ocean-700 dark:text-ocean-400 max-w-xl -mt-3">{intro}</p>
+		{/if}
 		<div>
 			<h1 class="text-ocean-900 dark:text-ocean-100">wip</h1>
 			<ul class="list-disc list-inside text-ocean-800 dark:text-ocean-blue">
@@ -322,11 +337,21 @@
 			</ul>
 		</div>
 		<div>
-			<h1 class="text-ocean-900 dark:text-ocean-100">projects</h1>
+			<h1 class="text-ocean-900 dark:text-ocean-100">
+				projects
+				{#if projectPages.length}<a href="/projects" class="text-xs text-ocean-600 dark:text-ocean-400 hover:underline ml-1">all →</a>{/if}
+			</h1>
 			<ul class="list-disc list-inside text-ocean-800 dark:text-ocean-blue">
-				<ProjectItem href="https://github.com/rayuii/skriptlinux" name="linux scripts" description="school forces me to suffer" />
-				<ProjectItem href="https://www.tartulinnaliin.ee" name="where is my bus lol" description="tartu bussiajad, but website" />
-				<ProjectItem href="https://github.com/rayuii/fonoteek" name="fonoteek" description="object-oriented programming stuff" />
+				<!-- Project pages from /admin → blog (kind "project"); the old list until there are any -->
+				{#if projectPages.length}
+					{#each projectPages as project}
+						<ProjectItem href="/projects/{project.slug}" name={project.title} description={project.excerpt || undefined} internal />
+					{/each}
+				{:else}
+					<ProjectItem href="https://github.com/rayuii/skriptlinux" name="linux scripts" description="school forces me to suffer" />
+					<ProjectItem href="https://www.tartulinnaliin.ee" name="where is my bus lol" description="tartu bussiajad, but website" />
+					<ProjectItem href="https://github.com/rayuii/fonoteek" name="fonoteek" description="object-oriented programming stuff" />
+				{/if}
 			</ul>
 		</div>
 		<div>
@@ -340,6 +365,9 @@
 		<div>
 			<h1 class="text-ocean-900 dark:text-ocean-100">friends</h1>
 			<div class="flex flex-wrap gap-1 mt-2">
+
+				<a href="https://advelos.moe"><img src="/advelosbutton.gif" alt="advelos button" title="advelos!!"></a>
+
 				<a href="https://nyoemii.dev/" target="_blank" rel="noopener noreferrer">
 				<img src="https://nyoemii.dev/media/img/button.png" alt="noemi's puppyhouse" class="h-[31px] w-[88px] image-pixelated" />
 				</a>
@@ -347,7 +375,7 @@
 				<a href="https://centaurea.ee/" target="_blank" rel="noopener noreferrer">
 				<img src="/centaurea.gif" alt="centaurea" class="h-[31px] w-[88px]" />
 				</a>
-
+				
 				<button
 				on:click={copyButtonCode}
 				title={copied ? 'copied!' : 'copy embed code'}
@@ -504,8 +532,8 @@
 											{activity.state}
 										</a>
 										{#if osuUser}
-											<div class="absolute bottom-full right-0 mb-2 z-50 w-64 pointer-events-none opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 ease-out">
-												<OsuTooltip {osuUser} />
+											<div class="absolute bottom-full right-0 pb-2 z-50 w-64 pointer-events-none group-hover:pointer-events-auto opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 ease-out">
+												<a href="https://osu.ppy.sh/users/{osuUser.id ?? OSU_SELF_USERNAME}" target="_blank" rel="noopener noreferrer" class="block"><OsuTooltip {osuUser} /></a>
 											</div>
 										{/if}
 									</div>
@@ -514,8 +542,8 @@
 									<div class="relative group">
 										<span class="text-ocean-700 dark:text-ocean-400 text-sm cursor-default">{activity.state}</span>
 										{#if osuUser}
-											<div class="absolute bottom-full right-0 mb-2 z-50 w-64 pointer-events-none opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 ease-out">
-												<OsuTooltip {osuUser} />
+											<div class="absolute bottom-full right-0 pb-2 z-50 w-64 pointer-events-none group-hover:pointer-events-auto opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 ease-out">
+												<a href="https://osu.ppy.sh/users/{osuUser.id ?? OSU_SELF_USERNAME}" target="_blank" rel="noopener noreferrer" class="block"><OsuTooltip {osuUser} /></a>
 											</div>
 										{/if}
 									</div>

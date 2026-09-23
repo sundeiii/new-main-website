@@ -7,7 +7,19 @@
 	let inputEl: HTMLInputElement;
 	let terminalEl: HTMLDivElement;
 
-	const commands: Record<string, { description: string; hidden?: boolean; action: (args?: string) => string | { text: string; html: boolean } }> = {
+	type Output = string | { text: string; html: boolean };
+
+	// Pages `random`, `ls` and `cd` know about.
+	const PAGES = ['about', 'blog', 'tournaments', 'gallery', 'music', 'guestbook', 'events', 'projects', 'osu', 'now', 'changelog', 'skins'];
+
+	const getJson = async (url: string) => {
+		const res = await fetch(url);
+		if (!res.ok) throw new Error(`${res.status}`);
+		return res.json();
+	};
+	const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+
+	const commands: Record<string, { description: string; hidden?: boolean; action: (args?: string) => Output | Promise<Output> }> = {
 		help: {
 			description: 'show available commands',
 			action: () => {
@@ -158,6 +170,102 @@
 				return 'navigating to /typing...';
 			}
 		},
+		osu: {
+			description: 'my osu! stats',
+			action: async () => {
+				const { username } = await getJson('/api/site/osu');
+				const u = await getJson(`/api/osu-user?u=${encodeURIComponent(username)}`);
+				if (!u) return `couldn't find ${username} on osu! right now`;
+				const n = (x: number | null) => (x == null ? '–' : Math.round(x).toLocaleString('en-US'));
+				return {
+					text: `${u.team?.short_name ? `<span class="text-ocean-400">[${esc(u.team.short_name)}]</span> ` : ''}<span class="text-ocean-magenta">${esc(u.username)}</span> · #${n(u.global_rank)} global · #${n(u.country_rank)} ${esc(u.country_code ?? '')} · ${n(u.pp)}pp
+<span class="text-ocean-400">more at /osu</span>`,
+					html: true
+				};
+			}
+		},
+		song: {
+			description: "what i'm listening to",
+			action: async () => {
+				const np = await getJson('/api/now-playing');
+				if (!np.track) return 'silence. for now.';
+				const artists = np.track.artists.map((a: any) => a.name).join(', ');
+				const label = np.isPlayingNow && !np.isPaused ? '▶ now playing' : '⏸ last played';
+				return { text: `<span class="text-ocean-green">${label}:</span> ${esc(np.track.name)} – ${esc(artists)}`, html: true };
+			}
+		},
+		lan: {
+			description: 'next event',
+			action: async () => {
+				const events: { slug: string; title: string; date: string; location: string | null }[] = await getJson('/api/blog?kind=event');
+				const today = new Date().toISOString().slice(0, 10);
+				const next = events.filter((e) => e.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0];
+				if (!next) return 'no events planned. touch grass maybe?';
+				const days = Math.round((new Date(next.date + 'T00:00:00').getTime() - new Date(today + 'T00:00:00').getTime()) / 864e5);
+				const when = days === 0 ? 'today!!' : days === 1 ? 'tomorrow' : `in ${days} days`;
+				return {
+					text: `<span class="text-ocean-yellow">${esc(next.title)}</span> ${when}${next.location ? ` · ${esc(next.location)}` : ''}
+<span class="text-ocean-400">details: /events/${esc(next.slug)}</span>`,
+					html: true
+				};
+			}
+		},
+		random: {
+			description: 'take me somewhere',
+			action: async () => {
+				const posts: { slug: string }[] = await getJson('/api/blog').catch(() => []);
+				const targets = [...PAGES.map((p) => `/${p}`), ...posts.map((p) => `/blog/${p.slug}`)];
+				const target = targets[Math.floor(Math.random() * targets.length)];
+				setTimeout(() => goto(target), 600);
+				return `🎲 rolling... ${target}`;
+			}
+		},
+		ls: {
+			description: 'list pages',
+			hidden: true,
+			action: () => PAGES.map((p) => `${p}/`).join('  ')
+		},
+		cd: {
+			description: 'go to a page',
+			hidden: true,
+			action: (args) => {
+				const target = (args || '').replace(/^\/|\/$/g, '');
+				if (!target || target === '~' || target === '..') return 'you are already home';
+				if (!PAGES.includes(target)) return `cd: ${target}: no such directory (try ls)`;
+				setTimeout(() => goto(`/${target}`), 300);
+				return `navigating to /${target}...`;
+			}
+		},
+		sudo: {
+			description: 'nice try',
+			hidden: true,
+			action: () => 'visitor is not in the sudoers file. this incident will be reported to kwan.'
+		},
+		rm: {
+			description: 'no',
+			hidden: true,
+			action: () => 'rm: cannot remove: this website is load-bearing'
+		},
+		coffee: {
+			description: 'brew',
+			hidden: true,
+			action: () => "☕ brewing... error 418: i'm a teapot"
+		},
+		kwan: {
+			description: 'kwan',
+			hidden: true,
+			action: () => commands.quote.action()
+		},
+		exit: {
+			description: 'leave',
+			hidden: true,
+			action: () => 'there is no escape. you live here now.'
+		},
+		hello: {
+			description: 'hi',
+			hidden: true,
+			action: () => 'hiii :3'
+		},
 		tf: {
 			description: 'secret :3',
 			hidden: true,
@@ -197,19 +305,29 @@
 		const cmd = parts[0].toLowerCase();
 		const args = parts.slice(1).join(' ');
 
-		const command = commands[cmd];
+		const command = commands[cmd === 'hi' ? 'hello' : cmd];
 		if (command) {
-			const result = command.action(args);
-			if (typeof result === 'object' && result.html) {
-				if (result.text) {
-					history = [...history, { command: trimmed, output: result.text, isHtml: true }];
-				} else {
-					history = [...history, { command: trimmed, output: '' }];
-				}
-			} else if (typeof result === 'string' && result) {
-				history = [...history, { command: trimmed, output: result }];
+			const toEntry = (result: Output) =>
+				typeof result === 'object' ? { command: trimmed, output: result.text, isHtml: result.html && !!result.text } : { command: trimmed, output: result || '' };
+			let result: Output | Promise<Output>;
+			try {
+				result = command.action(args);
+			} catch {
+				result = 'something broke. oops';
+			}
+			if (result instanceof Promise) {
+				// Show a placeholder, then fill in the answer when it arrives.
+				const index = history.length;
+				history = [...history, { command: trimmed, output: '…' }];
+				result
+					.catch(() => "couldn't reach the server. try again later")
+					.then((r) => {
+						history[index] = toEntry(r);
+						history = history;
+						setTimeout(() => terminalEl && (terminalEl.scrollTop = terminalEl.scrollHeight), 10);
+					});
 			} else {
-				history = [...history, { command: trimmed, output: '' }];
+				history = [...history, toEntry(result)];
 			}
 		} else {
 			history = [...history, { command: trimmed, output: `command not found: ${cmd}. type 'help' for available commands.` }];
