@@ -1,9 +1,18 @@
 // Editable page content, stored as JSON in the site_settings table and edited in /admin → pages.
 // Each key has defaults, so pages work before anything is saved.
 
+export interface HomeLink {
+	name: string;
+	href: string;
+	description: string;
+}
 export interface HomeSettings {
-	/** Short intro shown at the top of the home page (markdown). */
+	/** Short intro shown at the top of the home page. */
 	intro: string;
+	wip: HomeLink[];
+	/** If empty, the home page lists your /projects pages instead. */
+	projects: HomeLink[];
+	links: HomeLink[];
 }
 
 export interface NowSection {
@@ -114,6 +123,11 @@ export interface AboutSettings {
 	links: { label: string; url: string }[];
 }
 
+/** Alternative "who?" text for visitors with the secret theme unlocked (empty = normal text). */
+export interface AboutAltSettings {
+	bio: string;
+}
+
 export interface SiteSettings {
 	home: HomeSettings;
 	now: NowSettings;
@@ -123,11 +137,27 @@ export interface SiteSettings {
 	gallery: GallerySettings;
 	buttons: ButtonsSettings;
 	about: AboutSettings;
+	aboutAlt: AboutAltSettings;
 }
 
 export const settingDefaults: SiteSettings = {
 	home: {
-		intro: 'my corner of the internet — osu! tournaments, IT garbage, music & whatever else i feel like putting here.'
+		intro: 'my corner of the internet — osu! tournaments, IT garbage, music & whatever else i feel like putting here.',
+		wip: [
+			{ name: 'scripts', href: 'https://github.com/rayuii/winpowershell', description: 'powershell scripts (school)' },
+			{ name: 'titanic wiki', href: 'https://github.com/rayuii/Titanic-Wiki', description: 'contributions in estonian and dutch' },
+			{ name: 'old portfolio', href: 'https://github.com/rayuii/portfolio', description: 'buh' }
+		],
+		projects: [
+			{ name: 'linux scripts', href: 'https://github.com/rayuii/skriptlinux', description: 'school forces me to suffer' },
+			{ name: 'where is my bus lol', href: 'https://www.tartulinnaliin.ee', description: 'tartu bussiajad, but website' },
+			{ name: 'fonoteek', href: 'https://github.com/rayuii/fonoteek', description: 'object-oriented programming stuff' }
+		],
+		links: [
+			{ name: 'twitter', href: 'https://twitter.com/deprivedsundei', description: '' },
+			{ name: 'github', href: 'https://github.com/rayuii', description: '' },
+			{ name: 'email', href: 'mailto:sundei@sundei.ee', description: '' }
+		]
 	},
 	now: {
 		updated: 'February 2026',
@@ -220,7 +250,8 @@ export const settingDefaults: SiteSettings = {
 			{ label: 'github', url: 'https://github.com/rayuii' },
 			{ label: 'email', url: 'mailto:sundei@sundei.ee' }
 		]
-	}
+	},
+	aboutAlt: { bio: '' }
 };
 
 export const SETTING_KEYS = Object.keys(settingDefaults) as (keyof SiteSettings)[];

@@ -9,6 +9,7 @@
 </script>
 
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 	import { marked } from 'marked';
 	import PostBody from '$lib/components/PostBody.svelte';
@@ -16,7 +17,22 @@
 
 	export let about: AboutSettings | null;
 	$: page = about ?? settingDefaults.about;
-	$: bioHtml = marked.parse(page.bio || '', { async: false, gfm: true, breaks: true }) as string;
+	// Visitors who unlocked the secret theme can get a different "who?" text. It's only fetched in
+	// the browser, so it never appears in the page HTML.
+	let altBio = '';
+	async function loadAltBio() {
+		try {
+			if (localStorage.getItem('trans-unlocked') !== '1') return;
+			const res = await fetch('/api/site/aboutAlt');
+			if (res.ok) altBio = (await res.json()).bio || '';
+		} catch {}
+	}
+	onMount(() => {
+		loadAltBio();
+		window.addEventListener('trans-theme', loadAltBio);
+		return () => window.removeEventListener('trans-theme', loadAltBio);
+	});
+	$: bioHtml = marked.parse(altBio || page.bio || '', { async: false, gfm: true, breaks: true }) as string;
 	$: pcSpecs = page.pcBuild;
 	$: peripheralSpecs = page.peripherals;
 	$: interests = page.interests;

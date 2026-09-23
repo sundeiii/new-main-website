@@ -10,12 +10,18 @@
 			fetch('/api/blog?kind=event').then((r) => (r.ok ? r.json() : [])).catch(() => []),
 			fetch('/api/site/buttons').then((r) => (r.ok ? r.json() : null)).catch(() => null)
 		]);
-		return { props: { intro: home?.intro ?? '', projectPages: projects, events, buttons } };
+		return { props: { home, projectPages: projects, events, buttons } };
 	};
 </script>
 
 <script lang="ts">
-	export let intro: string;
+	export let home: import('$lib/siteSettings').HomeSettings | null;
+	$: homeSettings = home ?? settingDefaults.home;
+	$: intro = homeSettings.intro;
+	// Projects: your own list if you've made one, otherwise your /projects pages.
+	$: projectList = homeSettings.projects.length
+		? homeSettings.projects
+		: projectPages.map((p) => ({ name: p.title, href: `/projects/${p.slug}`, description: p.excerpt }));
 	export let projectPages: { slug: string; title: string; excerpt: string }[];
 	export let events: { slug: string; title: string; date: string; endDate: string | null; location: string | null }[];
 	export let buttons: import('$lib/siteSettings').ButtonsSettings | null;
@@ -356,40 +362,22 @@
 				📅 next up: {nextUp.title} {daysBetween(today(), nextUp.date) === 1 ? 'tomorrow' : `in ${daysBetween(today(), nextUp.date)} days`}
 			</a>
 		{/if}
-		<div>
-			<h1 class="text-ocean-900 dark:text-ocean-100">wip</h1>
-			<ul class="list-disc list-inside text-ocean-800 dark:text-ocean-blue">
-				<ProjectItem href="https://github.com/rayuii/winpowershell" name="scripts" description="powershell scripts (school)" />
-				<ProjectItem href="https://github.com/rayuii/Titanic-Wiki" name="titanic wiki" description="contributions in estonian and dutch" />
-				<ProjectItem href="https://github.com/rayuii/portfolio" name="old portfolio" description="buh" />
-			</ul>
-		</div>
-		<div>
-			<h1 class="text-ocean-900 dark:text-ocean-100">
-				projects
-				{#if projectPages.length}<a href="/projects" class="text-xs text-ocean-600 dark:text-ocean-400 hover:underline ml-1">all →</a>{/if}
-			</h1>
-			<ul class="list-disc list-inside text-ocean-800 dark:text-ocean-blue">
-				<!-- Project pages from /admin → blog (kind "project"); the old list until there are any -->
-				{#if projectPages.length}
-					{#each projectPages as project}
-						<ProjectItem href="/projects/{project.slug}" name={project.title} description={project.excerpt || undefined} internal />
-					{/each}
-				{:else}
-					<ProjectItem href="https://github.com/rayuii/skriptlinux" name="linux scripts" description="school forces me to suffer" />
-					<ProjectItem href="https://www.tartulinnaliin.ee" name="where is my bus lol" description="tartu bussiajad, but website" />
-					<ProjectItem href="https://github.com/rayuii/fonoteek" name="fonoteek" description="object-oriented programming stuff" />
-				{/if}
-			</ul>
-		</div>
-		<div>
-			<h1 class="text-ocean-900 dark:text-ocean-100">links</h1>
-			<ul class="list-disc list-inside text-ocean-800 dark:text-ocean-blue">
-				<ProjectItem href="https://twitter.com/deprivedsundei" name="twitter" />
-				<ProjectItem href="https://github.com/rayuii" name="github" />
-				<ProjectItem href="mailto:sundei@sundei.ee" name="email" />
-			</ul>
-		</div>
+		<!-- wip / projects / links, edited in /admin → pages → home -->
+		{#each [{ title: 'wip', items: homeSettings.wip }, { title: 'projects', items: projectList }, { title: 'links', items: homeSettings.links }] as group}
+			{#if group.items.length}
+				<div>
+					<h1 class="text-ocean-900 dark:text-ocean-100">
+						{group.title}
+						{#if group.title === 'projects' && projectPages.length}<a href="/projects" class="text-xs text-ocean-600 dark:text-ocean-400 hover:underline ml-1">all →</a>{/if}
+					</h1>
+					<ul class="list-disc list-inside text-ocean-800 dark:text-ocean-blue">
+						{#each group.items as item}
+							<ProjectItem href={item.href} name={item.name} description={item.description || undefined} internal={item.href.startsWith('/')} />
+						{/each}
+					</ul>
+				</div>
+			{/if}
+		{/each}
 		<div>
 			<h1 class="text-ocean-900 dark:text-ocean-100">friends</h1>
 			<!-- 88×31 buttons, edited in /admin → pages → buttons -->

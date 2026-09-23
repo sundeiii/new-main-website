@@ -56,9 +56,13 @@
 	:global(.dark) .post-body :global(h3) {
 		color: #eff1f5;
 	}
-	.post-body :global(h1) { font-size: 1.875rem; }
+	.post-body :global(h1) { font-size: 1.6rem; }
 	.post-body :global(h2) { font-size: 1.5rem; }
 	.post-body :global(h3) { font-size: 1.25rem; }
+
+	/* No extra space above the first / below the last element, e.g. notes that start with a heading */
+	.post-body > :global(:first-child) { margin-top: 0; }
+	.post-body > :global(:last-child) { margin-bottom: 0; }
 
 	.post-body :global(ul) { list-style: disc inside; }
 	.post-body :global(ol) { list-style: decimal inside; }

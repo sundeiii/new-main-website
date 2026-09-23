@@ -6,7 +6,7 @@
 	import AboutEditor from './AboutEditor.svelte';
 	import ButtonsEditor from './ButtonsEditor.svelte';
 	import GalleryEditor from './GalleryEditor.svelte';
-	import type { AboutSettings, ButtonsSettings, GallerySettings, HomeSettings, MusicSettings, NowSettings, OsuSettings, SkinsSettings } from '$lib/siteSettings';
+	import type { AboutAltSettings, AboutSettings, ButtonsSettings, GallerySettings, HomeSettings, MusicSettings, NowSettings, OsuSettings, SkinsSettings } from '$lib/siteSettings';
 
 	export let onUnauthorized: () => void;
 
@@ -21,6 +21,7 @@
 	let gallery: GallerySettings | null = null;
 	let buttons: ButtonsSettings | null = null;
 	let about: AboutSettings | null = null;
+	let aboutAlt: AboutAltSettings | null = null;
 	let changelog: { id: number; date: string; text: string }[] = [];
 
 	let error = '';
@@ -32,7 +33,7 @@
 	async function load() {
 		error = '';
 		try {
-			[home, now, osu, music, skins, gallery, buttons, about, changelog] = await Promise.all([
+			[home, now, osu, music, skins, gallery, buttons, about, aboutAlt, changelog] = await Promise.all([
 				api('/api/admin/site/home', 'GET'),
 				api('/api/admin/site/now', 'GET'),
 				api('/api/admin/site/osu', 'GET'),
@@ -41,6 +42,7 @@
 				api('/api/admin/site/gallery', 'GET'),
 				api('/api/admin/site/buttons', 'GET'),
 				api('/api/admin/site/about', 'GET'),
+				api('/api/admin/site/aboutAlt', 'GET'),
 				api('/api/admin/changelog', 'GET')
 			]);
 		} catch (e) {
@@ -48,7 +50,7 @@
 		}
 	}
 
-	async function save(key: 'home' | 'now' | 'osu' | 'music' | 'skins' | 'gallery' | 'buttons' | 'about', value: unknown) {
+	async function save(key: 'home' | 'now' | 'osu' | 'music' | 'skins' | 'gallery' | 'buttons' | 'about' | 'aboutAlt', value: unknown) {
 		busy = true;
 		error = saved = '';
 		try {
@@ -61,6 +63,7 @@
 			if (key === 'gallery') gallery = result;
 			if (key === 'buttons') buttons = result;
 			if (key === 'about') about = result;
+			if (key === 'aboutAlt') aboutAlt = result;
 			saved = 'saved';
 			setTimeout(() => (saved = ''), 2000);
 		} catch (e) {
@@ -161,6 +164,42 @@
 
 	const blankSkin = () => ({ name: '', author: '', description: '', preview: '', screenshots: [] as string[], download: '' });
 
+	// ── home lists ──
+	type ListKey = 'wip' | 'projects' | 'links';
+	const homeLists: { key: ListKey; title: string }[] = [
+		{ key: 'wip', title: 'wip' },
+		{ key: 'projects', title: 'projects (leave empty to list your /projects pages automatically)' },
+		{ key: 'links', title: 'links' }
+	];
+	async function useProjectPages() {
+		if (!home) return;
+		try {
+			const pages: { slug: string; title: string; excerpt: string }[] = await (await fetch('/api/blog?kind=project')).json();
+			if (!pages.length) return (error = 'no project pages yet (make them in the blog tab as kind "project")');
+			home.projects = pages.map((p) => ({ name: p.title, href: `/projects/${p.slug}`, description: p.excerpt }));
+		} catch (e) {
+			error = (e as Error).message;
+		}
+	}
+
+	// ── song of the month lookup ──
+	let songLink = '';
+	let songLookingUp = false;
+	async function fetchSong() {
+		if (!music || !songLink.trim()) return;
+		songLookingUp = true;
+		error = '';
+		try {
+			const song = await api(`/api/admin/song-lookup?q=${encodeURIComponent(songLink.trim())}`, 'GET');
+			music.songOfTheMonth = { ...song, note: music.songOfTheMonth?.note ?? '' };
+			songLink = '';
+		} catch (e) {
+			error = (e as Error).message;
+		} finally {
+			songLookingUp = false;
+		}
+	}
+
 	const musicNotesExample = "music i've been listening to lately.\n\nno rankings, no serious reviews, just songs/albums i like enough to put here.";
 
 	// Now-page items are edited one per line.
@@ -206,6 +245,24 @@
 				<label for="p-intro" class={fieldLabel}>intro (shown under your name on the home page)</label>
 				<textarea id="p-intro" bind:value={home.intro} rows="3" maxlength="1000" class={field} />
 			</div>
+			{#each homeLists as list}
+				<div class="flex flex-col gap-2">
+					<div class="flex items-center justify-between gap-2">
+						<span class={fieldLabel}>{list.title}</span>
+						{#if list.key === 'projects'}<button on:click={useProjectPages} class="{subtle} !text-xs">fill from my project pages</button>{/if}
+					</div>
+					{#each home[list.key] as item, i}
+						<div class="flex flex-wrap sm:flex-nowrap gap-2">
+							<input bind:value={item.name} placeholder="name" aria-label="name" class="{field} sm:!w-44" />
+							<input bind:value={item.href} placeholder="https://…, /projects/…, or mailto:…" aria-label="link" class={field} />
+							<input bind:value={item.description} placeholder="description (optional)" aria-label="description" class={field} />
+							<button on:click={() => home && (home[list.key] = move(home[list.key], i, -1))} class={subtle} aria-label="move up">▲</button>
+							<button on:click={() => home && (home[list.key] = home[list.key].filter((_, j) => j !== i))} class={danger} aria-label="remove">✕</button>
+						</div>
+					{/each}
+					<div><button on:click={() => home && (home[list.key] = [...home[list.key], { name: '', href: '', description: '' }])} class={subtle}>+ add</button></div>
+				</div>
+			{/each}
 			<div><button on:click={() => save('home', home)} class={primary} disabled={busy}>save</button></div>
 		</div>
 
@@ -320,6 +377,10 @@
 						<button on:click={() => music && (music.songOfTheMonth = { title: '', artist: '', url: '', image: '', note: '' })} class={subtle}>+ add</button>
 					{/if}
 				</div>
+				<form on:submit|preventDefault={fetchSong} class="flex gap-2">
+					<input bind:value={songLink} placeholder="paste a spotify or youtube link → fills in everything" aria-label="song link" class={field} />
+					<button type="submit" class={primary} disabled={songLookingUp || !songLink.trim()}>{songLookingUp ? 'fetching…' : 'fetch'}</button>
+				</form>
 				{#if music.songOfTheMonth}
 					<div class="grid sm:grid-cols-2 gap-2">
 						<input bind:value={music.songOfTheMonth.title} placeholder="title" aria-label="song title" class={field} />
@@ -331,7 +392,7 @@
 						</div>
 					</div>
 					<input bind:value={music.songOfTheMonth.note} placeholder="why this one (optional)" aria-label="note" class={field} />
-					<p class="text-xs text-ocean-500">tip: right-click the cover on spotify's web player → copy image address.</p>
+					{#if music.songOfTheMonth.image}<img src={music.songOfTheMonth.image} alt="" class="w-16 h-16 rounded object-cover" />{/if}
 				{/if}
 			</div>
 
@@ -359,9 +420,9 @@
 		</div>
 
 	<!-- ABOUT / GALLERY / BUTTONS -->
-	{:else if active === 'about' && about}
-		<AboutEditor bind:about on:error={(e) => (error = e.detail)} />
-		<div><button on:click={() => save('about', about)} class={primary} disabled={busy}>save</button></div>
+	{:else if active === 'about' && about && aboutAlt}
+		<AboutEditor bind:about bind:alt={aboutAlt} on:error={(e) => (error = e.detail)} />
+		<div><button on:click={async () => { await save('about', about); await save('aboutAlt', aboutAlt); }} class={primary} disabled={busy}>save</button></div>
 	{:else if active === 'gallery' && gallery}
 		<GalleryEditor bind:gallery on:error={(e) => (error = e.detail)} />
 		<div><button on:click={() => save('gallery', gallery)} class={primary} disabled={busy}>save</button></div>

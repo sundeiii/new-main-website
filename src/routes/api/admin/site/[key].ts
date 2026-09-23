@@ -18,7 +18,15 @@ const list = <T>(v: unknown, max: number, item: (x: any) => T | null): T[] =>
 
 // Coerces admin input into the exact shape each page expects, with length limits.
 const clean: { [K in keyof SiteSettings]: (v: any) => SiteSettings[K] } = {
-	home: (v) => ({ intro: str(v?.intro, 1000) }),
+	home: (v) => {
+		// Site-relative (/projects/x), http(s) or mailto links.
+		const homeLinks = (items: unknown) =>
+			list(items, 30, (l: any) => {
+				const href = str(l?.href, 300);
+				return str(l?.name, 60) && /^(https?:\/\/|mailto:|\/(?!\/))/.test(href) ? { name: str(l.name, 60), href, description: str(l?.description, 150) } : null;
+			});
+		return { intro: str(v?.intro, 1000), wip: homeLinks(v?.wip), projects: homeLinks(v?.projects), links: homeLinks(v?.links) };
+	},
 	now: (v) => ({
 		updated: str(v?.updated, 50),
 		sections: list(v?.sections, 20, (s) => {
@@ -95,6 +103,7 @@ const clean: { [K in keyof SiteSettings]: (v: any) => SiteSettings[K] } = {
 			})
 		};
 	},
+	aboutAlt: (v) => ({ bio: str(v?.bio, 5000) }),
 	skins: (v) => ({
 		items: list(v?.items, 50, (s) =>
 			str(s?.name, 100)

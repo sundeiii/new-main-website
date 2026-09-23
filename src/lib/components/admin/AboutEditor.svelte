@@ -2,9 +2,10 @@
 	import { createEventDispatcher } from 'svelte';
 	import { danger, field, fieldLabel, subtle } from './styles';
 	import UploadButton from './UploadButton.svelte';
-	import type { AboutSettings, AboutSpec } from '$lib/siteSettings';
+	import type { AboutAltSettings, AboutSettings, AboutSpec } from '$lib/siteSettings';
 
 	export let about: AboutSettings;
+	export let alt: AboutAltSettings;
 	const dispatch = createEventDispatcher<{ error: string }>();
 
 	const lines = (s: string) => s.split('\n').map((l) => l.trim()).filter(Boolean);
@@ -23,6 +24,15 @@
 	<div>
 		<label for="a-bio" class={fieldLabel}>who? (markdown; keep it as neutral as you like)</label>
 		<textarea id="a-bio" bind:value={about.bio} rows="6" class={field} />
+	</div>
+	<div>
+		<label for="a-alt-bio" class={fieldLabel}>
+			who?, for visitors who unlocked the secret theme (markdown). shown instead of the text above; leave empty to show the normal one.
+		</label>
+		<textarea id="a-alt-bio" bind:value={alt.bio} rows="6" class={field} />
+		<p class="text-xs text-ocean-500 mt-1">
+			it's only loaded in their browser, so it's not in the page's html or search results. it isn't truly private though: anyone who digs through the site's code can find it.
+		</p>
 	</div>
 
 	{#each [{ key: 'pcBuild', title: 'pc build' }, { key: 'peripherals', title: 'peripherals' }] as group}
