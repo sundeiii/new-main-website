@@ -11,7 +11,7 @@
 	type Output = string | { text: string; html: boolean };
 
 	// Pages `random`, `ls` and `cd` know about.
-	const PAGES = ['about', 'blog', 'tournaments', 'gallery', 'music', 'guestbook', 'events', 'projects', 'osu', 'now', 'changelog', 'skins'];
+	const PAGES = ['about', 'blog', 'tournaments', 'gallery', 'music', 'guestbook', 'events', 'projects', 'osu', 'now', 'changelog', 'skins', 'uses'];
 
 	const getJson = async (url: string) => {
 		const res = await fetch(url);
@@ -213,6 +213,62 @@
 				};
 			}
 		},
+		lastfm: {
+			description: 'my listening stats',
+			action: async () => {
+				const s = await getJson('/api/lastfm-stats?period=7day');
+				const n = (x: number) => x.toLocaleString('en-US');
+				const top = s.topArtists?.[0];
+				return {
+					text: [
+						`<span class="text-ocean-green">${n(s.total)}</span> scrobbles since ${new Date(s.since).getFullYear()}`,
+						`${n(s.last7d)} this week · ${n(s.last24h)} today-ish`,
+						top ? `top artist this week: <span class="text-ocean-magenta">${esc(top.name)}</span> (${n(top.plays)})` : ''
+					]
+						.filter(Boolean)
+						.join('\n'),
+					html: true
+				};
+			}
+		},
+		events: {
+			description: 'lans & events',
+			action: async () => {
+				const list: { slug: string; title: string; date: string; endDate: string | null }[] = await getJson('/api/blog?kind=event');
+				if (!list.length) return 'no events yet';
+				const rows = [...list]
+					.sort((a, b) => b.date.localeCompare(a.date))
+					.slice(0, 6)
+					.map((e) => {
+						const t = eventTiming(e);
+						const tag = t === 'now' ? '<span class="text-ocean-green">now</span>' : t === 'upcoming' ? '<span class="text-ocean-yellow">soon</span>' : '<span class="text-ocean-400">past</span>';
+						return `  ${tag}  ${e.date}  <span class="text-ocean-cyan">${esc(e.title)}</span>`;
+					});
+				return { text: ['events:', ...rows, '<span class="text-ocean-400">more at /events</span>'].join('\n'), html: true };
+			}
+		},
+		cat: {
+			description: 'read a file',
+			hidden: true,
+			action: async (args) => {
+				const file = (args || '').trim().toLowerCase();
+				if (file === 'about.txt') {
+					const about = await getJson('/api/site/about');
+					// Markdown → plain text, good enough for a terminal
+					return about.bio.replace(/[#*_`>]/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1').trim();
+				}
+				if (file === 'now.txt') {
+					const now = await getJson('/api/site/now');
+					return now.sections.map((s: any) => `${s.icon} ${s.title}: ${s.items.join(', ')}`).join('\n');
+				}
+				return file ? `cat: ${file}: no such file (try ls)` : 'cat: what file? (try ls)';
+			}
+		},
+		secret: {
+			description: 'shh',
+			hidden: true,
+			action: () => "not everything shows up in 'help'. the good one is only two letters long 👀"
+		},
 		random: {
 			description: 'take me somewhere',
 			action: async () => {
@@ -226,7 +282,7 @@
 		ls: {
 			description: 'list pages',
 			hidden: true,
-			action: () => PAGES.map((p) => `${p}/`).join('  ')
+			action: () => [...PAGES.map((p) => `${p}/`), 'about.txt', 'now.txt'].join('  ')
 		},
 		cd: {
 			description: 'go to a page',
