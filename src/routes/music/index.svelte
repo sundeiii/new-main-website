@@ -24,7 +24,40 @@
 	
 
 	// --- Tab state ---
-	let activeTab: 'top' | 'history' = 'top';
+	let activeTab: 'top' | 'history' | 'stats' = 'top';
+
+	// --- Last.fm stats tab ---
+	const periods = [
+		{ value: '7day', label: 'this week' },
+		{ value: '1month', label: 'this month' },
+		{ value: '12month', label: 'this year' },
+		{ value: 'overall', label: 'all time' }
+	];
+	let statsPeriod = '7day';
+	let stats: Record<string, any> = {};
+	let statsError = '';
+	async function loadStats(period: string) {
+		if (stats[period]) return;
+		statsError = '';
+		try {
+			const res = await fetch(`/api/lastfm-stats?period=${period}`);
+			if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `status ${res.status}`);
+			stats = { ...stats, [period]: await res.json() };
+		} catch (e) {
+			statsError = "couldn't load last.fm stats";
+			console.error(e);
+		}
+	}
+	$: if (browser && activeTab === 'stats') loadStats(statsPeriod);
+	$: s = stats[statsPeriod];
+	type StatRow = { name: string; sub: string; plays: number; url: string };
+	$: statLists = s
+		? [
+				{ title: 'top artists', rows: s.topArtists.map((a: any): StatRow => ({ name: a.name, sub: '', plays: a.plays, url: a.url })) },
+				{ title: 'top tracks', rows: s.topTracks.map((t: any): StatRow => ({ name: t.name, sub: t.artist, plays: t.plays, url: t.url })) }
+		  ]
+		: [];
+	const num = (n: number) => n.toLocaleString('en-US');
 
 	// --- Top Tracks ---
 	const options: {
@@ -174,6 +207,15 @@
 		});
 	}
 
+	// Romanize last.fm stats names
+	$: if (s) {
+		for (const a of s.topArtists) romanizeText(a.name);
+		for (const t of s.topTracks) {
+			romanizeText(t.name);
+			romanizeText(t.artist);
+		}
+	}
+
 	// Romanize history tracks
 	async function romanizeTracks(items: any[]) {
 		for (const item of items) {
@@ -255,6 +297,14 @@
 			>
 				listening history
 			</button>
+			<button
+				on:click={() => activeTab = 'stats'}
+				class="pb-2 transition-colors border-b-2 {activeTab === 'stats'
+					? 'text-ocean-900 dark:text-ocean-100 border-ocean-900 dark:border-ocean-100'
+					: 'text-ocean-600 dark:text-ocean-500 border-transparent hover:text-ocean-900 dark:hover:text-ocean-100'}"
+			>
+				stats
+			</button>
 		</div>
 
 		<!-- Top Tracks Tab -->
@@ -322,6 +372,61 @@
 					</div>
 					{/if}
 				{/key}
+			</div>
+
+		<!-- Last.fm Stats Tab -->
+		{:else if activeTab === 'stats'}
+			<div in:fade={{ duration: 200 }} class="flex flex-col gap-8">
+				{#if statsError}
+					<p class="text-red-500">{statsError}. <button class="underline" on:click={() => loadStats(statsPeriod)}>try again</button></p>
+				{:else if !s}
+					<p class="text-ocean-700 dark:text-ocean-400">loading...</p>
+				{:else}
+					<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+						{#each [
+							{ label: 'scrobbles', value: num(s.total), sub: `since ${new Date(s.since).getFullYear()}` },
+							{ label: 'last 24 hours', value: num(s.last24h), sub: 'songs' },
+							{ label: 'last 7 days', value: num(s.last7d), sub: `~${Math.round(s.last7d / 7)} a day` },
+							{ label: 'per day, all time', value: num(Math.round(s.total / Math.max(1, (Date.now() - s.since) / 864e5))), sub: 'on average' }
+						] as tile}
+							<div class="border border-ocean-300 dark:border-ocean-700 rounded-lg p-3">
+								<div class="text-[11px] text-ocean-500">{tile.label}</div>
+								<div class="text-xl text-ocean-900 dark:text-ocean-100">{tile.value}</div>
+								<div class="text-[11px] text-ocean-600 dark:text-ocean-400">{tile.sub}</div>
+							</div>
+						{/each}
+					</div>
+
+					<div class="flex flex-wrap gap-4 text-sm text-ocean-700 dark:text-ocean-400">
+						{#each periods as p}
+							<button on:click={() => (statsPeriod = p.value)} class="hover:text-ocean-900 dark:hover:text-ocean-100 {statsPeriod === p.value ? 'text-ocean-900 dark:text-ocean-100 underline underline-offset-4' : ''}">{p.label}</button>
+						{/each}
+					</div>
+
+					<div class="grid md:grid-cols-2 gap-8">
+						{#each statLists as list}
+							<div>
+								<h2 class="text-ocean-900 dark:text-ocean-100 text-sm mb-3">{list.title}</h2>
+								<div class="flex flex-col gap-1.5">
+									{#each list.rows as row, i}
+										<a href={row.url} target="_blank" rel="noopener noreferrer" class="group relative block rounded overflow-hidden text-sm">
+											<div class="absolute inset-y-0 left-0 bg-ocean-300/40 dark:bg-ocean-700/40 group-hover:bg-ocean-400/40 transition-colors" style="width: {(row.plays / (list.rows[0]?.plays || 1)) * 100}%" />
+											<div class="relative flex items-baseline gap-2 px-2 py-1">
+												<span class="text-ocean-500 w-5 text-right shrink-0">{i + 1}</span>
+												<span class="text-ocean-900 dark:text-ocean-100 truncate">{romanizedCache[row.name] || row.name}</span>
+												{#if row.sub}<span class="text-ocean-600 dark:text-ocean-400 text-xs truncate">{romanizedCache[row.sub] || row.sub}</span>{/if}
+												<span class="ml-auto text-ocean-600 dark:text-ocean-400 text-xs shrink-0">{num(row.plays)}</span>
+											</div>
+										</a>
+									{:else}
+										<p class="text-ocean-600 dark:text-ocean-400 text-sm">nothing yet</p>
+									{/each}
+								</div>
+							</div>
+						{/each}
+					</div>
+					<p class="text-xs text-ocean-500">from <a href={s.url} target="_blank" rel="noopener noreferrer" class="underline">last.fm</a> · updates every ~10 minutes</p>
+				{/if}
 			</div>
 
 		<!-- Listening History Tab -->

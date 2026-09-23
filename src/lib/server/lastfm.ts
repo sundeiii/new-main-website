@@ -58,3 +58,49 @@ export async function recentScrobbles({ before, limit }: { before: number; limit
 		return [];
 	}
 }
+
+// ── Stats for /music ─────────────────────────────────────────────────────────
+
+export const PERIODS = ['7day', '1month', '12month', 'overall'] as const;
+export type Period = typeof PERIODS[number];
+
+async function lastfm(method: string, extra: Record<string, string> = {}) {
+	const params = new URLSearchParams({ method, user: process.env.LASTFM_USER!, api_key: process.env.LASTFM_API_KEY!, format: 'json', ...extra });
+	const res = await fetch(`https://ws.audioscrobbler.com/2.0/?${params}`);
+	const data = await res.json();
+	if (!res.ok || data.error) throw new Error(`Last.fm: ${data.message ?? res.status}`);
+	return data;
+}
+
+/** Number of scrobbles since `fromMs` (Last.fm reports the total without sending them all). */
+async function scrobblesSince(fromMs: number) {
+	const data = await lastfm('user.getrecenttracks', { from: String(Math.floor(fromMs / 1000)), limit: '1' });
+	return Number(data.recenttracks?.['@attr']?.total ?? 0);
+}
+
+export async function lastfmStats(period: Period, isHidden: (artist: string) => boolean) {
+	const now = Date.now();
+	const [info, day, week, artists, tracks] = await Promise.all([
+		lastfm('user.getinfo'),
+		scrobblesSince(now - 864e5),
+		scrobblesSince(now - 7 * 864e5),
+		lastfm('user.gettopartists', { period, limit: '20' }),
+		lastfm('user.gettoptracks', { period, limit: '25' })
+	]);
+	return {
+		user: info.user?.name,
+		url: info.user?.url,
+		total: Number(info.user?.playcount ?? 0),
+		since: Number(info.user?.registered?.unixtime ?? 0) * 1000,
+		last24h: day,
+		last7d: week,
+		topArtists: [].concat(artists.topartists?.artist ?? [])
+			.filter((a: any) => !isHidden(a.name))
+			.slice(0, 8)
+			.map((a: any) => ({ name: a.name, plays: Number(a.playcount), url: a.url })),
+		topTracks: [].concat(tracks.toptracks?.track ?? [])
+			.filter((t: any) => !isHidden(t.artist?.name ?? ''))
+			.slice(0, 10)
+			.map((t: any) => ({ name: t.name, artist: t.artist?.name ?? '', plays: Number(t.playcount), url: t.url }))
+	};
+}
