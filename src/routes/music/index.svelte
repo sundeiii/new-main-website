@@ -250,7 +250,8 @@
 	<div class="flex flex-col gap-7">
 		<div in:fly={{ y: -20, duration: 400 }}>
 			<h1 class="text-ocean-900 dark:text-ocean-100">music</h1>
-			<p class="text-ocean-700 dark:text-ocean-400">what i've been listening to</p>
+			<!-- Your own notes replace the default subtitle -->
+			{#if !notesHtml}<p class="text-ocean-700 dark:text-ocean-400">what i've been listening to</p>{/if}
 		</div>
 
 		{#if sotm || notesHtml}

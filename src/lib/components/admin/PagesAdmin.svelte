@@ -161,6 +161,8 @@
 
 	const blankSkin = () => ({ name: '', author: '', description: '', preview: '', screenshots: [] as string[], download: '' });
 
+	const musicNotesExample = "music i've been listening to lately.\n\nno rankings, no serious reviews, just songs/albums i like enough to put here.";
+
 	// Now-page items are edited one per line.
 	const linesToItems = (s: string) => s.split('\n').map((l) => l.trim()).filter(Boolean);
 
@@ -335,7 +337,13 @@
 
 			<div>
 				<label for="p-music-notes" class={fieldLabel}>notes above the lists (markdown, e.g. what you're obsessed with lately)</label>
-				<textarea id="p-music-notes" bind:value={music.notes} rows="4" class={field} />
+				<textarea
+					id="p-music-notes"
+					bind:value={music.notes}
+					rows="4"
+					class={field}
+					placeholder={musicNotesExample}
+				/>
 			</div>
 			<div>
 				<label for="p-hidden-artists" class={fieldLabel}>hidden artists (one per line) — their tracks never show on the music page or as now playing</label>
