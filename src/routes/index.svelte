@@ -4,17 +4,32 @@
 	// Rendered per request (not prerendered) so the intro and project list edited in /admin
 	// show up without a redeploy.
 	export const load: Load = async ({ fetch }) => {
-		const [home, projects] = await Promise.all([
+		const [home, projects, events, buttons] = await Promise.all([
 			fetch('/api/site/home').then((r) => (r.ok ? r.json() : null)).catch(() => null),
-			fetch('/api/blog?kind=project').then((r) => (r.ok ? r.json() : [])).catch(() => [])
+			fetch('/api/blog?kind=project').then((r) => (r.ok ? r.json() : [])).catch(() => []),
+			fetch('/api/blog?kind=event').then((r) => (r.ok ? r.json() : [])).catch(() => []),
+			fetch('/api/site/buttons').then((r) => (r.ok ? r.json() : null)).catch(() => null)
 		]);
-		return { props: { intro: home?.intro ?? '', projectPages: projects } };
+		return { props: { intro: home?.intro ?? '', projectPages: projects, events, buttons } };
 	};
 </script>
 
 <script lang="ts">
 	export let intro: string;
 	export let projectPages: { slug: string; title: string; excerpt: string }[];
+	export let events: { slug: string; title: string; date: string; endDate: string | null; location: string | null }[];
+	export let buttons: import('$lib/siteSettings').ButtonsSettings | null;
+	import { daysBetween, eventTiming, today } from '$lib/dates';
+	import { settingDefaults } from '$lib/siteSettings';
+
+	// "currently at" during an event, "next up" in the two weeks before one.
+	$: happening = events.find((e) => eventTiming(e) === 'now');
+	$: nextUp = happening
+		? null
+		: events
+				.filter((e) => eventTiming(e) === 'upcoming' && daysBetween(today(), e.date) <= 14)
+				.sort((a, b) => a.date.localeCompare(b.date))[0];
+	$: buttonWall = buttons ?? settingDefaults.buttons;
 	import Branch from '$lib/components/Branch.svelte';
 	import Language from '$lib/components/Language.svelte';
 	import ProjectItem from '$lib/components/ProjectItem.svelte';
@@ -64,8 +79,11 @@
 	let copied = false;
 
 	function copyButtonCode() {
+		const { image, alt } = buttonWall.mine;
+		// Relative images need the full address to work on other people's sites.
+		const src = image.startsWith('/') ? `https://sundei.ee${image}` : image;
 		navigator.clipboard.writeText(
-		`<a href="https://sundei.ee/" target="_blank" rel="noopener noreferrer">\n  <img src="https://sundei.ee/sfa.gif" alt="the house of kwanmendments" style="image-rendering: pixelated; width: 88px; height: 31px;" />\n</a>`
+			`<a href="https://sundei.ee/" target="_blank" rel="noopener noreferrer">\n  <img src="${src}" alt="${alt.replace(/"/g, '&quot;')}" style="image-rendering: pixelated; width: 88px; height: 31px;" />\n</a>`
 		);
 		copied = true;
 		setTimeout(() => copied = false, 2000);
@@ -328,6 +346,16 @@
 		{#if intro}
 			<p class="text-ocean-700 dark:text-ocean-400 max-w-xl -mt-3">{intro}</p>
 		{/if}
+		{#if happening}
+			<a href="/events/{happening.slug}" class="-mt-4 self-start inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full border border-ocean-green/60 text-ocean-800 dark:text-ocean-200 hover:bg-ocean-green/10">
+				<span class="relative flex w-2 h-2"><span class="absolute inset-0 rounded-full bg-ocean-green animate-ping opacity-75" /><span class="relative w-2 h-2 rounded-full bg-ocean-green" /></span>
+				currently at {happening.title}{happening.location ? ` · ${happening.location}` : ''}
+			</a>
+		{:else if nextUp}
+			<a href="/events/{nextUp.slug}" class="-mt-4 self-start text-sm text-ocean-600 dark:text-ocean-400 hover:underline">
+				📅 next up: {nextUp.title} {daysBetween(today(), nextUp.date) === 1 ? 'tomorrow' : `in ${daysBetween(today(), nextUp.date)} days`}
+			</a>
+		{/if}
 		<div>
 			<h1 class="text-ocean-900 dark:text-ocean-100">wip</h1>
 			<ul class="list-disc list-inside text-ocean-800 dark:text-ocean-blue">
@@ -364,25 +392,22 @@
 		</div>
 		<div>
 			<h1 class="text-ocean-900 dark:text-ocean-100">friends</h1>
+			<!-- 88×31 buttons, edited in /admin → pages → buttons -->
 			<div class="flex flex-wrap gap-1 mt-2">
-
-				<a href="https://advelos.moe"><img src="/advelosbutton.gif" alt="advelos button" title="advelos!!"></a>
-
-				<a href="https://nyoemii.dev/" target="_blank" rel="noopener noreferrer">
-				<img src="https://nyoemii.dev/media/img/button.png" alt="noemi's puppyhouse" class="h-[31px] w-[88px] image-pixelated" />
-				</a>
-
-				<a href="https://centaurea.ee/" target="_blank" rel="noopener noreferrer">
-				<img src="/centaurea.gif" alt="centaurea" class="h-[31px] w-[88px]" />
-				</a>
-				
-				<button
-				on:click={copyButtonCode}
-				title={copied ? 'copied!' : 'copy embed code'}
-				class="cursor-pointer"
-				>
-				<img src="https://sundei.ee/sfa.gif" alt="the house of kwanmendments" class="h-[31px] w-[88px] image-pixelated" />
-				</button>
+				{#each buttonWall.items as b}
+					{#if b.href}
+						<a href={b.href} target="_blank" rel="noopener noreferrer" title={b.alt}>
+							<img src={b.image} alt={b.alt} width="88" height="31" class="h-[31px] w-[88px] {b.pixelated ? 'image-pixelated' : ''}" />
+						</a>
+					{:else}
+						<img src={b.image} alt={b.alt} title={b.alt} width="88" height="31" class="h-[31px] w-[88px] {b.pixelated ? 'image-pixelated' : ''}" />
+					{/if}
+				{/each}
+				{#if buttonWall.mine.image}
+					<button on:click={copyButtonCode} title={copied ? 'copied!' : 'my button: click to copy the embed code'} class="cursor-pointer">
+						<img src={buttonWall.mine.image} alt={buttonWall.mine.alt} width="88" height="31" class="h-[31px] w-[88px] image-pixelated" />
+					</button>
+				{/if}
 			</div>
 		</div>
 		<div class="mt-4 w-full sm:w-96">

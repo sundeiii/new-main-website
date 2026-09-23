@@ -10,11 +10,13 @@
 
 <script lang="ts">
 	import { fly } from 'svelte/transition';
+	import { daysBetween, eventTiming, formatRange, today } from '$lib/dates';
 
 	interface EventItem {
 		slug: string;
 		title: string;
 		date: string;
+		endDate: string | null;
 		excerpt: string;
 		banner: string | null;
 		location: string | null;
@@ -22,16 +24,14 @@
 
 	export let events: EventItem[];
 
-	const today = new Date().toISOString().slice(0, 10);
-	$: upcoming = events.filter((e) => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
-	$: past = events.filter((e) => e.date < today);
+	// Events still going on count as upcoming (shown first, with a "happening now" badge).
+	$: upcoming = events.filter((e) => eventTiming(e) !== 'past').sort((a, b) => a.date.localeCompare(b.date));
+	$: past = events.filter((e) => eventTiming(e) === 'past');
 
-	const formatDate = (d: string) =>
-		new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-
-	function countdown(d: string) {
-		const days = Math.round((new Date(d + 'T00:00:00').getTime() - new Date(today + 'T00:00:00').getTime()) / 864e5);
-		return days === 0 ? 'today!' : days === 1 ? 'tomorrow' : `in ${days} days`;
+	function countdown(e: EventItem) {
+		if (eventTiming(e) === 'now') return 'happening now!';
+		const days = daysBetween(today(), e.date);
+		return days === 1 ? 'tomorrow' : `in ${days} days`;
 	}
 </script>
 
@@ -67,11 +67,11 @@
 								<div class="flex flex-wrap items-baseline justify-between gap-2">
 									<h3 class="{event.banner ? 'text-white' : 'text-ocean-900 dark:text-ocean-100'} font-medium group-hover:underline">{event.title}</h3>
 									{#if group.label === 'upcoming'}
-										<span class="text-xs px-2 py-0.5 rounded-full bg-ocean-green/90 text-ocean-950">{countdown(event.date)}</span>
+										<span class="text-xs px-2 py-0.5 rounded-full bg-ocean-green/90 text-ocean-950">{countdown(event)}</span>
 									{/if}
 								</div>
 								<p class="{event.banner ? 'text-white/80' : 'text-ocean-700 dark:text-ocean-400'} text-sm">
-									{formatDate(event.date)}{#if event.location}{' · 📍 '}{event.location}{/if}
+									{formatRange(event.date, event.endDate)}{#if event.location}{' · 📍 '}{event.location}{/if}
 								</p>
 								{#if event.excerpt}
 									<p class="{event.banner ? 'text-white/90' : 'text-ocean-800 dark:text-ocean-300'} text-sm mt-2">{event.excerpt}</p>

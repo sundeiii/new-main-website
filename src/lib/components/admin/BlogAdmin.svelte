@@ -13,6 +13,7 @@
 	interface Post {
 		id?: number;
 		kind: Kind;
+		endDate: string | null;
 		location: string | null;
 		link: string | null;
 		slug: string;
@@ -94,13 +95,13 @@
 	}
 
 	function newPost() {
-		draft = { kind: kindFilter, location: '', link: '', slug: '', title: '', excerpt: '', banner: '', content: '', published: false, date: today() };
+		draft = { kind: kindFilter, endDate: '', location: '', link: '', slug: '', title: '', excerpt: '', banner: '', content: '', published: false, date: today() };
 		slugTouched = false;
 		error = saved = '';
 	}
 
 	function edit(post: Post) {
-		draft = { ...post, kind: post.kind ?? 'post', banner: post.banner ?? '', location: post.location ?? '', link: post.link ?? '' };
+		draft = { ...post, kind: post.kind ?? 'post', banner: post.banner ?? '', endDate: post.endDate ?? '', location: post.location ?? '', link: post.link ?? '' };
 		slugTouched = true;
 		error = saved = '';
 	}
@@ -112,7 +113,7 @@
 		error = saved = '';
 		try {
 			const result: Post = draft.id ? await api('PATCH', draft) : await api('POST', draft);
-			draft = { ...result, banner: result.banner ?? '', location: result.location ?? '', link: result.link ?? '' };
+			draft = { ...result, banner: result.banner ?? '', endDate: result.endDate ?? '', location: result.location ?? '', link: result.link ?? '' };
 			slugTouched = true;
 			saved = draft.published ? 'saved & published' : 'saved as draft';
 			await load();
@@ -242,9 +243,15 @@
 			<input id="b-slug" bind:value={draft.slug} on:input={() => (slugTouched = true)} class={field} />
 		</div>
 		{#if draft.kind === 'event'}
-			<div>
-				<label for="b-location" class={fieldLabel}>location</label>
-				<input id="b-location" bind:value={draft.location} maxlength="200" placeholder="e.g. TipiLAN, Tallinn" class={field} />
+			<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+				<div class="sm:col-span-2">
+					<label for="b-location" class={fieldLabel}>location</label>
+					<input id="b-location" bind:value={draft.location} maxlength="200" placeholder="e.g. TipiLAN, Tallinn" class={field} />
+				</div>
+				<div>
+					<label for="b-end" class={fieldLabel}>last day (if it's several days)</label>
+					<input id="b-end" type="date" bind:value={draft.endDate} min={draft.date} class={field} />
+				</div>
 			</div>
 		{:else if draft.kind === 'project'}
 			<div>

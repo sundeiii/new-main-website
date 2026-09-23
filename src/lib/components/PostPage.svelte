@@ -2,11 +2,13 @@
 	// Full page for a blog post, event or project written in the admin panel.
 	import { fade } from 'svelte/transition';
 	import PostBody from '$lib/components/PostBody.svelte';
+	import { formatRange } from '$lib/dates';
 
 	export let post: {
 		kind: 'post' | 'event' | 'project';
 		title: string;
 		date: string;
+		endDate?: string | null;
 		excerpt: string;
 		banner: string | null;
 		html: string;
@@ -16,8 +18,6 @@
 	};
 	export let back: { href: string; label: string };
 
-	const formatDate = (d: string) =>
-		new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 </script>
 
 <svelte:head>
@@ -46,7 +46,7 @@
 		<header class="mb-8 text-center">
 			<h1 class="text-ocean-900 dark:text-ocean-100 text-4xl font-bold mb-2">{post.title}</h1>
 			<p class="text-ocean-700 dark:text-ocean-400">
-				<time>{formatDate(post.date)}</time>
+				<time datetime={post.date}>{formatRange(post.date, post.endDate)}</time>
 				{#if post.location}{' · 📍 '}{post.location}{/if}
 			</p>
 			{#if post.link}

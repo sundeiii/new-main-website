@@ -16,7 +16,8 @@ export interface BlogPost {
 	banner: string | null;
 	content: string;
 	published: boolean;
-	date: string; // YYYY-MM-DD; for events, the day it happens
+	date: string; // YYYY-MM-DD; for events, the day it starts
+	endDate: string | null; // events that last several days (YYYY-MM-DD)
 	location: string | null; // events
 	link: string | null; // projects: repo or live site
 }
@@ -30,6 +31,7 @@ export const builtInPosts = [
 		date: '2026-02-10',
 		excerpt: "hey, i'm sundei. welcome to my little space on the web where i dump thoughts, projects, and whatever else feels worth remembering.",
 		banner: 'https://cdn.sundei.eu/banner1.png',
+		endDate: null,
 		location: null,
 		link: null
 	}
@@ -54,7 +56,8 @@ export const ensureTable = once(async () => {
 	await addColumns('blog_posts', {
 		kind: "VARCHAR(20) NOT NULL DEFAULT 'post'",
 		location: 'VARCHAR(200) NULL',
-		link: 'VARCHAR(500) NULL'
+		link: 'VARCHAR(500) NULL',
+		end_date: 'DATE NULL'
 	});
 });
 
@@ -71,6 +74,7 @@ function fromRow(row: any): BlogPost {
 		content: row.content,
 		published: !!row.published,
 		date: toDate(row.date),
+		endDate: row.end_date ? toDate(row.end_date) : null,
 		location: row.location ?? null,
 		link: row.link ?? null
 	};
@@ -99,7 +103,7 @@ export async function getPost(slug: string, kind: Kind, { includeDrafts = false 
 export const renderMarkdown = (md: string) => marked.parse(md, { async: false, gfm: true, breaks: true }) as string;
 
 export const slugify = (s: string) =>
-	s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 100);
+	s.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 100);
 
 /** Validates admin input, returning a clean post or an error message. */
 export function cleanPost(input: any): BlogPost | string {
@@ -113,6 +117,7 @@ export function cleanPost(input: any): BlogPost | string {
 		content: typeof input?.content === 'string' ? input.content : '',
 		published: !!input?.published,
 		date: str(input?.date) || new Date().toISOString().slice(0, 10),
+		endDate: str(input?.endDate) || null,
 		location: str(input?.location) || null,
 		link: str(input?.link) || null
 	};
@@ -120,6 +125,8 @@ export function cleanPost(input: any): BlogPost | string {
 	if (!post.content.trim() && post.kind === 'post') return 'the post is empty';
 	if (post.title.length > 200 || post.excerpt.length > 500) return 'title (max 200) or excerpt (max 500) is too long';
 	if (!/^\d{4}-\d{2}-\d{2}$/.test(post.date)) return 'date must be YYYY-MM-DD';
+	if (post.endDate && (!/^\d{4}-\d{2}-\d{2}$/.test(post.endDate) || post.endDate < post.date)) return 'end date must be on or after the start date';
+	if (post.kind !== 'event') post.endDate = null;
 	for (const [name, value] of [['banner', post.banner], ['link', post.link]] as const) {
 		if (value && (value.length > 500 || !/^https?:\/\//.test(value))) return `${name} must be an http(s) url`;
 	}

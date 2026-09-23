@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { fly, fade } from 'svelte/transition';
+	import { eventTiming, today as todayDate } from '$lib/dates';
 
 	let input = '';
 	let history: { command: string; output: string; isHtml?: boolean }[] = [];
@@ -197,8 +198,10 @@
 		lan: {
 			description: 'next event',
 			action: async () => {
-				const events: { slug: string; title: string; date: string; location: string | null }[] = await getJson('/api/blog?kind=event');
-				const today = new Date().toISOString().slice(0, 10);
+				const events: { slug: string; title: string; date: string; endDate: string | null; location: string | null }[] = await getJson('/api/blog?kind=event');
+				const now = events.find((e) => eventTiming(e) === 'now');
+				if (now) return { text: `<span class="text-ocean-green">📍 currently at ${esc(now.title)}!</span>${now.location ? ` · ${esc(now.location)}` : ''}`, html: true };
+				const today = todayDate();
 				const next = events.filter((e) => e.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0];
 				if (!next) return 'no events planned. touch grass maybe?';
 				const days = Math.round((new Date(next.date + 'T00:00:00').getTime() - new Date(today + 'T00:00:00').getTime()) / 864e5);

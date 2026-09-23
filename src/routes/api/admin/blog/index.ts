@@ -21,8 +21,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	await ensureTable();
 	try {
 		const [result]: any = await pool.query(
-			'INSERT INTO blog_posts (kind, slug, title, excerpt, banner, content, published, date, location, link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-			[post.kind, post.slug, post.title, post.excerpt, post.banner, post.content, post.published, post.date, post.location, post.link]
+			'INSERT INTO blog_posts (kind, slug, title, excerpt, banner, content, published, date, end_date, location, link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+			[post.kind, post.slug, post.title, post.excerpt, post.banner, post.content, post.published, post.date, post.endDate, post.location, post.link]
 		);
 		return json({ ...post, id: result.insertId }, 201);
 	} catch (e) {
@@ -42,8 +42,8 @@ export const PATCH: RequestHandler = async ({ request }) => {
 	await ensureTable();
 	try {
 		const [result]: any = await pool.query(
-			'UPDATE blog_posts SET kind = ?, slug = ?, title = ?, excerpt = ?, banner = ?, content = ?, published = ?, date = ?, location = ?, link = ? WHERE id = ?',
-			[post.kind, post.slug, post.title, post.excerpt, post.banner, post.content, post.published, post.date, post.location, post.link, body.id]
+			'UPDATE blog_posts SET kind = ?, slug = ?, title = ?, excerpt = ?, banner = ?, content = ?, published = ?, date = ?, end_date = ?, location = ?, link = ? WHERE id = ?',
+			[post.kind, post.slug, post.title, post.excerpt, post.banner, post.content, post.published, post.date, post.endDate, post.location, post.link, body.id]
 		);
 		if (result.affectedRows === 0) return json({ error: 'Post not found' }, 404);
 		return json({ ...post, id: body.id });
