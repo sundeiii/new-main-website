@@ -517,7 +517,7 @@
 													</span>
 												</div>
 												{#if item.source === 'lastfm'}
-													<span class="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-600 dark:text-red-400 flex-shrink-0" title="from last.fm">last.fm</span>
+													<span class="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-600 dark:text-red-400 flex-shrink-0" title="from last.fm">last.fm</span>
 												{/if}
 												<span class="text-ocean-600 dark:text-ocean-500 text-xs flex-shrink-0 hidden sm:block">
 													{new Date(item.played_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}

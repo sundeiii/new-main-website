@@ -76,7 +76,7 @@
 				{#if stats?.cover_url}
 					<img src={stats.cover_url} alt="" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
 				{/if}
-				<div class="absolute inset-0 {stats?.cover_url ? 'bg-black/55' : 'bg-ocean-200/50 dark:bg-ocean-800/50'}" />
+				<div class="absolute inset-0 {stats?.cover_url ? 'bg-black/60' : 'bg-ocean-200/50 dark:bg-ocean-800/50'}" />
 				<div class="relative p-5 flex items-center gap-4">
 					{#if stats?.avatar_url}
 						<img src={stats.avatar_url} alt="" class="w-16 h-16 rounded-lg" />
@@ -138,16 +138,16 @@
 						>
 							{#if map.cover}
 								<img src={map.cover} alt="" loading="lazy" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-								<div class="absolute inset-0 bg-black/60 group-hover:bg-black/45 transition-colors" />
+								<div class="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/40 transition-opacity group-hover:opacity-80" />
 							{/if}
-							<div class="relative">
+							<div class="relative {map.cover ? 'banner-text' : ''}">
 								<div class="{map.cover ? 'text-white' : 'text-ocean-900 dark:text-ocean-100'} text-sm">{map.title}</div>
 								{#if map.mapper || map.stars}
 									<div class="{map.cover ? 'text-white/70' : 'text-ocean-600 dark:text-ocean-400'} text-xs mt-0.5">
-										{#if map.mapper}mapped by {map.mapper}{/if}{#if map.mapper && map.stars} · {/if}{#if map.stars}{map.stars}★{/if}
+										{[map.mapper ? `mapped by ${map.mapper}` : '', map.stars ? `${map.stars}★` : ''].filter(Boolean).join(' · ')}
 									</div>
 								{/if}
-								{#if map.note}<div class="{map.cover ? 'text-white/85' : 'text-ocean-700 dark:text-ocean-300'} text-xs italic mt-1.5">“{map.note}”</div>{/if}
+								{#if map.note}<div class="{map.cover ? 'text-white/90' : 'text-ocean-700 dark:text-ocean-300'} text-xs italic mt-1.5">“{map.note}”</div>{/if}
 							</div>
 						</a>
 					{/each}
@@ -177,3 +177,10 @@
 		</div>
 	</div>
 </section>
+
+<style>
+	/* A soft shadow keeps white text readable on bright parts of a map cover. */
+	.banner-text {
+		text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 0, 0, 0.6);
+	}
+</style>

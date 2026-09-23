@@ -98,7 +98,7 @@
 
 {#if open}
 	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<div class="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4" on:click={() => (open = null)}>
+	<div class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" on:click={() => (open = null)}>
 		<img src={open.images[open.index]} alt="" class="max-h-[88vh] max-w-[92vw] rounded object-contain" on:click|stopPropagation={() => step(1)} />
 		{#if open.images.length > 1}
 			<button class="absolute left-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white text-3xl px-3" on:click|stopPropagation={() => step(-1)} aria-label="previous">‹</button>

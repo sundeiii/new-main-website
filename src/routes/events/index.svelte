@@ -61,7 +61,7 @@
 							{#if event.banner}
 								<img src={event.banner} alt="" loading="lazy" decoding="async" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
 								<!-- Darkest behind the text (left), so light banners stay readable -->
-								<div class="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/40 group-hover:from-black/85 group-hover:via-black/65 transition-colors" />
+								<div class="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/40 group-hover:from-black/80 group-hover:via-black/60 transition-colors" />
 							{/if}
 							<div class="relative p-4 {event.banner ? 'banner-text' : ''}">
 								<div class="flex flex-wrap items-baseline justify-between gap-2">
