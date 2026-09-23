@@ -11,7 +11,7 @@ import path from 'path';
 //   CDN_SFTP_HOST_FINGERPRINT (optional, recommended) – the server's SHA256 key fingerprint(s),
 //     comma-separated; connections to a server with a different key are refused
 
-export const FOLDERS = ['blog', 'tournaments', 'misc'] as const;
+export const FOLDERS = ['blog', 'tournaments', 'skins', 'misc'] as const;
 export type Folder = typeof FOLDERS[number];
 
 // Only raster images. SVG is left out because it can carry scripts.
@@ -101,6 +101,42 @@ export async function upload(folder: Folder, name: string, data: Buffer) {
 		await sftp.put(data, path.posix.join(remoteDir(folder), name));
 	});
 	return publicUrl(folder, name);
+}
+
+// ── Big files (osu! skins) in pieces ──────────────────────────────────────────
+// Vercel rejects request bodies over ~4.5 MB, so the browser sends big files in chunks. Chunk 0
+// creates a hidden temp file, later chunks are appended, and the last one renames it into place.
+// Chunks must arrive in order (the admin panel sends them one at a time).
+
+export const MAX_CHUNKS = 60; // × 4 MB = 240 MB
+const ARCHIVE_EXTENSIONS = ['osk', 'osz', 'zip'];
+
+export async function uploadChunk(opts: { folder: Folder; uploadId: string; index: number; total: number; originalName: string; data: Buffer }) {
+	const { folder, uploadId, index, total, originalName, data } = opts;
+	const ext = originalName.split('.').pop()?.toLowerCase() ?? '';
+	if (!ARCHIVE_EXTENSIONS.includes(ext)) throw new Error(`only ${ARCHIVE_EXTENSIONS.map((e) => '.' + e).join(', ')} files`);
+	if (!/^[a-z0-9]{8,40}$/.test(uploadId)) throw new Error('invalid upload id');
+	if (!Number.isInteger(index) || !Number.isInteger(total) || total < 1 || total > MAX_CHUNKS || index < 0 || index >= total) {
+		throw new Error('invalid chunk index');
+	}
+	if (data.length === 0 || data.length > MAX_BYTES) throw new Error('chunk must be 1 byte – 4 MB');
+	// osu! skins and beatmaps are zip files, which start with "PK".
+	if (index === 0 && data.readUInt32BE(0) !== 0x504b0304) throw new Error(`that isn't a valid .${ext} file`);
+
+	const temp = path.posix.join(remoteDir(folder), `.upload-${uploadId}.part`);
+	return withSftp(async (sftp) => {
+		if (index === 0) {
+			await sftp.mkdir(remoteDir(folder), true);
+			await sftp.put(data, temp);
+		} else {
+			if (!(await sftp.exists(temp))) throw new Error('upload expired, start again');
+			await sftp.append(data, temp);
+		}
+		if (index < total - 1) return null;
+		const name = fileName(originalName, ext);
+		await sftp.rename(temp, path.posix.join(remoteDir(folder), name));
+		return publicUrl(folder, name);
+	});
 }
 
 export async function list(folder: Folder) {

@@ -1,6 +1,6 @@
 // Shrinks an image in the browser and uploads it to the CDN through /api/admin/media.
 
-export type Folder = 'blog' | 'tournaments' | 'misc';
+export type Folder = 'blog' | 'tournaments' | 'skins' | 'misc';
 
 const MAX_BYTES = 4 * 1024 * 1024;
 
@@ -50,4 +50,26 @@ export async function uploadImage(file: File, folder: Folder, maxSize?: number):
 export function imageFrom(e: ClipboardEvent | DragEvent): File | null {
 	const items = 'clipboardData' in e ? e.clipboardData?.files : e.dataTransfer?.files;
 	return [...(items ?? [])].find((f) => f.type.startsWith('image/')) ?? null;
+}
+
+// Big files (osu! skins) are sent in ~3.5 MB pieces, since Vercel caps a request at ~4.5 MB.
+const CHUNK_BYTES = 3.5 * 1024 * 1024;
+
+export async function uploadLargeFile(file: File, folder: Folder, onProgress?: (fraction: number) => void): Promise<string> {
+	const total = Math.max(1, Math.ceil(file.size / CHUNK_BYTES));
+	const id = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, '0')).join('');
+	for (let index = 0; index < total; index++) {
+		const chunk = file.slice(index * CHUNK_BYTES, (index + 1) * CHUNK_BYTES);
+		const params = new URLSearchParams({ folder, name: file.name, id, index: String(index), total: String(total) });
+		const res = await fetch(`/api/admin/media/chunk?${params}`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/octet-stream' },
+			body: chunk
+		});
+		const data = await res.json().catch(() => ({}));
+		if (!res.ok) throw new Error(data.error || `upload failed (${res.status})`);
+		onProgress?.((index + 1) / total);
+		if (data.done) return data.url;
+	}
+	throw new Error('upload did not finish');
 }

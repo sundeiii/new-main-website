@@ -12,7 +12,7 @@
 		url: string;
 	}
 
-	const folders: Folder[] = ['blog', 'tournaments', 'misc'];
+	const folders: Folder[] = ['blog', 'tournaments', 'skins', 'misc'];
 	let folder: Folder = 'blog';
 	let files: MediaFile[] = [];
 	let loading = false;
