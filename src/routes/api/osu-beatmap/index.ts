@@ -15,7 +15,6 @@ async function getToken(): Promise<string> {
 		})
 	});
 	const data = await res.json();
-	console.log('token status:', res.status, '| has token:', !!data.access_token);
 	if (!data.access_token) {
 		console.error('token error:', JSON.stringify(data));
 		throw new Error('Failed to get osu! token');
@@ -53,14 +52,12 @@ export async function GET({ url }: any) {
 		};
 
 		const title = extractTitle(query);
-		console.log('osu lookup:', { query, title, difficulty });
 
 		const searchRes = await fetch(
 			`https://osu.ppy.sh/api/v2/beatmapsets/search?q=${encodeURIComponent(title)}`,
 			{ headers }
 		);
 
-		console.log('search status:', searchRes.status);
 
 		if (!searchRes.ok) {
 			const errText = await searchRes.text();
@@ -72,11 +69,6 @@ export async function GET({ url }: any) {
 
 		const searchData = await searchRes.json();
 		const beatmapsets = searchData.beatmapsets ?? [];
-
-		console.log('beatmapsets found:', beatmapsets.length);
-		if (beatmapsets.length) {
-			console.log('difficulties in first set:', beatmapsets[0]?.beatmaps?.map((b: any) => b.version));
-		}
 
 		if (!beatmapsets.length) {
 			return new Response(JSON.stringify({ url: null }), {
@@ -95,7 +87,6 @@ export async function GET({ url }: any) {
 			if (found) {
 				matchedSet = set;
 				matchedBeatmap = found;
-				console.log('exact match:', found.version);
 				break;
 			}
 		}
@@ -111,7 +102,6 @@ export async function GET({ url }: any) {
 				if (found) {
 					matchedSet = set;
 					matchedBeatmap = found;
-					console.log('partial match:', found.version);
 					break;
 				}
 			}
@@ -121,14 +111,12 @@ export async function GET({ url }: any) {
 		if (!matchedSet) {
 			matchedSet = beatmapsets[0];
 			matchedBeatmap = beatmapsets[0].beatmaps?.[0];
-			console.log('fallback to first result');
 		}
 
 		const beatmapUrl = matchedBeatmap
 			? `https://osu.ppy.sh/beatmapsets/${matchedSet.id}#osu/${matchedBeatmap.id}`
 			: `https://osu.ppy.sh/beatmapsets/${matchedSet.id}`;
 
-		console.log('resolved url:', beatmapUrl);
 
 		return new Response(JSON.stringify({ url: beatmapUrl }), {
 			headers: {

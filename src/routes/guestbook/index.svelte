@@ -9,6 +9,7 @@
 
 	// Form
 	let nameInput = '';
+	let website = ''; // honeypot: hidden from people, bots fill it in
 	let messageInput = '';
 	let submitting = false;
 	let submitError = '';
@@ -42,6 +43,7 @@
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
+					website,
 					name: nameInput.trim(),
 					message: messageInput.trim()
 				})
@@ -144,6 +146,10 @@
 					maxlength="500"
 					class="flex-1 bg-transparent border border-ocean-300 dark:border-ocean-700 rounded px-3 py-2 text-sm text-ocean-900 dark:text-ocean-100 placeholder-ocean-500 dark:placeholder-ocean-600 focus:outline-none focus:border-ocean-500 dark:focus:border-ocean-400"
 				/>
+			</div>
+			<!-- Honeypot: hidden from people and screen readers; bots that fill every field get rejected -->
+			<div class="absolute -left-[9999px] w-px h-px overflow-hidden" aria-hidden="true">
+				<label>website <input bind:value={website} type="text" name="website" tabindex="-1" autocomplete="off" /></label>
 			</div>
 			<div class="flex items-center gap-3">
 				<button

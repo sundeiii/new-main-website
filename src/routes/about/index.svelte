@@ -13,55 +13,55 @@
 			label: 'processor',
 			value: 'i5-13400F',
 			sub: '10c / 16t • up to 4.6 GHz',
-			image: '/images/pcbuild/13400f.png'
+			image: '/images/pcbuild/13400f.webp'
 		},
 		{
 			label: 'graphics card',
 			value: 'GeForce RTX 3060 12GB',
 			sub: 'asus • 12GB gddr6',
-			image: '/images/pcbuild/rtx3060.png'
+			image: '/images/pcbuild/rtx3060.webp'
 		},
 		{
 			label: 'memory',
 			value: '4x16GB DDR4',
 			sub: 'xmp certified • 3200 MT/s',
-			image: '/images/pcbuild/memory.png'
+			image: '/images/pcbuild/memory.webp'
 		},
 		{
 			label: 'main nvme',
 			value: 'Samsung 990 PRO 1TB',
 			sub: 'gen4 • ~7,000 MB/s',
-			image: '/images/pcbuild/samsung.png'
+			image: '/images/pcbuild/samsung.webp'
 		},
 		{
 			label: 'additional storage',
 			value: 'Seagate Barracuda',
 			sub: '2tb • 7200 rpm hdd',
-			image: '/images/pcbuild/barracuda.png'
+			image: '/images/pcbuild/barracuda.webp'
 		},
 		{
 			label: 'backup storage',
 			value: 'Western Digital Blue',
 			sub: '2x500GB • sata',
-			image: '/images/pcbuild/wd.png'
+			image: '/images/pcbuild/wd.webp'
 		},
 		{
 			label: 'motherboard',
 			value: 'ASRock B760M Pro RS/D4 WiFi',
 			sub: 'lga1700 • matx • wi‑fi',
-			image: '/images/pcbuild/b760m.png'
+			image: '/images/pcbuild/b760m.webp'
 		},
 		{
 			label: 'cooling',
 			value: 'NZXT Kraken 240',
 			sub: '240mm aio • customizable screen',
-			image: '/images/pcbuild/kraken.png'
+			image: '/images/pcbuild/kraken.webp'
 		},
 		{
 			label: 'chassis',
 			value: 'NZXT H5 Elite',
 			sub: 'matx • tempered glass',
-			image: '/images/pcbuild/h5-elite.png'
+			image: '/images/pcbuild/h5-elite.webp'
 		}
 	];
 
@@ -70,31 +70,31 @@
 			label: 'monitor',
 			value: 'Lenovo Legion 24-10',
 			sub: '1080p • 240 Hz',
-			image: '/images/peripherals/main-lenovo.png'
+			image: '/images/peripherals/main-lenovo.webp'
 		},
 		{
 			label: 'keyboard',
 			value: 'Wooting 60HE',
 			sub: 'hall effect • analog • rapid trigger',
-			image: '/images/peripherals/wooting.png'
+			image: '/images/peripherals/wooting.webp'
 		},
 		{
 			label: 'mouse',
 			value: 'Logitech PRO 2 LIGHTSPEED',
 			sub: '25k sensor • wireless',
-			image: '/images/peripherals/mouse.png'
+			image: '/images/peripherals/mouse.webp'
 		},
 		{
 			label: 'tablet',
 			value: 'Wacom CTL-472',
 			sub: 'the osu tablet • stan full area',
-			image: '/images/peripherals/ctl472.png'
+			image: '/images/peripherals/ctl472.webp'
 		},
 		{
 			label: 'headphones',
 			value: 'Sony WH-1000XM4',
 			sub: 'active noise cancellation • wireless',
-			image: '/images/peripherals/xm4.png'
+			image: '/images/peripherals/xm4.webp'
 		}
 	];
 

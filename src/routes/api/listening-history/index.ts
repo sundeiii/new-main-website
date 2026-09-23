@@ -9,13 +9,13 @@ export async function GET({ platform }: any) {
 		return new Response('Missing Spotify client ID', { status: 500 });
 	}
 
-	const accessToken = await getSpotifyAccessToken({ platform });
-
-	const api = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, accessToken, {
-		fetch: fetch as any
-	});
-
 	try {
+		const accessToken = await getSpotifyAccessToken({ platform });
+
+		const api = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, accessToken, {
+			fetch: fetch as any
+		});
+
 		const recentlyPlayed = await api.player.getRecentlyPlayedTracks(50);
 
 		return new Response(JSON.stringify(recentlyPlayed.items), {

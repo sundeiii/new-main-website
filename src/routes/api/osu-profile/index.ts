@@ -1,13 +1,27 @@
 import type { RequestHandler } from './$types';
 
+// Profiles are scraped from osu!'s HTML (heavy), and the tournaments page asks for every host, so
+// cache results in memory per server instance and on Vercel's edge.
+const cache = new Map<string, { at: number; body: string }>();
+const CACHE_MS = 6 * 60 * 60 * 1000;
+const cacheHeaders = {
+	'Content-Type': 'application/json',
+	'Cache-Control': 'public, max-age=3600, s-maxage=21600, stale-while-revalidate=86400'
+};
+
 export const GET: RequestHandler = async ({ url }) => {
-	const userId = url.searchParams.get('id');
-	
-	if (!userId) {
-		return new Response(JSON.stringify({ error: 'Missing user id' }), {
+	const userId = url.searchParams.get('id') ?? '';
+
+	if (!/^\d{1,10}$/.test(userId)) {
+		return new Response(JSON.stringify({ error: 'Invalid user id' }), {
 			status: 400,
 			headers: { 'Content-Type': 'application/json' }
 		});
+	}
+
+	const hit = cache.get(userId);
+	if (hit && Date.now() - hit.at < CACHE_MS) {
+		return new Response(hit.body, { headers: cacheHeaders });
 	}
 
 	try {
@@ -54,12 +68,9 @@ export const GET: RequestHandler = async ({ url }) => {
 			}
 		}
 
-		return new Response(JSON.stringify({ cover_url, country_code, country_name }), {
-			headers: { 
-				'Content-Type': 'application/json',
-				'Cache-Control': 'public, max-age=3600'
-			}
-		});
+		const body = JSON.stringify({ cover_url, country_code, country_name });
+		cache.set(userId, { at: Date.now(), body });
+		return new Response(body, { headers: cacheHeaders });
 	} catch (error) {
 		console.error('Error fetching osu profile:', error);
 		return new Response(JSON.stringify({ cover_url: null, country_code: null, country_name: null }), {

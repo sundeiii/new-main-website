@@ -35,9 +35,6 @@ export async function GET({ url }: any) {
 
 		const user = await userRes.json();
 
-		// Log full user to see if team is embedded
-		console.log('[osu-user] team field:', JSON.stringify(user.team));
-		console.log('[osu-user] is_supporter:', user.is_supporter, 'support_level:', user.support_level);
 
 		// Team — may be embedded in user object directly
 		let team: { id: number; name: string; short_name: string | null; flag_url: string | null } | null = null;

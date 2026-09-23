@@ -8,6 +8,8 @@ interface NowPlayingResponse {
   isPaused: boolean;
   progressMs: number;
   track: SpotifyApi.TrackObjectFull | null;
+  // When Spotify was asked, so clients can correct progressMs for time spent in the cache.
+  fetchedAt: number;
 }
 
 export const GET: RequestHandler = async ({ fetch, platform }) => {
@@ -16,17 +18,25 @@ export const GET: RequestHandler = async ({ fetch, platform }) => {
     return new Response('Missing Spotify client ID', { status: 500 });
   }
 
-  const accessToken = await getSpotifyAccessToken({ fetch, platform });
-  const api = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, accessToken);
+  // Every visitor on the home page polls this every 5 seconds, so let Vercel's cache share one
+  // Spotify call between everyone for a few seconds instead of hitting Spotify per visitor.
+  const cacheHeaders = {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'public, max-age=0, s-maxage=4, stale-while-revalidate=4'
+  };
 
   const base: NowPlayingResponse = {
     isPlayingNow: false,
     isPaused: false,
     progressMs: 0,
-    track: null
+    track: null,
+    fetchedAt: Date.now()
   };
 
   try {
+    const accessToken = await getSpotifyAccessToken({ fetch, platform });
+    const api = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, accessToken);
+
     // this is the ts-sdk wrapper for /me/player
     const playback = await api.player.getPlaybackState(); // <— FIX HERE [web:41][web:35]
 
@@ -39,7 +49,7 @@ export const GET: RequestHandler = async ({ fetch, platform }) => {
           progressMs: playback.progress_ms ?? 0,
           track: playback.item as SpotifyApi.TrackObjectFull
         }),
-        { headers: { 'Content-Type': 'application/json' } }
+        { headers: cacheHeaders }
       );
     }
 
@@ -52,13 +62,11 @@ export const GET: RequestHandler = async ({ fetch, platform }) => {
           ...base,
           track: item.track as SpotifyApi.TrackObjectFull
         }),
-        { headers: { 'Content-Type': 'application/json' } }
+        { headers: cacheHeaders }
       );
     }
 
-    return new Response(JSON.stringify(base), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new Response(JSON.stringify(base), { headers: cacheHeaders });
   } catch (error) {
     console.error('Failed to fetch now playing:', error);
     return new Response(

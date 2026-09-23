@@ -26,20 +26,33 @@
 	};
 
 	let selectedRange = options[0].value;
+	let topLoading: Partial<Record<SpotifyTimeRange, boolean>> = {};
+	let topError: Partial<Record<SpotifyTimeRange, string>> = {};
 
 	$: if (browser) {
 		fetchTopTracks(selectedRange);
 	}
 
 	function fetchTopTracks(range: SpotifyTimeRange) {
-		if (tracks[range]) return;
+		if (tracks[range] || topLoading[range]) return;
 
-		tracks[range] = [];
+		topLoading[range] = true;
+		topError[range] = '';
 
 		fetch('/api/top-tracks?time_range=' + range)
-			.then(res => res.json())
+			.then(res => {
+				if (!res.ok) throw new Error(`status ${res.status}`);
+				return res.json();
+			})
 			.then(res => {
 				tracks[range] = res;
+			})
+			.catch(e => {
+				console.error('Failed to load top tracks:', e);
+				topError[range] = "couldn't load top tracks";
+			})
+			.finally(() => {
+				topLoading[range] = false;
 			});
 	}
 
@@ -170,9 +183,9 @@
 
 <svelte:head>
 	<title>music</title>
-	<meta name="og:title" content="music" />
+	<meta property="og:title" content="music" />
 	<meta name="description" content="tracks i've listened to the most" />
-	<meta name="og:description" content="tracks i've listened to the most" />
+	<meta property="og:description" content="tracks i've listened to the most" />
 	<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f0f5" />
 	<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#281c21" />
 </svelte:head>
@@ -219,6 +232,15 @@
 							</button>
 						{/each}
 					</div>
+
+					{#if topLoading[selectedRange]}
+						<p class="text-ocean-700 dark:text-ocean-400">loading...</p>
+					{:else if topError[selectedRange]}
+						<p class="text-red-500">
+							{topError[selectedRange]}.
+							<button class="underline" on:click={() => fetchTopTracks(selectedRange)}>try again</button>
+						</p>
+					{/if}
 
 					{#key selectedRange}
 						<div class="flex flex-col gap-2" in:fade={{ duration: 300 }}>

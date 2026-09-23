@@ -16,22 +16,26 @@ export async function GET({ fetch: svelteKitFetch, platform, url }: any) {
 		return new Response('Missing Spotify client ID', { status: 500 });
 	}
 
-	const accessToken = await getSpotifyAccessToken({ platform });
+	try {
+		const accessToken = await getSpotifyAccessToken({ platform });
 
-	const api = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, accessToken, {
-		fetch: fetch as any
-	});
+		const api = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, accessToken, {
+			fetch: fetch as any
+		});
 
-	const items = await api.currentUser.topItems(
-		'tracks',
-		range as SpotifyTimeRange,
-		50
-	);
+		const items = await api.currentUser.topItems('tracks', range as SpotifyTimeRange, 50);
 
-	return new Response(JSON.stringify(items.items), {
-		headers: {
-			'Content-Type': 'application/json',
-			'Cache-Control': 'public, max-age=0, s-maxage=300'
-		}
-	});
+		return new Response(JSON.stringify(items.items), {
+			headers: {
+				'Content-Type': 'application/json',
+				'Cache-Control': 'public, max-age=0, s-maxage=300'
+			}
+		});
+	} catch (error) {
+		console.error('Failed to fetch top tracks:', error);
+		return new Response(JSON.stringify({ error: 'Failed to fetch top tracks' }), {
+			status: 500,
+			headers: { 'Content-Type': 'application/json' }
+		});
+	}
 }
