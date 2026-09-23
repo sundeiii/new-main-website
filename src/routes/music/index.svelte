@@ -1,5 +1,24 @@
+<script context="module" lang="ts">
+	import type { Load } from '@sveltejs/kit';
+
+	// Design, song of the month and notes are edited in /admin → pages → music.
+	export const load: Load = async ({ fetch }) => {
+		const res = await fetch('/api/site/music').catch(() => null);
+		return { props: { music: res?.ok ? await res.json() : null } };
+	};
+</script>
+
 <script lang="ts">
 	import { fade, fly } from 'svelte/transition';
+	import { marked } from 'marked';
+	import PostBody from '$lib/components/PostBody.svelte';
+	import { settingDefaults, type MusicSettings } from '$lib/siteSettings';
+
+	export let music: MusicSettings | null;
+	$: settings = music ?? settingDefaults.music;
+	$: cards = settings.design === 'cards';
+	$: notesHtml = settings.notes ? (marked.parse(settings.notes, { async: false, gfm: true, breaks: true }) as string) : '';
+	$: sotm = settings.songOfTheMonth;
 	import { browser } from '$app/env';
 	import type { SpotifyTimeRange, TopTracksResponse } from '$lib/types';
 	
@@ -192,6 +211,32 @@
 			<p class="text-ocean-700 dark:text-ocean-400">what i've been listening to</p>
 		</div>
 
+		{#if sotm || notesHtml}
+			<div class="flex flex-col sm:flex-row gap-5 items-start" in:fly={{ y: 20, duration: 400, delay: 50 }}>
+				{#if sotm}
+					<a
+						href={sotm.url || undefined}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="group flex gap-3 items-center border border-ocean-300 dark:border-ocean-700 rounded-lg p-3 pr-5 hover:border-ocean-500 transition-colors shrink-0 max-w-sm"
+					>
+						{#if sotm.image}
+							<img src={sotm.image} alt="" class="w-16 h-16 rounded shadow-lg group-hover:rotate-3 transition-transform" />
+						{/if}
+						<div class="min-w-0">
+							<div class="text-[10px] uppercase tracking-widest text-ocean-500">song of the month</div>
+							<div class="text-ocean-900 dark:text-ocean-100 truncate">{sotm.title}</div>
+							{#if sotm.artist}<div class="text-ocean-600 dark:text-ocean-400 text-sm truncate">{sotm.artist}</div>{/if}
+							{#if sotm.note}<div class="text-ocean-600 dark:text-ocean-400 text-xs italic mt-1">“{sotm.note}”</div>{/if}
+						</div>
+					</a>
+				{/if}
+				{#if notesHtml}
+					<div class="flex-1 text-sm"><PostBody html={notesHtml} /></div>
+				{/if}
+			</div>
+		{/if}
+
 		<!-- Tabs -->
 		<div class="flex gap-6 text-sm border-b border-ocean-300 dark:border-ocean-700">
 			<button
@@ -237,6 +282,32 @@
 				{/if}
 
 				{#key selectedRange}
+					{#if cards}
+						<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" in:fade={{ duration: 300 }}>
+							{#each currentRange ?? [] as track, i}
+								<a
+									href={track.external_urls.spotify}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="group flex flex-col gap-1.5"
+								>
+									<div class="relative aspect-square rounded-md overflow-hidden shadow bg-ocean-200 dark:bg-ocean-800">
+										{#if track.album?.images?.[1]?.url || track.album?.images?.[0]?.url}
+											<img
+												src={track.album.images[1]?.url || track.album.images[0]?.url}
+												alt=""
+												loading="lazy"
+												class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+											/>
+										{/if}
+										<span class="absolute top-1.5 left-1.5 text-xs px-1.5 py-0.5 rounded bg-black/60 text-white">#{i + 1}</span>
+									</div>
+									<span class="text-ocean-900 dark:text-ocean-100 text-xs truncate group-hover:underline">{romanizedCache[track.name] || track.name}</span>
+									<span class="text-ocean-600 dark:text-ocean-400 text-[11px] truncate -mt-1">{track.artists.map(a => romanizedCache[a.name] || a.name).join(', ')}</span>
+								</a>
+							{/each}
+						</div>
+					{:else}
 					<div class="flex flex-col gap-2" in:fade={{ duration: 300 }}>
 						{#each currentRange ?? [] as track, i}
 							<a
@@ -249,6 +320,7 @@
 							</a>
 						{/each}
 					</div>
+					{/if}
 				{/key}
 			</div>
 
@@ -265,6 +337,40 @@
 					</div>
 				{:else if historyError}
 					<p class="text-red-500">{historyError}</p>
+				{:else if cards}
+					<p class="text-ocean-600 dark:text-ocean-500 text-xs mb-6">recent 50 spotify listens</p>
+					<div class="space-y-8">
+						{#each Object.entries(grouped) as [date, items], groupIndex}
+							<div in:fly={{ y: 20, duration: 300, delay: groupIndex * 100 }}>
+								<h2 class="text-ocean-800 dark:text-ocean-200 text-sm font-medium mb-3 sticky top-14 py-2 backdrop-blur-md z-10">
+									{date} <span class="text-ocean-500 text-xs">· {items.length}</span>
+								</h2>
+								<div class="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2">
+									{#each items as item, i}
+										{@const trackName = item.track?.name || ''}
+										{@const artists = item.track?.artists?.map(a => a.name).join(', ') || ''}
+										<a
+											href={item.track?.external_urls?.spotify || '#'}
+											target="_blank"
+											rel="noopener noreferrer"
+											title="{romanizedCache[trackName] || trackName} – {romanizedCache[artists] || artists} · {timeAgo(item.played_at)}"
+											class="group relative aspect-square rounded overflow-hidden bg-ocean-200 dark:bg-ocean-800"
+											in:fade={{ duration: 200, delay: groupIndex * 100 + i * 15 }}
+										>
+											{#if item.track?.album?.images?.[1]?.url || item.track?.album?.images?.[0]?.url}
+												<img src={item.track.album.images[1]?.url || item.track.album.images[0]?.url} alt="" loading="lazy" class="w-full h-full object-cover" />
+											{/if}
+											<div class="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 flex flex-col justify-end">
+												<span class="text-white text-[10px] leading-tight truncate">{romanizedCache[trackName] || trackName}</span>
+												<span class="text-white/70 text-[9px] truncate">{romanizedCache[artists] || artists}</span>
+												<span class="text-white/50 text-[9px]">{new Date(item.played_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}{item.source === 'lastfm' ? ' · last.fm' : ''}</span>
+											</div>
+										</a>
+									{/each}
+								</div>
+							</div>
+						{/each}
+					</div>
 				{:else}
 					<p class="text-ocean-600 dark:text-ocean-500 text-xs mb-6">recent 50 spotify listens</p>
 					<div class="space-y-8">
@@ -304,6 +410,9 @@
 														{romanizedCache[artists] || artists}
 													</span>
 												</div>
+												{#if item.source === 'lastfm'}
+													<span class="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-600 dark:text-red-400 flex-shrink-0" title="from last.fm">last.fm</span>
+												{/if}
 												<span class="text-ocean-600 dark:text-ocean-500 text-xs flex-shrink-0 hidden sm:block">
 													{new Date(item.played_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
 												</span>

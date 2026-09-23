@@ -1,4 +1,5 @@
 import { getSpotifyAccessToken } from '$lib/server/spotify';
+import { hiddenArtistFilter } from '$lib/server/hiddenArtists';
 import type { SpotifyTimeRange } from '$lib/types';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import fetch from 'node-fetch';
@@ -23,9 +24,17 @@ export async function GET({ fetch: svelteKitFetch, platform, url }: any) {
 			fetch: fetch as any
 		});
 
-		const items = await api.currentUser.topItems('tracks', range as SpotifyTimeRange, 50);
+		// Hidden artists can take up a lot of the top 50, so keep paging further down the list
+		// until there are 50 tracks to show (or Spotify runs out).
+		const { keep } = await hiddenArtistFilter();
+		const tracks: any[] = [];
+		for (let offset = 0; offset < 200 && tracks.length < 50; offset += 50) {
+			const page = await api.currentUser.topItems('tracks', range as SpotifyTimeRange, 50, offset);
+			tracks.push(...page.items.filter(keep));
+			if (page.items.length < 50) break;
+		}
 
-		return new Response(JSON.stringify(items.items), {
+		return new Response(JSON.stringify(tracks.slice(0, 50)), {
 			headers: {
 				'Content-Type': 'application/json',
 				'Cache-Control': 'public, max-age=0, s-maxage=300'

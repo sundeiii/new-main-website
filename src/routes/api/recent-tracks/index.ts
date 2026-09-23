@@ -1,4 +1,5 @@
 import { getSpotifyAccessToken } from '$lib/server/spotify';
+import { hiddenArtistFilter } from '$lib/server/hiddenArtists';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 
 export async function GET({ fetch, platform }: any) {
@@ -13,9 +14,10 @@ export async function GET({ fetch, platform }: any) {
 
 		const api = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, accessToken);
 
-		const recentlyPlayed = await api.player.getRecentlyPlayedTracks(1);
-		
-		return new Response(JSON.stringify(recentlyPlayed.items[0]), {
+		// Look a bit further back so a hidden artist's track doesn't leave this empty.
+		const [recentlyPlayed, { keep }] = await Promise.all([api.player.getRecentlyPlayedTracks(20), hiddenArtistFilter()]);
+
+		return new Response(JSON.stringify(recentlyPlayed.items.find(keep) ?? null), {
 			headers: {
 				'Content-Type': 'application/json',
 				'Cache-Control': 'public, max-age=0, s-maxage=60'

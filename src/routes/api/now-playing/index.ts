@@ -1,6 +1,7 @@
 // src/routes/api/now-playing/+server.ts
 import type { RequestHandler } from './$types';
 import { getSpotifyAccessToken } from '$lib/server/spotify';
+import { hiddenArtistFilter } from '$lib/server/hiddenArtists';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 
 interface NowPlayingResponse {
@@ -38,9 +39,10 @@ export const GET: RequestHandler = async ({ fetch, platform }) => {
     const api = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, accessToken);
 
     // this is the ts-sdk wrapper for /me/player
-    const playback = await api.player.getPlaybackState(); // <— FIX HERE [web:41][web:35]
+    const [playback, { isHidden, keep }] = await Promise.all([api.player.getPlaybackState(), hiddenArtistFilter()]);
 
-    if (playback && playback.item && playback.currently_playing_type === 'track') {
+    // Hidden artists are treated as "not playing", so it falls back to the last other track.
+    if (playback && playback.item && playback.currently_playing_type === 'track' && !isHidden(playback.item)) {
       return new Response(
         JSON.stringify({
           ...base,
@@ -54,8 +56,8 @@ export const GET: RequestHandler = async ({ fetch, platform }) => {
     }
 
     // fallback to your existing recent-tracks call
-    const recentlyPlayed = await api.player.getRecentlyPlayedTracks(1); // [web:33]
-    const item = recentlyPlayed.items[0];
+    const recentlyPlayed = await api.player.getRecentlyPlayedTracks(20); // [web:33]
+    const item = recentlyPlayed.items.find(keep);
     if (item?.track) {
       return new Response(
         JSON.stringify({
