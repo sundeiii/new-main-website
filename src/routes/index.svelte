@@ -344,6 +344,10 @@
 				<img src="https://nyoemii.dev/media/img/button.png" alt="noemi's puppyhouse" class="h-[31px] w-[88px] image-pixelated" />
 				</a>
 
+				<a href="https://centaurea.ee/" target="_blank" rel="noopener noreferrer">
+				<img src="/centaurea.gif" alt="centaurea" class="h-[31px] w-[88px]" />
+				</a>
+
 				<button
 				on:click={copyButtonCode}
 				title={copied ? 'copied!' : 'copy embed code'}
