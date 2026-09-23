@@ -47,7 +47,7 @@
 			<h1 class="text-ocean-900 dark:text-ocean-100 text-4xl font-bold mb-2">{post.title}</h1>
 			<p class="text-ocean-700 dark:text-ocean-400">
 				<time>{formatDate(post.date)}</time>
-				{#if post.location} · 📍 {post.location}{/if}
+				{#if post.location}{' · 📍 '}{post.location}{/if}
 			</p>
 			{#if post.link}
 				<a

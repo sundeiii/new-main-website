@@ -60,20 +60,21 @@
 						>
 							{#if event.banner}
 								<img src={event.banner} alt="" loading="lazy" decoding="async" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-								<div class="absolute inset-0 bg-black/60 group-hover:bg-black/45 transition-colors" />
+								<!-- Darkest behind the text (left), so light banners stay readable -->
+								<div class="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/40 group-hover:from-black/85 group-hover:via-black/65 transition-colors" />
 							{/if}
-							<div class="relative p-4">
+							<div class="relative p-4 {event.banner ? 'banner-text' : ''}">
 								<div class="flex flex-wrap items-baseline justify-between gap-2">
 									<h3 class="{event.banner ? 'text-white' : 'text-ocean-900 dark:text-ocean-100'} font-medium group-hover:underline">{event.title}</h3>
 									{#if group.label === 'upcoming'}
 										<span class="text-xs px-2 py-0.5 rounded-full bg-ocean-green/90 text-ocean-950">{countdown(event.date)}</span>
 									{/if}
 								</div>
-								<p class="{event.banner ? 'text-white/70' : 'text-ocean-700 dark:text-ocean-400'} text-sm">
-									{formatDate(event.date)}{#if event.location} · 📍 {event.location}{/if}
+								<p class="{event.banner ? 'text-white/80' : 'text-ocean-700 dark:text-ocean-400'} text-sm">
+									{formatDate(event.date)}{#if event.location}{' · 📍 '}{event.location}{/if}
 								</p>
 								{#if event.excerpt}
-									<p class="{event.banner ? 'text-white/85' : 'text-ocean-800 dark:text-ocean-300'} text-sm mt-2">{event.excerpt}</p>
+									<p class="{event.banner ? 'text-white/90' : 'text-ocean-800 dark:text-ocean-300'} text-sm mt-2">{event.excerpt}</p>
 								{/if}
 							</div>
 						</a>
@@ -87,3 +88,10 @@
 		{/if}
 	</div>
 </section>
+
+<style>
+	/* A soft shadow keeps white text readable on bright parts of a banner. */
+	.banner-text {
+		text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 0, 0, 0.6);
+	}
+</style>

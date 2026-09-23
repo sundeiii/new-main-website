@@ -98,12 +98,13 @@
 								decoding="async"
 								class="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
 							/>
-							<div class="absolute inset-0 bg-black/60 dark:bg-black/70 transition-colors duration-300 group-hover:bg-black/40 dark:group-hover:bg-black/50" />
+							<!-- Darkest behind the text (left), so light banners stay readable -->
+							<div class="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/40 transition-opacity duration-300 group-hover:opacity-80" />
 						{/if}
 						<!-- Not an <a> around everything: the host chips are links, and links can't be
 							 nested (browsers split them when parsing the server HTML). The title's link is
 							 stretched over the card instead, and the chips sit above it. -->
-						<div class="relative p-4 {event.badge ? 'pr-28' : ''}">
+						<div class="relative p-4 {event.badge ? 'pr-28' : ''} {event.banner ? 'banner-text' : ''}">
 							{#if event.badge}
 								<img
 									src={event.badge}
@@ -174,3 +175,10 @@
 	{/each}
 	</div>
 </section>
+
+<style>
+	/* A soft shadow keeps white text readable on bright parts of a banner. */
+	.banner-text {
+		text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 0, 0, 0.6);
+	}
+</style>
