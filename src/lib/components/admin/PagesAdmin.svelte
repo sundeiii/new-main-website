@@ -3,11 +3,14 @@
 	import { adminApi, danger, field, fieldLabel, primary, subtle } from './styles';
 	import UploadButton from './UploadButton.svelte';
 	import { uploadImage, uploadLargeFile } from './upload';
-	import type { HomeSettings, MusicSettings, NowSettings, OsuSettings, SkinsSettings } from '$lib/siteSettings';
+	import AboutEditor from './AboutEditor.svelte';
+	import ButtonsEditor from './ButtonsEditor.svelte';
+	import GalleryEditor from './GalleryEditor.svelte';
+	import type { AboutSettings, ButtonsSettings, GallerySettings, HomeSettings, MusicSettings, NowSettings, OsuSettings, SkinsSettings } from '$lib/siteSettings';
 
 	export let onUnauthorized: () => void;
 
-	const sections = ['home', 'now', 'osu', 'music', 'skins', 'changelog'] as const;
+	const sections = ['home', 'about', 'now', 'osu', 'music', 'gallery', 'buttons', 'skins', 'changelog'] as const;
 	let active: typeof sections[number] = 'home';
 
 	let home: HomeSettings | null = null;
@@ -15,6 +18,9 @@
 	let osu: OsuSettings | null = null;
 	let music: MusicSettings | null = null;
 	let skins: SkinsSettings | null = null;
+	let gallery: GallerySettings | null = null;
+	let buttons: ButtonsSettings | null = null;
+	let about: AboutSettings | null = null;
 	let changelog: { id: number; date: string; text: string }[] = [];
 
 	let error = '';
@@ -26,12 +32,15 @@
 	async function load() {
 		error = '';
 		try {
-			[home, now, osu, music, skins, changelog] = await Promise.all([
+			[home, now, osu, music, skins, gallery, buttons, about, changelog] = await Promise.all([
 				api('/api/admin/site/home', 'GET'),
 				api('/api/admin/site/now', 'GET'),
 				api('/api/admin/site/osu', 'GET'),
 				api('/api/admin/site/music', 'GET'),
 				api('/api/admin/site/skins', 'GET'),
+				api('/api/admin/site/gallery', 'GET'),
+				api('/api/admin/site/buttons', 'GET'),
+				api('/api/admin/site/about', 'GET'),
 				api('/api/admin/changelog', 'GET')
 			]);
 		} catch (e) {
@@ -39,7 +48,7 @@
 		}
 	}
 
-	async function save(key: 'home' | 'now' | 'osu' | 'music' | 'skins', value: unknown) {
+	async function save(key: 'home' | 'now' | 'osu' | 'music' | 'skins' | 'gallery' | 'buttons' | 'about', value: unknown) {
 		busy = true;
 		error = saved = '';
 		try {
@@ -49,6 +58,9 @@
 			if (key === 'osu') osu = result;
 			if (key === 'music') music = result;
 			if (key === 'skins') skins = result;
+			if (key === 'gallery') gallery = result;
+			if (key === 'buttons') buttons = result;
+			if (key === 'about') about = result;
 			saved = 'saved';
 			setTimeout(() => (saved = ''), 2000);
 		} catch (e) {
@@ -178,7 +190,7 @@
 		<div class="flex items-center gap-2 text-sm">
 			{#if saved}<span class="text-ocean-green">{saved}</span>{/if}
 			{#if active !== 'changelog'}
-				<a href={active === 'home' ? '/' : `/${active}`} target="_blank" class={subtle}>view ↗</a>
+				<a href={active === 'home' || active === 'buttons' ? '/' : `/${active}`} target="_blank" class={subtle}>view ↗</a>
 			{/if}
 		</div>
 	</div>
@@ -337,6 +349,17 @@
 			</div>
 			<div><button on:click={() => save('music', music)} class={primary} disabled={busy}>save</button></div>
 		</div>
+
+	<!-- ABOUT / GALLERY / BUTTONS -->
+	{:else if active === 'about' && about}
+		<AboutEditor bind:about on:error={(e) => (error = e.detail)} />
+		<div><button on:click={() => save('about', about)} class={primary} disabled={busy}>save</button></div>
+	{:else if active === 'gallery' && gallery}
+		<GalleryEditor bind:gallery on:error={(e) => (error = e.detail)} />
+		<div><button on:click={() => save('gallery', gallery)} class={primary} disabled={busy}>save</button></div>
+	{:else if active === 'buttons' && buttons}
+		<ButtonsEditor bind:buttons on:error={(e) => (error = e.detail)} />
+		<div><button on:click={() => save('buttons', buttons)} class={primary} disabled={busy}>save</button></div>
 
 	<!-- SKINS -->
 	{:else if active === 'skins' && skins}

@@ -1,6 +1,6 @@
 // Shrinks an image in the browser and uploads it to the CDN through /api/admin/media.
 
-export type Folder = 'blog' | 'tournaments' | 'skins' | 'misc';
+export type Folder = 'blog' | 'tournaments' | 'skins' | 'gallery' | 'misc';
 
 const MAX_BYTES = 4 * 1024 * 1024;
 

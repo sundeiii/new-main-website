@@ -1,114 +1,26 @@
+<script context="module" lang="ts">
+	import type { Load } from '@sveltejs/kit';
+
+	// Everything on this page is edited in /admin → pages → about.
+	export const load: Load = async ({ fetch }) => {
+		const res = await fetch('/api/site/about').catch(() => null);
+		return { props: { about: res?.ok ? await res.json() : null } };
+	};
+</script>
+
 <script lang="ts">
 	import { fade, fly } from 'svelte/transition';
+	import { marked } from 'marked';
+	import PostBody from '$lib/components/PostBody.svelte';
+	import { settingDefaults, type AboutSettings } from '$lib/siteSettings';
 
-
-
-	const pcSpecs = [
-		{
-			label: 'processor',
-			value: 'i5-13400F',
-			sub: '10c / 16t • up to 4.6 GHz',
-			image: '/images/pcbuild/13400f.webp'
-		},
-		{
-			label: 'graphics card',
-			value: 'GeForce RTX 3060 12GB',
-			sub: 'asus • 12GB gddr6',
-			image: '/images/pcbuild/rtx3060.webp'
-		},
-		{
-			label: 'memory',
-			value: '4x16GB DDR4',
-			sub: 'xmp certified • 3200 MT/s',
-			image: '/images/pcbuild/memory.webp'
-		},
-		{
-			label: 'main nvme',
-			value: 'Samsung 990 PRO 1TB',
-			sub: 'gen4 • ~7,000 MB/s',
-			image: '/images/pcbuild/samsung.webp'
-		},
-		{
-			label: 'additional storage',
-			value: 'Seagate Barracuda',
-			sub: '2tb • 7200 rpm hdd',
-			image: '/images/pcbuild/barracuda.webp'
-		},
-		{
-			label: 'backup storage',
-			value: 'Western Digital Blue',
-			sub: '2x500GB • sata',
-			image: '/images/pcbuild/wd.webp'
-		},
-		{
-			label: 'motherboard',
-			value: 'ASRock B760M Pro RS/D4 WiFi',
-			sub: 'lga1700 • matx • wi‑fi',
-			image: '/images/pcbuild/b760m.webp'
-		},
-		{
-			label: 'cooling',
-			value: 'NZXT Kraken 240',
-			sub: '240mm aio • customizable screen',
-			image: '/images/pcbuild/kraken.webp'
-		},
-		{
-			label: 'chassis',
-			value: 'NZXT H5 Elite',
-			sub: 'matx • tempered glass',
-			image: '/images/pcbuild/h5-elite.webp'
-		}
-	];
-
-	const peripheralSpecs = [
-		{
-			label: 'monitor',
-			value: 'Lenovo Legion 24-10',
-			sub: '1080p • 240 Hz',
-			image: '/images/peripherals/main-lenovo.webp'
-		},
-		{
-			label: 'keyboard',
-			value: 'Wooting 60HE',
-			sub: 'hall effect • analog • rapid trigger',
-			image: '/images/peripherals/wooting.webp'
-		},
-		{
-			label: 'mouse',
-			value: 'Logitech PRO 2 LIGHTSPEED',
-			sub: '25k sensor • wireless',
-			image: '/images/peripherals/mouse.webp'
-		},
-		{
-			label: 'tablet',
-			value: 'Wacom CTL-472',
-			sub: 'the osu tablet • stan full area',
-			image: '/images/peripherals/ctl472.webp'
-		},
-		{
-			label: 'headphones',
-			value: 'Sony WH-1000XM4',
-			sub: 'active noise cancellation • wireless',
-			image: '/images/peripherals/xm4.webp'
-		}
-	];
-
-	const interests = [
-		'osu!',
-		'web development',
-		'music',
-		'graphic design',
-		'editing'
-	];
-
-	const languages = [
-		{ name: 'TypeScript', color: '#3178c6' },
-		{ name: 'Svelte', color: '#ff3e00' },
-		{ name: 'Python', color: '#3776ab' },
-		{ name: 'HTML/CSS', color: '#e34c26' },
-		{ name: 'PowerShell', color: '#012456' },
-		{ name: 'Bash', color: '#4eaa25' }
-	];
+	export let about: AboutSettings | null;
+	$: page = about ?? settingDefaults.about;
+	$: bioHtml = marked.parse(page.bio || '', { async: false, gfm: true, breaks: true }) as string;
+	$: pcSpecs = page.pcBuild;
+	$: peripheralSpecs = page.peripherals;
+	$: interests = page.interests;
+	$: languages = page.languages;
 </script>
 
 <svelte:head>
@@ -139,23 +51,11 @@
 			in:fly={{ y: 20, duration: 300, delay: 100 }}
 		>
 			<h2 class="text-ocean-900 dark:text-ocean-100 text-lg mb-3">who?</h2>
-			<div class="text-ocean-800 dark:text-ocean-300 text-sm space-y-3">
-				<p>
-					hey, i'm sundei. i'm a student and developer from Estonia. i enjoy building things 
-					for the web, playing osu!, and listening to way too much music.
-				</p>
-				<p>
-					i mostly work with TypeScript and Svelte these days. this portfolio is built with 
-					SvelteKit, Tailwind CSS, and a bunch of APIs stitched together.
-				</p>
-				<p>
-					when i'm not coding, i'm probably watching streams, staffing osu! tournaments, 
-					or contributing to random wikis.
-				</p>
-			</div>
+			<div class="text-sm"><PostBody html={bioHtml} /></div>
 		</div>
 
 		<!-- PC build -->
+		{#if pcSpecs.length}
 		<div
 			class="mb-10"
 			in:fly={{ y: 20, duration: 300, delay: 200 }}
@@ -196,6 +96,7 @@
 				{/each}
 			</div>
 		</div>
+		{/if}
 
 		<!-- Peripherals -->
 		<div
@@ -281,33 +182,16 @@
 		<div in:fly={{ y: 20, duration: 300, delay: 500 }}>
 			<h2 class="text-ocean-900 dark:text-ocean-100 text-lg mb-3">reach me</h2>
 			<div class="flex flex-wrap gap-3 text-sm">
-				<a 
-					href="https://twitter.com/deprivedsundei" 
-					target="_blank" rel="noopener noreferrer"
-					class="text-ocean-700 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 underline transition-colors"
-				>
-					twitter
-				</a>
-				<a 
-					href="https://github.com/rayuii" 
-					target="_blank" rel="noopener noreferrer"
-					class="text-ocean-700 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 underline transition-colors"
-				>
-					github
-				</a>
-				<a 
-					href="mailto:sundei@sundei.ee"
-					class="text-ocean-700 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 underline transition-colors"
-				>
-					email
-				</a>
-				<!-- <a 
-					href="https://osu.ppy.sh/users/28827755" 
-					target="_blank" rel="noopener noreferrer"
-					class="text-ocean-700 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 underline transition-colors"
-				>
-					osu!
-				</a> -->
+				{#each page.links as link}
+					<a
+						href={link.url}
+						target={link.url.startsWith('mailto:') ? undefined : '_blank'}
+						rel="noopener noreferrer"
+						class="text-ocean-700 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 underline transition-colors"
+					>
+						{link.label}
+					</a>
+				{/each}
 			</div>
 		</div>
 	</div>

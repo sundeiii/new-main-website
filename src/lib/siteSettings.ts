@@ -69,12 +69,60 @@ export interface SkinsSettings {
 	items: Skin[];
 }
 
+export interface GalleryPhoto {
+	src: string;
+	caption: string;
+	date: string;
+}
+export interface GalleryAlbum {
+	slug: string;
+	title: string;
+	description: string;
+	photos: GalleryPhoto[];
+}
+export interface GallerySettings {
+	albums: GalleryAlbum[];
+}
+
+export interface Button88x31 {
+	image: string;
+	href: string;
+	alt: string;
+	/** Pixel-art buttons look best with image-rendering: pixelated. */
+	pixelated: boolean;
+}
+export interface ButtonsSettings {
+	/** Friends' / other sites' buttons shown on the home page. */
+	items: Button88x31[];
+	/** Your own button, with a "copy embed code" click. */
+	mine: { image: string; alt: string };
+}
+
+export interface AboutSpec {
+	label: string;
+	value: string;
+	sub: string;
+	image: string;
+}
+export interface AboutSettings {
+	/** Markdown. */
+	bio: string;
+	pcBuild: AboutSpec[];
+	peripherals: AboutSpec[];
+	languages: { name: string; color: string }[];
+	interests: string[];
+	links: { label: string; url: string }[];
+}
+
 export interface SiteSettings {
 	home: HomeSettings;
 	now: NowSettings;
 	osu: OsuSettings;
 	music: MusicSettings;
 	skins: SkinsSettings;
+	gallery: GallerySettings;
+	buttons: ButtonsSettings;
+	about: AboutSettings;
 }
 
 export const settingDefaults: SiteSettings = {
@@ -115,6 +163,62 @@ export const settingDefaults: SiteSettings = {
 				screenshots: [],
 				download: '/skins/- 『BlooXoo』 - (sundei edit).osk'
 			}
+		]
+	},
+	gallery: {
+		albums: [
+			{
+				slug: 'random',
+				title: 'random',
+				description: '',
+				photos: [
+					{ src: 'https://cdn.sundei.eu/temp_gallery/IMG_2469.jpg', caption: 'rain and spring', date: '2026-02-09' },
+					{ src: 'https://cdn.sundei.eu/temp_gallery/IMG_2481.jpg', caption: 'the sunset after the rain', date: '2026-02-08' }
+				]
+			}
+		]
+	},
+	buttons: {
+		items: [
+			{ image: '/advelosbutton.gif', href: 'https://advelos.moe', alt: 'advelos!!', pixelated: false },
+			{ image: 'https://nyoemii.dev/media/img/button.png', href: 'https://nyoemii.dev/', alt: "noemi's puppyhouse", pixelated: true },
+			{ image: '/centaurea.gif', href: 'https://centaurea.ee/', alt: 'centaurea', pixelated: false }
+		],
+		mine: { image: 'https://sundei.ee/sfa.gif', alt: 'the house of kwanmendments' }
+	},
+	about: {
+		bio: "hey, i'm sundei. i'm a student and developer from Estonia. i enjoy building things for the web, playing osu!, and listening to way too much music.\n\ni mostly work with TypeScript and Svelte these days. this portfolio is built with SvelteKit, Tailwind CSS, and a bunch of APIs stitched together.\n\nwhen i'm not coding, i'm probably watching streams, staffing osu! tournaments, or contributing to random wikis.",
+		pcBuild: [
+			{ label: 'processor', value: 'i5-13400F', sub: '10c / 16t • up to 4.6 GHz', image: '/images/pcbuild/13400f.webp' },
+			{ label: 'graphics card', value: 'GeForce RTX 3060 12GB', sub: 'asus • 12GB gddr6', image: '/images/pcbuild/rtx3060.webp' },
+			{ label: 'memory', value: '4x16GB DDR4', sub: 'xmp certified • 3200 MT/s', image: '/images/pcbuild/memory.webp' },
+			{ label: 'main nvme', value: 'Samsung 990 PRO 1TB', sub: 'gen4 • ~7,000 MB/s', image: '/images/pcbuild/samsung.webp' },
+			{ label: 'additional storage', value: 'Seagate Barracuda', sub: '2tb • 7200 rpm hdd', image: '/images/pcbuild/barracuda.webp' },
+			{ label: 'backup storage', value: 'Western Digital Blue', sub: '2x500GB • sata', image: '/images/pcbuild/wd.webp' },
+			{ label: 'motherboard', value: 'ASRock B760M Pro RS/D4 WiFi', sub: 'lga1700 • matx • wi-fi', image: '/images/pcbuild/b760m.webp' },
+			{ label: 'cooling', value: 'NZXT Kraken 240', sub: '240mm aio • customizable screen', image: '/images/pcbuild/kraken.webp' },
+			{ label: 'chassis', value: 'NZXT H5 Elite', sub: 'matx • tempered glass', image: '/images/pcbuild/h5-elite.webp' }
+		],
+		peripherals: [
+			{ label: 'monitor', value: 'Lenovo Legion 24-10', sub: '1080p • 240 Hz', image: '/images/peripherals/main-lenovo.webp' },
+			{ label: 'keyboard', value: 'Wooting 60HE', sub: 'hall effect • analog • rapid trigger', image: '/images/peripherals/wooting.webp' },
+			{ label: 'mouse', value: 'Logitech PRO 2 LIGHTSPEED', sub: '25k sensor • wireless', image: '/images/peripherals/mouse.webp' },
+			{ label: 'tablet', value: 'Wacom CTL-472', sub: 'the osu tablet • stan full area', image: '/images/peripherals/ctl472.webp' },
+			{ label: 'headphones', value: 'Sony WH-1000XM4', sub: 'active noise cancellation • wireless', image: '/images/peripherals/xm4.webp' }
+		],
+		languages: [
+			{ name: 'TypeScript', color: '#3178c6' },
+			{ name: 'Svelte', color: '#ff3e00' },
+			{ name: 'Python', color: '#3776ab' },
+			{ name: 'HTML/CSS', color: '#e34c26' },
+			{ name: 'PowerShell', color: '#012456' },
+			{ name: 'Bash', color: '#4eaa25' }
+		],
+		interests: ['osu!', 'web development', 'music', 'graphic design', 'editing'],
+		links: [
+			{ label: 'twitter', url: 'https://twitter.com/deprivedsundei' },
+			{ label: 'github', url: 'https://github.com/rayuii' },
+			{ label: 'email', url: 'mailto:sundei@sundei.ee' }
 		]
 	}
 };

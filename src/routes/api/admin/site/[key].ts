@@ -59,6 +59,42 @@ const clean: { [K in keyof SiteSettings]: (v: any) => SiteSettings[K] } = {
 		notes: str(v?.notes, 3000),
 		hiddenArtists: list(v?.hiddenArtists, 50, (a) => str(a, 100) || null)
 	}),
+	gallery: (v) => ({
+		albums: list(v?.albums, 30, (a) => {
+			const title = str(a?.title, 60);
+			if (!title) return null;
+			const slug = (str(a?.slug, 40) || title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'album';
+			return {
+				slug,
+				title,
+				description: str(a?.description, 500),
+				photos: list(a?.photos, 300, (p) => (urlOrPath(p?.src) ? { src: urlOrPath(p.src), caption: str(p?.caption, 200), date: str(p?.date, 20) } : null))
+			};
+		})
+	}),
+	buttons: (v) => ({
+		items: list(v?.items, 60, (b) =>
+			urlOrPath(b?.image) ? { image: urlOrPath(b.image), href: url(b?.href), alt: str(b?.alt, 100), pixelated: !!b?.pixelated } : null
+		),
+		mine: { image: urlOrPath(v?.mine?.image), alt: str(v?.mine?.alt, 100) }
+	}),
+	about: (v) => {
+		const spec = (s: any) =>
+			str(s?.label, 50) || str(s?.value, 100) ? { label: str(s?.label, 50), value: str(s?.value, 100), sub: str(s?.sub, 150), image: urlOrPath(s?.image) } : null;
+		return {
+			bio: str(v?.bio, 5000),
+			pcBuild: list(v?.pcBuild, 30, spec),
+			peripherals: list(v?.peripherals, 30, spec),
+			languages: list(v?.languages, 30, (l) =>
+				str(l?.name, 40) ? { name: str(l.name, 40), color: /^#[0-9a-f]{3,8}$/i.test(str(l?.color, 9)) ? str(l.color, 9) : '#888888' } : null
+			),
+			interests: list(v?.interests, 30, (i) => str(i, 60) || null),
+			links: list(v?.links, 20, (l) => {
+				const u = str(l?.url, 300);
+				return str(l?.label, 40) && /^(https?:\/\/|mailto:)/.test(u) ? { label: str(l.label, 40), url: u } : null;
+			})
+		};
+	},
 	skins: (v) => ({
 		items: list(v?.items, 50, (s) =>
 			str(s?.name, 100)

@@ -11,7 +11,7 @@ import path from 'path';
 //   CDN_SFTP_HOST_FINGERPRINT (optional, recommended) – the server's SHA256 key fingerprint(s),
 //     comma-separated; connections to a server with a different key are refused
 
-export const FOLDERS = ['blog', 'tournaments', 'skins', 'misc'] as const;
+export const FOLDERS = ['blog', 'tournaments', 'skins', 'gallery', 'misc'] as const;
 export type Folder = typeof FOLDERS[number];
 
 // Only raster images. SVG is left out because it can carry scripts.
