@@ -1,31 +1,32 @@
+<script context="module" lang="ts">
+	import type { Load } from '@sveltejs/kit';
+
+	// Posts come from the admin panel (database) plus the hand-written ones like /blog/welcome.
+	export const load: Load = async ({ fetch }) => {
+		const res = await fetch('/api/blog');
+		return { props: { posts: res.ok ? await res.json() : [] } };
+	};
+</script>
+
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 	
+	export let posts: { slug: string; title: string; date: string; excerpt: string; banner: string | null }[];
+
 	let mounted = false;
 	
 	onMount(() => {
 		mounted = true;
 	});
 	
-	// Blog posts will be stored here - you can later move to markdown files or a CMS
-	const posts = [
-		{
-			id: 1,
-			title: 'welcome to my corner of the internet',
-			date: '2026-02-10',
-			excerpt: 'hey, i\'m sundei. welcome to my little space on the web where i dump thoughts, projects, and whatever else feels worth remembering.',
-			slug: 'welcome',
-			banner: 'https://cdn.sundei.eu/banner1.png'
-		}
-	];
 </script>
 
 <svelte:head>
 	<title>blog</title>
-	<meta name="og:title" content="blog" />
+	<meta property="og:title" content="blog" />
 	<meta name="description" content="thoughts, tutorials, and random writings" />
-	<meta name="og:description" content="thoughts, tutorials, and random writings" />
+	<meta property="og:description" content="thoughts, tutorials, and random writings" />
 	<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f0f5" />
 	<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#281c21" />
 </svelte:head>
@@ -59,7 +60,7 @@
 								{post.title}
 							</h2>
 							<p class="text-ocean-700 dark:text-ocean-400 text-sm mt-1">
-								{new Date(post.date).toLocaleDateString('en-US', { 
+								{new Date(post.date + 'T00:00:00').toLocaleDateString('en-US', { 
 									month: 'long', 
 									day: 'numeric', 
 									year: 'numeric' 

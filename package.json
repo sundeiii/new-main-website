@@ -3,7 +3,7 @@
 	"version": "0.0.1",
 	"scripts": {
 		"dev": "node scripts/generate-buildtime.cjs && vite dev",
-		"build": "node scripts/generate-buildtime.cjs && vite build",
+		"build": "node scripts/generate-buildtime.cjs && vite build && node scripts/copy-kuromoji-dict.cjs",
 		"package": "svelte-kit package",
 		"preview": "vite preview",
 		"check": "svelte-check --tsconfig ./tsconfig.json",
@@ -16,6 +16,7 @@
 		"@sveltejs/kit": "next",
 		"@types/cookie": "^0.5.1",
 		"@types/luxon": "^3.0.0",
+		"@types/ssh2-sftp-client": "^9.0.6",
 		"@typescript-eslint/eslint-plugin": "^5.27.0",
 		"@typescript-eslint/parser": "^5.27.0",
 		"autoprefixer": "^10.4.7",
@@ -25,6 +26,7 @@
 		"postcss": "^8.4.14",
 		"prettier": "^2.6.2",
 		"prettier-plugin-svelte": "^2.7.0",
+		"sharp": "^0.35.4",
 		"svelte": "^3.46.0",
 		"svelte-check": "^2.7.1",
 		"svelte-preprocess": "^4.10.7",
@@ -40,9 +42,11 @@
 		"kuroshiro": "^1.2.0",
 		"kuroshiro-analyzer-kuromoji": "^1.1.0",
 		"luxon": "^3.0.1",
+		"marked": "^18.0.14",
 		"mysql2": "^3.17.0",
 		"node-fetch": "^2.7.0",
 		"sk-lanyard": "^0.1.5",
+		"ssh2-sftp-client": "^12.1.1",
 		"uuid": "^13.0.0"
 	}
 }
