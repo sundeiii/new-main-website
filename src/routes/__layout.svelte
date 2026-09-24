@@ -6,8 +6,21 @@
 	import { browser } from '$app/env';
 	import GradientMesh from '$lib/components/GradientMesh.svelte';
 	import CursorTrail from '$lib/components/CursorTrail.svelte';
+	import { BUILD_TIMESTAMP } from '$lib/buildtime';
 
 	import '../app.css';
+
+	// "updated 3 days ago" in the footer, from when the site was last built (i.e. deployed).
+	function ago(ts: number) {
+		const mins = Math.floor((Date.now() - ts) / 60000);
+		if (mins < 60) return mins <= 1 ? 'just now' : `${mins} minutes ago`;
+		const hours = Math.floor(mins / 60);
+		if (hours < 24) return hours === 1 ? 'an hour ago' : `${hours} hours ago`;
+		const days = Math.floor(hours / 24);
+		if (days < 60) return days === 1 ? 'yesterday' : `${days} days ago`;
+		return `${Math.floor(days / 30)} months ago`;
+	}
+	const updatedAgo = ago(BUILD_TIMESTAMP);
 
 	let ready = false;
 	let mobileMenuOpen = false;
@@ -539,6 +552,7 @@
 		<div class="mt-6 pt-4 border-t border-ocean-200 dark:border-ocean-800">
 			<p class="text-ocean-600 dark:text-ocean-600 text-xs">
 				© {new Date().getFullYear()} sundei. source on <a href="https://github.com/sundeiii/new-main-website" target="_blank" rel="noopener noreferrer" class="underline hover:text-ocean-800 dark:hover:text-ocean-400 transition-colors">github</a>.
+				<span title={new Date(BUILD_TIMESTAMP).toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short' })}>updated {updatedAgo}.</span>
 			</p>
 		</div>
 	</div>
