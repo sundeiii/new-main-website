@@ -1,7 +1,7 @@
-import type { RequestHandler } from './$types';
+import type { RequestHandler } from '@sveltejs/kit';
 
 export const GET: RequestHandler = async () => {
-	const GITHUB_USERNAME = 'rayuii';
+	const GITHUB_USERNAME = 'sundeiii';
 	
 	try {
 		const [userResponse, reposResponse] = await Promise.all([

@@ -313,17 +313,17 @@
 {/if}
 
 <nav class="border-b border-ocean-300 dark:border-ocean-700 sticky top-0 backdrop-blur-md z-50">
-	<div class="px-6 sm:px-12 lg:px-24 py-3 sm:py-4 flex justify-between items-center font-cascadia">
+	<div class="px-6 sm:px-12 lg:px-24 py-3 sm:py-4 flex justify-between items-center gap-6 font-cascadia">
 		<a 
 			href="/" 
-			class="text-ocean-700 dark:text-ocean-300 hover:text-ocean-900 dark:hover:text-ocean-100 font-medium"
+			class="text-ocean-700 dark:text-ocean-300 hover:text-ocean-900 dark:hover:text-ocean-100 font-medium shrink-0"
 			on:click={handleLogoClick}
 		>
 			sundei
 		</a>
 
 		<!-- Desktop nav -->
-		<div class="hidden sm:flex gap-6 text-ocean-700 dark:text-ocean-400 text-sm items-center">
+		<div class="hidden lg:flex gap-4 xl:gap-6 text-ocean-700 dark:text-ocean-400 text-sm items-center">
 			{#each navLinks as link}
 				<a 
 					href={link.href} 
@@ -336,7 +336,7 @@
 			{/each}
 			
 			{#if !weatherLoading && weather.city}
-				<div class="flex items-center gap-1.5 border-l border-ocean-300 dark:border-ocean-700 pl-6 text-ocean-600 dark:text-ocean-400 text-xs">
+				<div class="hidden xl:flex items-center gap-1.5 border-l border-ocean-300 dark:border-ocean-700 pl-6 text-ocean-600 dark:text-ocean-400 text-xs whitespace-nowrap">
 					{#if weather.icon}
 						<img 
 							src="https://openweathermap.org/img/wn/{weather.icon}.png" 
@@ -351,7 +351,7 @@
 			<!-- Dark mode toggle -->
 			<button
 				on:click={toggleDarkMode}
-				class="border-l border-ocean-300 dark:border-ocean-700 pl-6 text-ocean-600 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 transition-colors"
+				class="border-l border-ocean-300 dark:border-ocean-700 pl-4 xl:pl-6 text-ocean-600 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 transition-colors"
 				aria-label="Toggle dark mode"
 			>
 				{#if isDarkMode}
@@ -366,7 +366,7 @@
 			</button>
 			
 			<!-- Theme switcher -->
-			<div class="relative border-l border-ocean-300 dark:border-ocean-700 pl-6 theme-switcher">
+			<div class="relative border-l border-ocean-300 dark:border-ocean-700 pl-4 xl:pl-6 theme-switcher">
 				<button
 					on:click={() => themeOpen = !themeOpen}
 					class="w-5 h-5 rounded-full ring-2 ring-ocean-400 dark:ring-ocean-600 hover:ring-ocean-600 dark:hover:ring-ocean-400 transition-all"
@@ -393,7 +393,7 @@
 		</div>
 
 		<!-- Mobile: weather + hamburger -->
-		<div class="flex sm:hidden items-center gap-3">
+		<div class="flex lg:hidden items-center gap-3">
 			{#if !weatherLoading && weather.city}
 				<div class="flex items-center gap-1">
 					{#if weather.icon}
@@ -427,7 +427,7 @@
 	<!-- Mobile dropdown menu -->
 	{#if mobileMenuOpen}
 		<div 
-			class="sm:hidden border-t border-ocean-300 dark:border-ocean-700 font-cascadia"
+			class="lg:hidden border-t border-ocean-300 dark:border-ocean-700 font-cascadia"
 			transition:slide={{ duration: 200 }}
 		>
 			<div class="px-6 py-3 flex flex-col gap-1">
@@ -513,7 +513,7 @@
 				<span class="text-ocean-900 dark:text-ocean-200 text-xs font-medium mb-1">socials</span>
 				<div class="flex gap-4">
 					<a 
-						href="https://github.com/rayuii" 
+						href="https://github.com/sundeiii" 
 						target="_blank" rel="noopener noreferrer"
 						class="text-ocean-700 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 transition-colors text-xs"
 					>
@@ -538,7 +538,7 @@
 
 		<div class="mt-6 pt-4 border-t border-ocean-200 dark:border-ocean-800">
 			<p class="text-ocean-600 dark:text-ocean-600 text-xs">
-				© {new Date().getFullYear()} sundei. source on <a href="https://github.com/rayuii/new-main-website" target="_blank" rel="noopener noreferrer" class="underline hover:text-ocean-800 dark:hover:text-ocean-400 transition-colors">github</a>.
+				© {new Date().getFullYear()} sundei. source on <a href="https://github.com/sundeiii/new-main-website" target="_blank" rel="noopener noreferrer" class="underline hover:text-ocean-800 dark:hover:text-ocean-400 transition-colors">github</a>.
 			</p>
 		</div>
 	</div>

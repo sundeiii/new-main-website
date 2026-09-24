@@ -154,18 +154,18 @@ export const settingDefaults: SiteSettings = {
 	home: {
 		intro: 'my corner of the internet — osu! tournaments, IT garbage, music & whatever else i feel like putting here.',
 		wip: [
-			{ name: 'scripts', href: 'https://github.com/rayuii/winpowershell', description: 'powershell scripts (school)' },
-			{ name: 'titanic wiki', href: 'https://github.com/rayuii/Titanic-Wiki', description: 'contributions in estonian and dutch' },
-			{ name: 'old portfolio', href: 'https://github.com/rayuii/portfolio', description: 'buh' }
+			{ name: 'scripts', href: 'https://github.com/sundeiii/winpowershell', description: 'powershell scripts (school)' },
+			{ name: 'titanic wiki', href: 'https://github.com/sundeiii/Titanic-Wiki', description: 'contributions in estonian and dutch' },
+			{ name: 'old portfolio', href: 'https://github.com/sundeiii/portfolio', description: 'buh' }
 		],
 		projects: [
-			{ name: 'linux scripts', href: 'https://github.com/rayuii/skriptlinux', description: 'school forces me to suffer' },
+			{ name: 'linux scripts', href: 'https://github.com/sundeiii/skriptlinux', description: 'school forces me to suffer' },
 			{ name: 'where is my bus lol', href: 'https://www.tartulinnaliin.ee', description: 'tartu bussiajad, but website' },
-			{ name: 'fonoteek', href: 'https://github.com/rayuii/fonoteek', description: 'object-oriented programming stuff' }
+			{ name: 'fonoteek', href: 'https://github.com/sundeiii/fonoteek', description: 'object-oriented programming stuff' }
 		],
 		links: [
 			{ name: 'twitter', href: 'https://twitter.com/deprivedsundei', description: '' },
-			{ name: 'github', href: 'https://github.com/rayuii', description: '' },
+			{ name: 'github', href: 'https://github.com/sundeiii', description: '' },
 			{ name: 'email', href: 'mailto:sundei@sundei.ee', description: '' }
 		],
 		titles: { wip: 'wip', projects: 'projects', links: 'links', friends: 'friends' },
@@ -261,7 +261,7 @@ export const settingDefaults: SiteSettings = {
 		interests: ['osu!', 'web development', 'music', 'graphic design', 'editing'],
 		links: [
 			{ label: 'twitter', url: 'https://twitter.com/deprivedsundei' },
-			{ label: 'github', url: 'https://github.com/rayuii' },
+			{ label: 'github', url: 'https://github.com/sundeiii' },
 			{ label: 'email', url: 'mailto:sundei@sundei.ee' }
 		],
 		software: [

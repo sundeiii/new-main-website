@@ -1,5 +1,5 @@
 export async function GET() {
-	const username = 'rayuii';
+	const username = 'sundeiii';
 
 	try {
 		// Scrape the contributions from GitHub's public profile page
