@@ -7,7 +7,7 @@
 		title: 'welcome to my corner of the internet',
 		date: '2026-02-10',
 		excerpt: 'An introduction to who I am, what I do, and why this blog exists.',
-		banner: 'https://cdn.sundei.eu/banner1.png'
+		banner: 'https://cdn.doitforjanice.eu/blog/banner-43f288.webp'
 	};
 
 	let showModal = false;
@@ -84,7 +84,7 @@
 			class="w-full cursor-pointer hover:opacity-90 transition-opacity"
 		>
 			<img 
-				src="https://cdn.sundei.eu/desk.jpg"
+				src="https://cdn.doitforjanice.eu/blog/desk-7117b4.webp"
 				alt="my setup"
 				class="w-full"
 			/>
@@ -109,7 +109,7 @@
 					×
 				</button>
 				<img 
-					src="https://cdn.sundei.eu/desk.jpg"
+					src="https://cdn.doitforjanice.eu/blog/desk-7117b4.webp"
 					alt="my setup"
 					class="max-h-[90vh] max-w-[90vw] rounded object-contain"
 				/>

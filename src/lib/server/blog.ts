@@ -30,7 +30,7 @@ export const builtInPosts = [
 		title: 'welcome to my corner of the internet',
 		date: '2026-02-10',
 		excerpt: "hey, i'm sundei. welcome to my little space on the web where i dump thoughts, projects, and whatever else feels worth remembering.",
-		banner: 'https://cdn.sundei.eu/banner1.png',
+		banner: 'https://cdn.doitforjanice.eu/blog/banner-43f288.webp',
 		endDate: null,
 		location: null,
 		link: null

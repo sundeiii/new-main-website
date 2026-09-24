@@ -214,10 +214,7 @@ export const settingDefaults: SiteSettings = {
 				slug: 'random',
 				title: 'random',
 				description: '',
-				photos: [
-					{ src: 'https://cdn.sundei.eu/temp_gallery/IMG_2469.jpg', caption: 'rain and spring', date: '2026-02-09' },
-					{ src: 'https://cdn.sundei.eu/temp_gallery/IMG_2481.jpg', caption: 'the sunset after the rain', date: '2026-02-08' }
-				]
+				photos: []
 			}
 		]
 	},
