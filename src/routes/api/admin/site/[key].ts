@@ -42,6 +42,7 @@ const clean: { [K in keyof SiteSettings]: (v: any) => SiteSettings[K] } = {
 		};
 	},
 	now: (v) => ({
+		status: str(v?.status, 140),
 		updated: str(v?.updated, 50),
 		sections: list(v?.sections, 20, (s) => {
 			const title = str(s?.title, 50);

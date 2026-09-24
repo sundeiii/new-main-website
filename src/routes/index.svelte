@@ -37,7 +37,8 @@
 	].sort((a, b) => b.date.localeCompare(a.date))[0];
 
 	// "working on" comes from the first matching section of the /now page.
-	$: workingOn = (nowPage ?? settingDefaults.now).sections.find((sec) => /work|build|mak/i.test(sec.title))?.items[0];
+	$: nowStatus = (nowPage ?? settingDefaults.now).status;
+	$: workingOn = (nowPage ?? settingDefaults.now).sections.find((sec) => /work|build|mak|doing/i.test(sec.title))?.items[0];
 	import { daysBetween, eventTiming, today } from '$lib/dates';
 	import { settingDefaults } from '$lib/siteSettings';
 
@@ -368,9 +369,12 @@
 			<p class="text-ocean-700 dark:text-ocean-400 max-w-xl -mt-3">{intro}</p>
 		{/if}
 		<!-- "currently" box: all pulled from things the site already knows -->
-		{#if homeSettings.showCurrently && (workingOn || playing || happening || nextUp)}
+		{#if homeSettings.showCurrently && (nowStatus || workingOn || playing || happening || nextUp)}
 			<div class="-mt-2 border border-ocean-300 dark:border-ocean-700 rounded-lg px-4 py-3 text-sm flex flex-col gap-1.5 max-w-xl">
 				<span class="text-[11px] uppercase tracking-widest text-ocean-500">currently</span>
+				{#if nowStatus}
+					<a href="/now" class="text-ocean-900 dark:text-ocean-100 hover:underline">{nowStatus}</a>
+				{/if}
 				{#if happening}
 					<a href="/events/{happening.slug}" class="flex items-center gap-2 text-ocean-800 dark:text-ocean-200 hover:underline">
 						<span class="relative flex w-2 h-2 shrink-0"><span class="absolute inset-0 rounded-full bg-ocean-green animate-ping opacity-75" /><span class="relative w-2 h-2 rounded-full bg-ocean-green" /></span>

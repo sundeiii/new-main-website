@@ -280,6 +280,10 @@
 	<!-- NOW -->
 	{:else if active === 'now' && now}
 		<div class="flex flex-col gap-4">
+			<div>
+				<label for="p-status" class={fieldLabel}>status: one line, shown at the top of the home "currently" box and on /now (leave empty to hide)</label>
+				<input id="p-status" bind:value={now.status} maxlength="140" placeholder="grinding HR, reffing EDC, listening to Epitaph on repeat" class={field} />
+			</div>
 			<div class="max-w-xs">
 				<label for="p-updated" class={fieldLabel}>last updated</label>
 				<input id="p-updated" bind:value={now.updated} placeholder="September 2026" class={field} />

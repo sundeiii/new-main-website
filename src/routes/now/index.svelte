@@ -30,6 +30,9 @@
 			<p class="text-ocean-500 dark:text-ocean-400 text-sm mb-8">
 				what i'm up to right now · last updated {page.updated}
 			</p>
+			{#if page.status}
+				<p class="text-ocean-900 dark:text-ocean-100 border-l-2 border-ocean-500 pl-3 mb-8">{page.status}</p>
+			{/if}
 			<p class="text-ocean-600 dark:text-ocean-300 text-sm mb-8">
 				this is a <a href="https://nownownow.com/about" target="_blank" rel="noopener noreferrer" class="text-ocean-cyan hover:underline">/now page</a>. if you have your own site, you should make one too.
 			</p>

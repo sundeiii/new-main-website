@@ -27,6 +27,8 @@ export interface NowSection {
 	items: string[];
 }
 export interface NowSettings {
+	/** One-line status shown at the top of the home "currently" box and on /now. */
+	status: string;
 	updated: string;
 	sections: NowSection[];
 }
@@ -173,6 +175,7 @@ export const settingDefaults: SiteSettings = {
 		showLatest: true
 	},
 	now: {
+		status: '',
 		updated: 'February 2026',
 		sections: [
 			{ icon: '🔨', title: 'working on', items: ['this portfolio site', 'school projects (powershell, linux)'] },
