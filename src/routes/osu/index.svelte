@@ -29,6 +29,7 @@
 	$: latest = [...staffed].reverse().slice(0, 3);
 
 	interface Stats {
+		id: number;
 		username: string;
 		avatar_url: string;
 		cover_url: string;
@@ -46,7 +47,50 @@
 			const res = await fetch(`/api/osu-user?u=${encodeURIComponent(page.username)}`);
 			if (res.ok) stats = await res.json();
 		} catch {}
+		if (!stats?.id) return;
+		// Top plays show first; recent ones load in the background for the other tab.
+		for (const type of ['best', 'recent'] as const) {
+			fetch(`/api/osu-scores?id=${stats.id}&type=${type}`)
+				.then((r) => (r.ok ? r.json() : []))
+				.then((list: Score[]) => (scores = { ...scores, [type]: list }))
+				.catch(() => (scores = { ...scores, [type]: [] }));
+		}
 	});
+
+	interface Score {
+		id: number;
+		url: string;
+		title: string;
+		artist: string;
+		version: string;
+		stars: number | null;
+		cover: string | null;
+		rank: string;
+		pp: number | null;
+		accuracy: number;
+		combo: number;
+		mods: string[];
+		date: string;
+	}
+	let scores: { best?: Score[]; recent?: Score[] } = {};
+	let tab: 'best' | 'recent' = 'best';
+	$: shown = scores[tab];
+
+	// osu! calls SS "X"; the H versions are the silver (hidden/flashlight) grades.
+	const gradeLabel = (r: string) => (r.startsWith('X') ? 'SS' : r.replace('H', ''));
+	const gradeColor = (r: string) =>
+		r.endsWith('H') ? 'text-slate-200' : r.startsWith('X') || r === 'S' ? 'text-yellow-300' : r === 'A' ? 'text-green-400' : r === 'B' ? 'text-sky-400' : r === 'C' ? 'text-purple-400' : 'text-red-400';
+	const details = (s: Score) =>
+		[`[${s.version}]`, s.stars ? `${s.stars.toFixed(2)}★` : '', `${(s.accuracy * 100).toFixed(2)}%`, `${s.combo}x`, s.mods.length ? `+${s.mods.join('')}` : '', ago(s.date)]
+			.filter(Boolean)
+			.join(' · ');
+	function ago(iso: string) {
+		const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+		if (m < 60) return `${Math.max(m, 1)}m ago`;
+		if (m < 1440) return `${Math.round(m / 60)}h ago`;
+		const d = Math.round(m / 1440);
+		return d < 30 ? `${d}d ago` : new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+	}
 
 	const fmt = (n: number | null | undefined) => (n == null ? '–' : Math.round(n).toLocaleString('en-US'));</script>
 
@@ -100,6 +144,56 @@
 					</div>
 				</div>
 			</a>
+		{/if}
+
+		<!-- plays -->
+		{#if page.showStats && stats?.id}
+			<div class="flex flex-col gap-3" in:fly={{ y: 20, duration: 400, delay: 100 }}>
+				<div class="flex items-center gap-4">
+					<h2 class="text-ocean-900 dark:text-ocean-100 text-lg">plays</h2>
+					<div class="flex gap-1 text-sm">
+						{#each [{ key: 'best', label: 'top' }, { key: 'recent', label: 'recent' }] as t}
+							<button
+								on:click={() => (tab = t.key === 'recent' ? 'recent' : 'best')}
+								class="px-2.5 py-0.5 rounded border transition-colors {tab === t.key
+									? 'border-ocean-500 bg-ocean-200 dark:bg-ocean-800 text-ocean-900 dark:text-ocean-100'
+									: 'border-ocean-300 dark:border-ocean-700 text-ocean-600 dark:text-ocean-400 hover:border-ocean-500'}">{t.label}</button
+							>
+						{/each}
+					</div>
+				</div>
+				{#if !shown}
+					<p class="text-sm text-ocean-500">loading…</p>
+				{:else if !shown.length}
+					<p class="text-sm text-ocean-500">{tab === 'recent' ? 'nothing passed in the last 24 hours' : 'no plays found'}</p>
+				{:else}
+					<div class="flex flex-col gap-1.5">
+						{#each shown as s (s.id)}
+							<a
+								href={s.url}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="group relative overflow-hidden rounded border border-ocean-300 dark:border-ocean-700 hover:border-ocean-500 transition-colors"
+							>
+								{#if s.cover}
+									<img src={s.cover} alt="" loading="lazy" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+								{/if}
+								<div class="absolute inset-0 {s.cover ? 'bg-gradient-to-r from-black/90 via-black/80 to-black/50' : 'bg-ocean-800'}" />
+								<div class="relative banner-text flex items-center gap-3 px-3 py-2 text-white">
+									<span class="w-7 text-center font-bold {gradeColor(s.rank)}">{gradeLabel(s.rank)}</span>
+									<div class="flex-1 min-w-0">
+										<div class="text-sm truncate">{s.artist} – {s.title}</div>
+										<div class="text-xs text-white/70 truncate">
+											{details(s)}
+										</div>
+									</div>
+									<span class="text-sm font-medium shrink-0">{s.pp == null ? '–' : `${Math.round(s.pp)}pp`}</span>
+								</div>
+							</a>
+						{/each}
+					</div>
+				{/if}
+			</div>
 		{/if}
 
 		{#if introHtml}
