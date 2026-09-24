@@ -2,7 +2,6 @@ import { getSpotifyAccessToken } from '$lib/server/spotify';
 import { hiddenArtistFilter } from '$lib/server/hiddenArtists';
 import { recentScrobbles } from '$lib/server/lastfm';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
-import fetch from 'node-fetch';
 
 export async function GET({ platform }: any) {
 	const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID || '';
@@ -14,9 +13,7 @@ export async function GET({ platform }: any) {
 	try {
 		const accessToken = await getSpotifyAccessToken({ platform });
 
-		const api = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, accessToken, {
-			fetch: fetch as any
-		});
+		const api = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, accessToken);
 
 		const [recent, { keep }] = await Promise.all([api.player.getRecentlyPlayedTracks(50), hiddenArtistFilter()]);
 		const plays: any[] = recent.items.filter(keep);

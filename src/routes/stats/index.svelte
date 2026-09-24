@@ -1,4 +1,5 @@
 <script lang="ts">
+	const joinArtists = (artists: { name: string }[] | undefined) => (artists ?? []).map((a) => a.name).join(', ');
 	import { lanyard } from '$lib/lanyard';
 	import { onMount, onDestroy } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
@@ -108,7 +109,7 @@
 		romanizeText(lastPlayedTrack.track.name).then(r => romanizedLastSong = r);
 	}
 	$: if (lastPlayedTrack?.track?.artists) {
-		romanizeText(lastPlayedTrack.track.artists.map(a => a.name).join(', ')).then(r => romanizedLastArtist = r);
+		romanizeText(joinArtists(lastPlayedTrack.track.artists)).then(r => romanizedLastArtist = r);
 	}
 	$: if (spotify?.song) {
 		romanizeText(spotify.song).then(r => romanizedSpotifySong = r);
@@ -525,7 +526,7 @@
 								{romanizedLastSong || lastPlayedTrack.track?.name}
 							</a>
 							<span class="text-ocean-800 dark:text-ocean-300">
-								{romanizedLastArtist || lastPlayedTrack.track?.artists?.map(a => a.name).join(', ')}
+								{romanizedLastArtist || joinArtists(lastPlayedTrack.track?.artists)}
 							</span>
 							<span class="text-ocean-700 dark:text-ocean-400 text-sm">
 								{new Date(lastPlayedTrack.played_at).toLocaleString()}

@@ -26,6 +26,8 @@
 	// --- Tab state ---
 	let activeTab: 'top' | 'history' | 'stats' = 'top';
 
+	const joinArtists = (artists: { name: string }[] | undefined) => (artists ?? []).map((a) => a.name).join(', ');
+
 	// --- Last.fm stats tab ---
 	const periods = [
 		{ value: '7day', label: 'this week' },
@@ -454,7 +456,7 @@
 								<div class="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2">
 									{#each items as item, i}
 										{@const trackName = item.track?.name || ''}
-										{@const artists = item.track?.artists?.map(a => a.name).join(', ') || ''}
+										{@const artists = joinArtists(item.track?.artists)}
 										<a
 											href={item.track?.external_urls?.spotify || '#'}
 											target="_blank"
@@ -488,7 +490,7 @@
 								<div class="relative ml-4 border-l border-ocean-300 dark:border-ocean-700 pl-6 space-y-1">
 									{#each items as item, i}
 										{@const trackName = item.track?.name || ''}
-										{@const artists = item.track?.artists?.map(a => a.name).join(', ') || ''}
+										{@const artists = joinArtists(item.track?.artists)}
 										<div 
 											class="relative group"
 											in:fly={{ x: -10, duration: 200, delay: groupIndex * 100 + i * 30 }}

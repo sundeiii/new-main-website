@@ -1,4 +1,4 @@
-import type { RequestHandler } from './$types';
+import type { RequestHandler } from '@sveltejs/kit';
 
 // Profiles are scraped from osu!'s HTML (heavy), and the tournaments page asks for every host, so
 // cache results in memory per server instance and on Vercel's edge.

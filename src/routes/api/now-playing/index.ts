@@ -1,19 +1,18 @@
-// src/routes/api/now-playing/+server.ts
-import type { RequestHandler } from './$types';
+import type { RequestHandler } from '@sveltejs/kit';
 import { getSpotifyAccessToken } from '$lib/server/spotify';
 import { hiddenArtistFilter } from '$lib/server/hiddenArtists';
-import { SpotifyApi } from '@spotify/web-api-ts-sdk';
+import { SpotifyApi, type Track } from '@spotify/web-api-ts-sdk';
 
 interface NowPlayingResponse {
   isPlayingNow: boolean;
   isPaused: boolean;
   progressMs: number;
-  track: SpotifyApi.TrackObjectFull | null;
+  track: Track | null;
   // When Spotify was asked, so clients can correct progressMs for time spent in the cache.
   fetchedAt: number;
 }
 
-export const GET: RequestHandler = async ({ fetch, platform }) => {
+export const GET: RequestHandler = async ({ platform }) => {
   const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID || '';
   if (!SPOTIFY_CLIENT_ID) {
     return new Response('Missing Spotify client ID', { status: 500 });
@@ -35,7 +34,7 @@ export const GET: RequestHandler = async ({ fetch, platform }) => {
   };
 
   try {
-    const accessToken = await getSpotifyAccessToken({ fetch, platform });
+    const accessToken = await getSpotifyAccessToken({ platform });
     const api = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, accessToken);
 
     // this is the ts-sdk wrapper for /me/player
@@ -49,7 +48,7 @@ export const GET: RequestHandler = async ({ fetch, platform }) => {
           isPlayingNow: true,
           isPaused: !playback.is_playing,
           progressMs: playback.progress_ms ?? 0,
-          track: playback.item as SpotifyApi.TrackObjectFull
+          track: playback.item as Track
         }),
         { headers: cacheHeaders }
       );
@@ -62,7 +61,7 @@ export const GET: RequestHandler = async ({ fetch, platform }) => {
       return new Response(
         JSON.stringify({
           ...base,
-          track: item.track as SpotifyApi.TrackObjectFull
+          track: item.track as Track
         }),
         { headers: cacheHeaders }
       );

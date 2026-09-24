@@ -170,7 +170,7 @@
 		isPlayingNow: boolean;
 		isPaused: boolean;
 		progressMs: number;
-		track: SpotifyApi.TrackObjectFull | null;
+		track: import('@spotify/web-api-ts-sdk').Track | null;
 		fetchedAt?: number;
 	}
 

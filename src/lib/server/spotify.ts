@@ -1,5 +1,4 @@
 import type { AccessToken } from '@spotify/web-api-ts-sdk';
-import fetch from 'node-fetch';
 export const TEST = 'test';
 
 type AccessTokenResponse = {
@@ -68,7 +67,7 @@ export async function getSpotifyAccessToken({
 					refresh_token: SPOTIFY_REFRESH_TOKEN
 				}).toString()
 			}
-		).then(res => res.json() as Promise<AccessTokenResponse>);
+		).then((res) => res.json() as Promise<AccessTokenResponse>);
 
 		await kv.put('accessToken', JSON.stringify(response));
 		await kv.put(

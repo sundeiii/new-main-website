@@ -2,9 +2,8 @@ import { getSpotifyAccessToken } from '$lib/server/spotify';
 import { hiddenArtistFilter } from '$lib/server/hiddenArtists';
 import type { SpotifyTimeRange } from '$lib/types';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
-import fetch from 'node-fetch';
 
-export async function GET({ fetch: svelteKitFetch, platform, url }: any) {
+export async function GET({ platform, url }: any) {
 	const range = url.searchParams.get('time_range') ?? '';
 
 	if (!['short_term', 'medium_term', 'long_term'].includes(range)) {
@@ -20,9 +19,7 @@ export async function GET({ fetch: svelteKitFetch, platform, url }: any) {
 	try {
 		const accessToken = await getSpotifyAccessToken({ platform });
 
-		const api = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, accessToken, {
-			fetch: fetch as any
-		});
+		const api = SpotifyApi.withAccessToken(SPOTIFY_CLIENT_ID, accessToken);
 
 		// Hidden artists can take up a lot of the top 50, so keep paging further down the list
 		// until there are 50 tracks to show (or Spotify runs out).

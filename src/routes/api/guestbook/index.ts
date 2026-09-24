@@ -106,7 +106,7 @@ export async function POST({ request, clientAddress }: any) {
 
 		// And max 1 entry per name per 5 minutes
 		const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-		const [recentRows] = await pool.query(
+		const [recentRows]: any = await pool.query(
 			'SELECT * FROM guestbook WHERE name = ? AND created_at > ? ORDER BY created_at DESC LIMIT 1',
 			[cleanName, fiveMinutesAgo]
 		);
@@ -130,7 +130,7 @@ export async function POST({ request, clientAddress }: any) {
 			'INSERT INTO guestbook (id, name, message, created_at, stamp) VALUES (?, ?, ?, ?, ?)',
 			[id, cleanName, cleanMessage, createdAt, stampId]
 		);
-		const [rows] = await pool.query('SELECT * FROM guestbook WHERE id = ?', [id]);
+		const [rows]: any = await pool.query('SELECT * FROM guestbook WHERE id = ?', [id]);
 		const newEntry = rows[0];
 
 		return new Response(JSON.stringify(newEntry), {
