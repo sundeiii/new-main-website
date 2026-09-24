@@ -40,6 +40,8 @@ export async function GET({ url }: any) {
 			global_rank: user.statistics?.global_rank,
 			country_rank: user.statistics?.country_rank,
 			pp: user.statistics?.pp,
+			// Global rank for each of the last 90 days, oldest first (0 = unranked that day).
+			rank_history: user.rank_history?.data ?? user.rankHistory?.data ?? [],
 			is_online: user.is_online,
 			// use support_level > 0 as the supporter check since is_supporter can be unreliable
 			support_level: user.support_level ?? 0,

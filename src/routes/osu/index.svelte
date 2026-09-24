@@ -38,8 +38,28 @@
 		country_rank: number | null;
 		pp: number | null;
 		team: { id: number; name: string; short_name: string | null; flag_url: string | null } | null;
+		rank_history: number[];
 	}
 	let stats: Stats | null = null;
+
+	// Rank graph: last 90 days from osu!, oldest first. Better (lower) ranks are drawn higher.
+	const W = 600, H = 120, PAD = 6;
+	let hover: number | null = null;
+	$: history = (stats?.rank_history ?? []).map((rank, i, all) => ({ rank, daysAgo: all.length - 1 - i })).filter((d) => d.rank > 0);
+	$: best = Math.min(...history.map((d) => d.rank));
+	$: worst = Math.max(...history.map((d) => d.rank));
+	$: xOf = (i: number) => PAD + (i / Math.max(history.length - 1, 1)) * (W - PAD * 2);
+	$: yOf = (rank: number) => PAD + ((rank - best) / Math.max(worst - best, 1)) * (H - PAD * 2);
+	$: line = history.map((d, i) => `${i ? 'L' : 'M'}${xOf(i).toFixed(1)},${yOf(d.rank).toFixed(1)}`).join('');
+	$: area = history.length ? `${line}L${xOf(history.length - 1)},${H}L${xOf(0)},${H}Z` : '';
+	$: gained = history.length > 1 ? history[0].rank - history[history.length - 1].rank : 0;
+	$: hovered = hover == null ? null : history[hover];
+	function onGraphMove(e: PointerEvent) {
+		const box = (e.currentTarget as SVGElement).getBoundingClientRect();
+		const x = ((e.clientX - box.left) / box.width) * W;
+		hover = Math.round(((x - PAD) / (W - PAD * 2)) * (history.length - 1));
+		hover = Math.max(0, Math.min(history.length - 1, hover));
+	}
 
 	onMount(async () => {
 		if (!page.showStats || !page.username) return;
@@ -144,6 +164,44 @@
 					</div>
 				</div>
 			</a>
+		{/if}
+
+		<!-- rank graph -->
+		{#if page.showStats && history.length > 1}
+			<div class="flex flex-col gap-2" in:fly={{ y: 20, duration: 400, delay: 90 }}>
+				<div class="flex items-baseline justify-between gap-4 flex-wrap">
+					<h2 class="text-ocean-900 dark:text-ocean-100 text-lg">
+						rank <span class="text-ocean-500 text-sm">· last {history[0].daysAgo + 1} days</span>
+					</h2>
+					<span class="text-sm text-ocean-700 dark:text-ocean-400">
+						{#if hovered}
+							#{fmt(hovered.rank)} · {hovered.daysAgo === 0 ? 'today' : hovered.daysAgo === 1 ? 'yesterday' : `${hovered.daysAgo} days ago`}
+						{:else if gained}
+							<span class={gained > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}>{gained > 0 ? '▲' : '▼'} {fmt(Math.abs(gained))}</span> places
+						{/if}
+					</span>
+				</div>
+				<svg
+					viewBox="0 0 {W} {H}"
+					preserveAspectRatio="none"
+					class="w-full h-28 rounded border border-ocean-300 dark:border-ocean-700 text-ocean-500 touch-none"
+					role="img"
+					aria-label="global rank over the last {history.length} days, from #{fmt(history[0].rank)} to #{fmt(history[history.length - 1].rank)}"
+					on:pointermove={onGraphMove}
+					on:pointerdown={onGraphMove}
+					on:pointerleave={() => (hover = null)}
+				>
+					<path d={area} fill="currentColor" opacity="0.15" />
+					<path d={line} fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" />
+					{#if hovered && hover != null}
+						<line x1={xOf(hover)} x2={xOf(hover)} y1="0" y2={H} stroke="currentColor" opacity="0.4" vector-effect="non-scaling-stroke" />
+					{/if}
+				</svg>
+				<div class="flex justify-between text-xs text-ocean-500">
+					<span>#{fmt(history[0].rank)}</span>
+					<span>#{fmt(history[history.length - 1].rank)}</span>
+				</div>
+			</div>
 		{/if}
 
 		<!-- plays -->
