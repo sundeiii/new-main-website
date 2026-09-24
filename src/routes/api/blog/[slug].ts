@@ -1,4 +1,5 @@
 import type { RequestHandler } from '@sveltejs/kit';
+import { isMissingTable } from '$lib/server/db';
 import { isAdmin } from '$lib/server/adminAuth';
 import { getPost, isKind, renderMarkdown } from '$lib/server/blog';
 
@@ -15,7 +16,7 @@ export const GET: RequestHandler = async ({ params, request, url }) => {
 			});
 		}
 	} catch (error: any) {
-		if (error?.code !== 'ER_NO_SUCH_TABLE') console.error('Failed to load post:', error);
+		if (!isMissingTable(error)) console.error('Failed to load post:', error);
 	}
 	return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
 };

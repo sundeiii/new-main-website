@@ -1,9 +1,9 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { json, requireAdmin } from '$lib/server/adminAuth';
-import { pool } from '$lib/server/db';
+import { isDuplicate, run } from '$lib/server/db';
 import { cleanPost, ensureTable, listPosts } from '$lib/server/blog';
 
-const duplicateSlug = (e: any) => e?.code === 'ER_DUP_ENTRY';
+const duplicateSlug = isDuplicate;
 
 export const GET: RequestHandler = async ({ request }) => {
 	const denied = requireAdmin(request);
@@ -20,11 +20,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	await ensureTable();
 	try {
-		const [result]: any = await pool.query(
+		const result = await run(
 			'INSERT INTO blog_posts (kind, slug, title, excerpt, banner, content, published, date, end_date, location, link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
 			[post.kind, post.slug, post.title, post.excerpt, post.banner, post.content, post.published, post.date, post.endDate, post.location, post.link]
 		);
-		return json({ ...post, id: result.insertId }, 201);
+		return json({ ...post, id: result.lastId }, 201);
 	} catch (e) {
 		if (duplicateSlug(e)) return json({ error: `something already uses the url slug "${post.slug}"` }, 409);
 		throw e;
@@ -41,11 +41,11 @@ export const PATCH: RequestHandler = async ({ request }) => {
 
 	await ensureTable();
 	try {
-		const [result]: any = await pool.query(
-			'UPDATE blog_posts SET kind = ?, slug = ?, title = ?, excerpt = ?, banner = ?, content = ?, published = ?, date = ?, end_date = ?, location = ?, link = ? WHERE id = ?',
-			[post.kind, post.slug, post.title, post.excerpt, post.banner, post.content, post.published, post.date, post.endDate, post.location, post.link, body.id]
+		const result = await run(
+			'UPDATE blog_posts SET kind = ?, slug = ?, title = ?, excerpt = ?, banner = ?, content = ?, published = ?, date = ?, end_date = ?, location = ?, link = ?, updated_at = ? WHERE id = ?',
+			[post.kind, post.slug, post.title, post.excerpt, post.banner, post.content, post.published, post.date, post.endDate, post.location, post.link, new Date(), body.id]
 		);
-		if (result.affectedRows === 0) return json({ error: 'Post not found' }, 404);
+		if (result.changes === 0) return json({ error: 'Post not found' }, 404);
 		return json({ ...post, id: body.id });
 	} catch (e) {
 		if (duplicateSlug(e)) return json({ error: `something already uses the url slug "${post.slug}"` }, 409);
@@ -61,6 +61,6 @@ export const DELETE: RequestHandler = async ({ request }) => {
 	if (!Number.isInteger(id)) return json({ error: 'id is required' }, 400);
 
 	await ensureTable();
-	const [result]: any = await pool.query('DELETE FROM blog_posts WHERE id = ?', [id]);
-	return json({ deleted: result.affectedRows });
+	const result = await run('DELETE FROM blog_posts WHERE id = ?', [id]);
+	return json({ deleted: result.changes });
 };

@@ -1,5 +1,4 @@
-import { pool } from '$lib/server/db';
-import { once } from '$lib/server/migrate';
+import { ensureSchema, sql } from '$lib/server/db';
 
 export interface ChangelogEntry {
 	id?: number;
@@ -7,22 +6,13 @@ export interface ChangelogEntry {
 	text: string;
 }
 
-export const ensureChangelogTable = once(() =>
-	pool.query(
-		`CREATE TABLE IF NOT EXISTS changelog (
-			id INT AUTO_INCREMENT PRIMARY KEY,
-			date DATE NOT NULL,
-			text VARCHAR(500) NOT NULL,
-			created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
-	)
-);
+export const ensureChangelogTable = ensureSchema;
 
 const toDate = (d: unknown) => (d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10));
 
 export async function listChangelog({ createTable = true } = {}): Promise<ChangelogEntry[]> {
 	if (createTable) await ensureChangelogTable();
-	const [rows]: any = await pool.query('SELECT id, date, text FROM changelog ORDER BY date DESC, id DESC');
+	const rows = await sql('SELECT id, date, text FROM changelog ORDER BY date DESC, id DESC');
 	return rows.map((r: any) => ({ id: r.id, date: toDate(r.date), text: r.text }));
 }
 

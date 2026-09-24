@@ -1,4 +1,5 @@
 import type { RequestHandler } from '@sveltejs/kit';
+import { isMissingTable } from '$lib/server/db';
 import { builtInPosts, listPosts, postPath } from '$lib/server/blog';
 
 const SITE = 'https://sundei.ee';
@@ -12,7 +13,7 @@ export const GET: RequestHandler = async () => {
 		const posts = await listPosts({ createTable: false });
 		items.push(...posts.filter((p) => p.kind !== 'project'));
 	} catch (error: any) {
-		if (error?.code !== 'ER_NO_SUCH_TABLE') console.error('RSS: failed to load posts:', error);
+		if (!isMissingTable(error)) console.error('RSS: failed to load posts:', error);
 	}
 	items = items.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 50);
 

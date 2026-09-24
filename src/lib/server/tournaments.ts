@@ -1,33 +1,7 @@
-import { pool } from '$lib/server/db';
-import { addColumns } from '$lib/server/migrate';
+import { ensureSchema, run, sql } from '$lib/server/db';
 import { tournamentSeed, type Tournament, type TournamentYear } from '$lib/tournamentSeed';
 
-let tableReady: Promise<unknown> | null = null;
-
-export function ensureTable() {
-	tableReady ??= pool
-		.query(
-			`CREATE TABLE IF NOT EXISTS tournaments (
-				id INT AUTO_INCREMENT PRIMARY KEY,
-				year VARCHAR(20) NOT NULL,
-				name VARCHAR(200) NOT NULL,
-				role VARCHAR(100) NOT NULL,
-				link VARCHAR(500) NOT NULL,
-				banner VARCHAR(500) NULL,
-				badge VARCHAR(500) NULL,
-				hosts TEXT NOT NULL,
-				position INT NOT NULL DEFAULT 0,
-				created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
-			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
-		)
-		// Added after the first version; older tables get them here.
-		.then(() => addColumns('tournaments', { tier: 'VARCHAR(50) NULL', region: 'VARCHAR(100) NULL', memory: 'VARCHAR(300) NULL' }))
-		.catch((e) => {
-			tableReady = null;
-			throw e;
-		});
-	return tableReady;
-}
+export const ensureTable = ensureSchema;
 
 function fromRow(row: any): Tournament {
 	let hosts = [];
@@ -55,7 +29,7 @@ function fromRow(row: any): Tournament {
  */
 export async function listTournaments({ createTable = true } = {}): Promise<Tournament[]> {
 	if (createTable) await ensureTable();
-	const [rows]: any = await pool.query('SELECT * FROM tournaments ORDER BY year ASC, position ASC, id ASC');
+	const rows = await sql('SELECT * FROM tournaments ORDER BY year ASC, position ASC, id ASC');
 	return rows.map(fromRow);
 }
 
@@ -99,18 +73,18 @@ export function cleanTournament(input: any): Tournament | string {
 
 export async function insertTournament(t: Tournament) {
 	await ensureTable();
-	const [[{ next }]]: any = await pool.query('SELECT COALESCE(MAX(position), -1) + 1 AS next FROM tournaments WHERE year = ?', [t.year]);
-	const [result]: any = await pool.query(
+	const [{ next }] = await sql('SELECT COALESCE(MAX(position), -1) + 1 AS next FROM tournaments WHERE year = ?', [t.year]);
+	const result = await run(
 		'INSERT INTO tournaments (year, name, role, link, banner, badge, hosts, position, tier, region, memory) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
 		[t.year, t.name, t.role, t.link, t.banner ?? null, t.badge ?? null, JSON.stringify(t.hosts), next, t.tier ?? null, t.region ?? null, t.memory ?? null]
 	);
-	return result.insertId as number;
+	return result.lastId as number;
 }
 
 /** Copies the old hardcoded list into the table. Only runs when the table is empty. */
 export async function importSeed() {
 	await ensureTable();
-	const [[{ count }]]: any = await pool.query('SELECT COUNT(*) AS count FROM tournaments');
+	const [{ count }] = await sql('SELECT COUNT(*) AS count FROM tournaments');
 	if (count > 0) return 0;
 	let imported = 0;
 	for (const group of tournamentSeed) {

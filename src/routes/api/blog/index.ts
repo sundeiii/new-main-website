@@ -1,4 +1,5 @@
 import type { RequestHandler } from '@sveltejs/kit';
+import { isMissingTable } from '$lib/server/db';
 import { builtInPosts, isKind, listPosts } from '$lib/server/blog';
 
 // Published items for a list page (no content): ?kind=post (default), event or project.
@@ -12,7 +13,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		items = (await listPosts({ kind, createTable: false })).map(({ content, published, id, ...rest }) => rest);
 	} catch (error: any) {
 		// Table not created yet (nothing written in the admin panel), or the database is down.
-		if (error?.code !== 'ER_NO_SUCH_TABLE') console.error('Failed to load posts:', error);
+		if (!isMissingTable(error)) console.error('Failed to load posts:', error);
 	}
 	if (kind === 'post') items = [...items, ...builtInPosts];
 	items.sort((a, b) => b.date.localeCompare(a.date));

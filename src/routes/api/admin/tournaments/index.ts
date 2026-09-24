@@ -1,6 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { json, requireAdmin } from '$lib/server/adminAuth';
-import { pool } from '$lib/server/db';
+import { run } from '$lib/server/db';
 import { tournamentSeed } from '$lib/tournamentSeed';
 import { cleanTournament, ensureTable, importSeed, insertTournament, listTournaments } from '$lib/server/tournaments';
 
@@ -37,11 +37,11 @@ export const PATCH: RequestHandler = async ({ request }) => {
 	if (typeof t === 'string') return json({ error: t }, 400);
 
 	await ensureTable();
-	const [result]: any = await pool.query(
+	const result = await run(
 		'UPDATE tournaments SET year = ?, name = ?, role = ?, link = ?, banner = ?, badge = ?, hosts = ?, tier = ?, region = ?, memory = ? WHERE id = ?',
 		[t.year, t.name, t.role, t.link, t.banner, t.badge, JSON.stringify(t.hosts), t.tier, t.region, t.memory, body.id]
 	);
-	if (result.affectedRows === 0) return json({ error: 'Tournament not found' }, 404);
+	if (result.changes === 0) return json({ error: 'Tournament not found' }, 404);
 	return json({ ...t, id: body.id });
 };
 
@@ -54,7 +54,7 @@ export const PUT: RequestHandler = async ({ request }) => {
 	if (!Array.isArray(order) || !order.every(Number.isInteger)) return json({ error: 'order must be a list of ids' }, 400);
 
 	await ensureTable();
-	await Promise.all(order.map((id: number, position: number) => pool.query('UPDATE tournaments SET position = ? WHERE id = ?', [position, id])));
+	await Promise.all(order.map((id: number, position: number) => run('UPDATE tournaments SET position = ? WHERE id = ?', [position, id])));
 	return json({ ok: true });
 };
 
@@ -66,6 +66,6 @@ export const DELETE: RequestHandler = async ({ request }) => {
 	if (!Number.isInteger(id)) return json({ error: 'id is required' }, 400);
 
 	await ensureTable();
-	const [result]: any = await pool.query('DELETE FROM tournaments WHERE id = ?', [id]);
-	return json({ deleted: result.affectedRows });
+	const result = await run('DELETE FROM tournaments WHERE id = ?', [id]);
+	return json({ deleted: result.changes });
 };

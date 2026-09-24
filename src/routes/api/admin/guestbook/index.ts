@@ -1,12 +1,12 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { json, requireAdmin } from '$lib/server/adminAuth';
-import { pool } from '$lib/server/db';
+import { placeholders, run, sql } from '$lib/server/db';
 
 export const GET: RequestHandler = async ({ request }) => {
 	const denied = requireAdmin(request);
 	if (denied) return denied;
 
-	const [rows] = await pool.query('SELECT * FROM guestbook ORDER BY created_at DESC');
+	const rows = await sql('SELECT * FROM guestbook ORDER BY created_at DESC');
 	return json(rows);
 };
 
@@ -23,14 +23,14 @@ export const PATCH: RequestHandler = async ({ request }) => {
 		return json({ error: 'Name max 50 chars, message max 500 chars' }, 400);
 	}
 
-	const [result]: any = await pool.query('UPDATE guestbook SET name = ?, message = ? WHERE id = ?', [
+	const result = await run('UPDATE guestbook SET name = ?, message = ? WHERE id = ?', [
 		name.trim(),
 		message.trim(),
 		id
 	]);
-	if (result.affectedRows === 0) return json({ error: 'Entry not found' }, 404);
+	if (result.changes === 0) return json({ error: 'Entry not found' }, 404);
 
-	const [rows]: any = await pool.query('SELECT * FROM guestbook WHERE id = ?', [id]);
+	const rows = await sql('SELECT * FROM guestbook WHERE id = ?', [id]);
 	return json(rows[0]);
 };
 
@@ -42,6 +42,6 @@ export const DELETE: RequestHandler = async ({ request }) => {
 	const { ids } = await request.json().catch(() => ({}));
 	if (!Array.isArray(ids) || ids.length === 0) return json({ error: 'ids is required' }, 400);
 
-	const [result]: any = await pool.query('DELETE FROM guestbook WHERE id IN (?)', [ids]);
-	return json({ deleted: result.affectedRows });
+	const result = await run(`DELETE FROM guestbook WHERE id IN (${placeholders(ids.length)})`, ids.map(String));
+	return json({ deleted: result.changes });
 };

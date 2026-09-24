@@ -1,16 +1,7 @@
-import { pool } from '$lib/server/db';
-import { once } from '$lib/server/migrate';
+import { ensureSchema, isMissingTable, run, sql } from '$lib/server/db';
 import { settingDefaults, type SiteSettings } from '$lib/siteSettings';
 
-export const ensureSettingsTable = once(() =>
-	pool.query(
-		`CREATE TABLE IF NOT EXISTS site_settings (
-			k VARCHAR(50) PRIMARY KEY,
-			v MEDIUMTEXT NOT NULL,
-			updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
-	)
-);
+export const ensureSettingsTable = ensureSchema;
 
 /**
  * Saved value merged over the defaults (so new fields get their default). Public pages pass
@@ -20,16 +11,20 @@ export async function getSetting<K extends keyof SiteSettings>(key: K, { createT
 	const defaults = settingDefaults[key];
 	try {
 		if (createTable) await ensureSettingsTable();
-		const [rows]: any = await pool.query('SELECT v FROM site_settings WHERE k = ?', [key]);
+		const rows = await sql('SELECT v FROM site_settings WHERE k = ?', [key]);
 		if (!rows[0]) return defaults;
 		return { ...defaults, ...JSON.parse(rows[0].v) };
 	} catch (error: any) {
-		if (error?.code !== 'ER_NO_SUCH_TABLE') console.error(`Failed to load setting ${key}:`, error);
+		if (!isMissingTable(error)) console.error(`Failed to load setting ${key}:`, error);
 		return defaults;
 	}
 }
 
 export async function setSetting<K extends keyof SiteSettings>(key: K, value: SiteSettings[K]) {
 	await ensureSettingsTable();
-	await pool.query('INSERT INTO site_settings (k, v) VALUES (?, ?) ON DUPLICATE KEY UPDATE v = VALUES(v)', [key, JSON.stringify(value)]);
+	await run(
+		`INSERT INTO site_settings (k, v, updated_at) VALUES (?, ?, ?)
+		ON CONFLICT (k) DO UPDATE SET v = excluded.v, updated_at = excluded.updated_at`,
+		[key, JSON.stringify(value), new Date()]
+	);
 }

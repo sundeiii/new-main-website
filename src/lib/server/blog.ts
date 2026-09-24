@@ -1,6 +1,5 @@
 import { marked } from 'marked';
-import { pool } from '$lib/server/db';
-import { addColumns, once } from '$lib/server/migrate';
+import { ensureSchema, sql } from '$lib/server/db';
 
 // One table holds blog posts, events (/events) and project pages (/projects), told apart by kind.
 export const KINDS = ['post', 'event', 'project'] as const;
@@ -37,29 +36,7 @@ export const builtInPosts = [
 	}
 ];
 
-export const ensureTable = once(async () => {
-	await pool.query(
-		`CREATE TABLE IF NOT EXISTS blog_posts (
-			id INT AUTO_INCREMENT PRIMARY KEY,
-			slug VARCHAR(100) NOT NULL UNIQUE,
-			title VARCHAR(200) NOT NULL,
-			excerpt VARCHAR(500) NOT NULL DEFAULT '',
-			banner VARCHAR(500) NULL,
-			content MEDIUMTEXT NOT NULL,
-			published TINYINT(1) NOT NULL DEFAULT 0,
-			date DATE NOT NULL,
-			created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
-	);
-	// Added after the first version; tables created back then get them here.
-	await addColumns('blog_posts', {
-		kind: "VARCHAR(20) NOT NULL DEFAULT 'post'",
-		location: 'VARCHAR(200) NULL',
-		link: 'VARCHAR(500) NULL',
-		end_date: 'DATE NULL'
-	});
-});
+export const ensureTable = ensureSchema;
 
 const toDate = (d: unknown) => (d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10));
 
@@ -86,7 +63,7 @@ function fromRow(row: any): BlogPost {
  */
 export async function listPosts({ kind, includeDrafts = false, createTable = true }: { kind?: Kind; includeDrafts?: boolean; createTable?: boolean } = {}) {
 	if (createTable) await ensureTable();
-	const [rows]: any = await pool.query(
+	const rows = await sql(
 		`SELECT * FROM blog_posts ${includeDrafts ? '' : 'WHERE published = 1'} ORDER BY date DESC, id DESC`
 	);
 	const posts: BlogPost[] = rows.map(fromRow);
@@ -94,7 +71,7 @@ export async function listPosts({ kind, includeDrafts = false, createTable = tru
 }
 
 export async function getPost(slug: string, kind: Kind, { includeDrafts = false } = {}): Promise<BlogPost | null> {
-	const [rows]: any = await pool.query(`SELECT * FROM blog_posts WHERE slug = ? ${includeDrafts ? '' : 'AND published = 1'}`, [slug]);
+	const rows = await sql(`SELECT * FROM blog_posts WHERE slug = ? ${includeDrafts ? '' : 'AND published = 1'}`, [slug]);
 	const post = rows[0] ? fromRow(rows[0]) : null;
 	return post?.kind === kind ? post : null;
 }
