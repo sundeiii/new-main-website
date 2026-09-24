@@ -100,7 +100,8 @@
 
 	<div class="grid sm:grid-cols-2 gap-4">
 		<div>
-			<label for="a-interests" class={fieldLabel}>interests (one per line)</label>
+			<input bind:value={about.interestsTitle} placeholder="things i like" aria-label="interests heading" class="{field} !py-1 mb-1.5 font-medium" />
+			<label for="a-interests" class={fieldLabel}>one per line</label>
 			<textarea id="a-interests" value={about.interests.join('\n')} on:input={(e) => (about.interests = lines(e.currentTarget.value))} rows="5" class={field} />
 		</div>
 		<div class="flex flex-col gap-2">

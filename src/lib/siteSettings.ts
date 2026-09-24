@@ -125,6 +125,8 @@ export interface AboutSettings {
 	pcBuild: AboutSpec[];
 	peripherals: AboutSpec[];
 	languages: { name: string; color: string }[];
+	/** Heading above the interests list. */
+	interestsTitle: string;
 	interests: string[];
 	links: { label: string; url: string }[];
 	/** Software & setup for /uses (label e.g. "editor", value e.g. "VS Code"). */
@@ -255,6 +257,7 @@ export const settingDefaults: SiteSettings = {
 			{ name: 'PowerShell', color: '#012456' },
 			{ name: 'Bash', color: '#4eaa25' }
 		],
+		interestsTitle: 'things i like',
 		interests: ['osu!', 'web development', 'music', 'graphic design', 'editing'],
 		links: [
 			{ label: 'twitter', url: 'https://twitter.com/deprivedsundei' },

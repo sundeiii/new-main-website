@@ -184,10 +184,13 @@
 			class="mb-10"
 			in:fly={{ y: 20, duration: 300, delay: 400 }}
 		>
-			<h2 class="text-ocean-900 dark:text-ocean-100 text-lg mb-3">interests</h2>
-			<ul class="list-disc list-inside text-ocean-800 dark:text-ocean-300 text-sm space-y-1">
+			<h2 class="text-ocean-900 dark:text-ocean-100 text-lg mb-3">{page.interestsTitle || 'things i like'}</h2>
+			<ul class="flex flex-wrap gap-2 text-sm">
 				{#each interests as interest, i}
-					<li in:fly={{ x: -10, duration: 200, delay: 450 + i * 40 }}>
+					<li
+						class="px-3 py-1 rounded-full border border-ocean-300 dark:border-ocean-700 text-ocean-800 dark:text-ocean-300"
+						in:fly={{ y: 10, duration: 200, delay: 450 + i * 40 }}
+					>
 						{interest}
 					</li>
 				{/each}

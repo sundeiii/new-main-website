@@ -110,6 +110,7 @@ const clean: { [K in keyof SiteSettings]: (v: any) => SiteSettings[K] } = {
 			languages: list(v?.languages, 30, (l) =>
 				str(l?.name, 40) ? { name: str(l.name, 40), color: /^#[0-9a-f]{3,8}$/i.test(str(l?.color, 9)) ? str(l.color, 9) : '#888888' } : null
 			),
+			interestsTitle: str(v?.interestsTitle, 40) || 'things i like',
 			interests: list(v?.interests, 30, (i) => str(i, 60) || null),
 			software: list(v?.software, 40, (s) => (str(s?.label, 40) && str(s?.value, 100) ? { label: str(s.label, 40), value: str(s.value, 100), sub: str(s?.sub, 150) } : null)),
 			links: list(v?.links, 20, (l) => {
