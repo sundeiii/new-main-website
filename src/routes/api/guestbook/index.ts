@@ -9,7 +9,7 @@ const IP_LIMIT = 3;
 const IP_WINDOW_MINUTES = 10;
 
 const hashIp = (ip: string) =>
-	createHash('sha256').update(`${process.env.GUESTBOOK_SALT || process.env.BUNNY_DB_TOKEN || ''}:${ip}`).digest('hex');
+	createHash('sha256').update(`${process.env.GUESTBOOK_SALT || process.env.DB_TOKEN || ''}:${ip}`).digest('hex');
 
 export async function GET() {
 	try {
