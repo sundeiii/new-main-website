@@ -11,7 +11,9 @@ const config = {
 
 	kit: {
 		adapter: adapter({
-			runtime: 'nodejs20.x'
+			runtime: 'nodejs20.x',
+			// Stockholm, next to the Turso database.
+			regions: ['arn1']
 		}),
 		alias: {
 			$lib: './src/lib'

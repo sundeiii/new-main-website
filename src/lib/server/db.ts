@@ -1,11 +1,11 @@
 import { createClient, type InArgs, type InValue } from '@libsql/client/web';
 import { once } from '$lib/server/migrate';
 
-// Bunny Database (libSQL, i.e. SQLite) over HTTPS, so there are no connections or IP allow-lists
+// Turso (libSQL, i.e. SQLite) over HTTPS, so there are no connections or IP allow-lists
 // to manage from Vercel.
 export const db = createClient({
-	url: process.env.BUNNY_DB_URL || '',
-	authToken: process.env.BUNNY_DB_TOKEN
+	url: process.env.DB_URL || '',
+	authToken: process.env.DB_TOKEN
 });
 
 type Arg = InValue | Date | boolean | undefined;
