@@ -1,7 +1,9 @@
 import { getSetting } from '$lib/server/settings';
 
-// Live up/down (and player counts) for the servers listed in /admin → pages → status.
-// Checked server-side so visitors' browsers don't need CORS, and cached for a minute.
+// Live up/down (and player counts) for the servers listed in /admin → server status.
+// Checked server-side so visitors' browsers don't need CORS. Not cached by Vercel, so edits show
+// straight away; each server reuses its last check for 30 seconds unless the list changed.
+let last: { key: string; at: number; body: string } | null = null;
 export interface ServiceStatus {
 	name: string;
 	link: string;
@@ -26,7 +28,10 @@ async function timed(url: string, ms = 4000) {
 
 export async function GET() {
 	const settings = await getSetting('status');
-	if (!settings.show) return new Response(JSON.stringify({ show: false, items: [] }), { headers: { 'Content-Type': 'application/json' } });
+	const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+	if (!settings.show) return new Response(JSON.stringify({ show: false, items: [] }), { headers });
+	const key = JSON.stringify(settings);
+	if (last && last.key === key && Date.now() - last.at < 30_000) return new Response(last.body, { headers });
 
 	const items: ServiceStatus[] = await Promise.all(
 		settings.items.map(async (s) => {
@@ -51,7 +56,7 @@ export async function GET() {
 			return out;
 		})
 	);
-	return new Response(JSON.stringify({ show: true, title: settings.title, items, checked: new Date().toISOString() }), {
-		headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=120' }
-	});
+	const body = JSON.stringify({ show: true, title: settings.title, items, checked: new Date().toISOString() });
+	last = { key, at: Date.now(), body };
+	return new Response(body, { headers });
 }
