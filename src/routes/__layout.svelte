@@ -90,7 +90,12 @@
 		{ name: 'forest', light: '#f0f5f1', dark: '#1c2820', lightBlur: '#f0f3f0', darkBlur: '#1e2420', accent: '#A3BE8C' },
 		{ name: 'sunset', light: '#f5f2f0', dark: '#28211c', lightBlur: '#f3f2f0', darkBlur: '#242120', accent: '#EBCB8B' },
 		{ name: 'lavender', light: '#f3f0f9', dark: '#221c28', lightBlur: '#f1f0f3', darkBlur: '#201e24', accent: '#9B8EC4' },
-		{ name: 'mono', light: '#f5f5f5', dark: '#1a1a1a', lightBlur: '#f0f0f0', darkBlur: '#181818', accent: '#888888' }
+		{ name: 'mono', light: '#f5f5f5', dark: '#1a1a1a', lightBlur: '#f0f0f0', darkBlur: '#181818', accent: '#888888' },
+		// Ryo Yamada (Bocchi the Rock!): deep blue hair, golden eyes.
+		{
+			name: 'ryo', light: '#eef1f7', dark: '#141824', lightBlur: '#eceef2', darkBlur: '#13161e', accent: '#4A6A9C',
+			swatch: 'linear-gradient(135deg, #3B5584 0 62%, #E6C255 62%)'
+		}
 	];
 
 	// Secret theme: type `tf` in the browser console to unlock it.
@@ -111,7 +116,7 @@
 		setTimeout(() => (transToast = false), 4000);
 	}
 
-	let currentTheme: typeof themes[0] & { swatch?: string } = themes[0];
+	let currentTheme: { name: string; light: string; dark: string; lightBlur: string; darkBlur: string; accent: string; swatch?: string } = themes[0];
 
 	function setTheme(theme: typeof currentTheme) {
 		currentTheme = theme;
@@ -140,6 +145,7 @@
 		const t = currentTheme;
 		document.documentElement.classList.toggle('dark', isDark());
 		document.documentElement.classList.toggle('trans', t.name === 'trans');
+		document.documentElement.classList.toggle('ryo', t.name === 'ryo');
 		document.body.className = `motion-safe:transition-colors motion-safe:duration-300`;
 		if (isDark()) {
 			document.body.style.backgroundColor = focused ? t.dark : t.darkBlur;
@@ -566,5 +572,10 @@
 	:global(html.trans ::selection) {
 		background: #f5a9b8;
 		color: #1f1c2a;
+	}
+
+	:global(html.ryo ::selection) {
+		background: #4a6a9c;
+		color: #ffffff;
 	}
 </style>

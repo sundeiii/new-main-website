@@ -98,6 +98,35 @@
 		opacity: 0.16;
 	}
 
+	/* Ryo theme: her blues, with a little gold from her eyes */
+	:global(.ryo) .layer-1 {
+		background:
+			radial-gradient(ellipse 80% 50% at 20% 30%, #3B5584 0%, transparent 50%),
+			radial-gradient(ellipse 60% 80% at 80% 20%, #6F8FBF 0%, transparent 50%),
+			radial-gradient(ellipse 70% 60% at 70% 80%, #2A3A5C 0%, transparent 50%);
+	}
+
+	:global(.ryo) .layer-2 {
+		background:
+			radial-gradient(ellipse 50% 70% at 30% 70%, #6F8FBF 0%, transparent 50%),
+			radial-gradient(ellipse 14% 10% at 72% 32%, #E6C255 0%, transparent 50%),
+			radial-gradient(ellipse 60% 60% at 10% 50%, #3B5584 0%, transparent 50%);
+	}
+
+	:global(.ryo) .layer-3 {
+		background:
+			radial-gradient(ellipse 40% 80% at 50% 10%, #4A6A9C 0%, transparent 50%),
+			radial-gradient(ellipse 70% 50% at 90% 60%, #2A3A5C 0%, transparent 50%);
+	}
+
+	:global(.ryo) .mesh-layer {
+		opacity: 0.22;
+	}
+
+	:global(.dark.ryo) .mesh-layer {
+		opacity: 0.16;
+	}
+
 	/* Subtle noise texture to break up banding */
 	.noise-overlay {
 		position: absolute;
