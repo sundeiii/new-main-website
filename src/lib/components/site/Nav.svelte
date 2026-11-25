@@ -116,7 +116,7 @@
 								class="flex items-center gap-3 rounded-xl p-2 {item.href ? 'hover:bg-ocean-200/60 dark:hover:bg-ocean-800/60' : ''}"
 							>
 								{#if item.image}
-									<img src={item.image} alt="" class="w-9 h-9 rounded-md shrink-0" />
+									<img src={item.image} alt="" class="w-9 h-9 rounded-md shrink-0 object-cover" on:error={(e) => (e.currentTarget.style.visibility = 'hidden')} />
 								{:else}
 									<span class="w-9 h-9 rounded-md shrink-0 grid place-items-center bg-ocean-200/70 dark:bg-ocean-800/70 text-base">
 										{item.label === 'coding' ? '⌨' : item.label === 'watching' ? '▶' : item.label === 'listening' ? '♪' : '●'}

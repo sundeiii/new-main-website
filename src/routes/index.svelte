@@ -89,7 +89,7 @@
 	import OsuTooltip from '$lib/components/OsuTooltip.svelte';
 	import { getCodeData } from '$lib/rpcUtils';
 	import { lanyard } from '$lib/lanyard';
-	import { nowPlaying as nowPlayingStore } from '$lib/components/site/presence';
+	import { nowPlaying as nowPlayingStore, activityImage } from '$lib/components/site/presence';
 	import { onMount, onDestroy } from 'svelte';
 	import { fade, fly, slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
@@ -518,6 +518,7 @@
 					{#each visibleActivities as activity}
 						{@const isTwitch = activity.name?.toLowerCase().includes('twitch') || activity.application_id === '802958789555781663'}
 						{@const isOsu = isOsuActivity(activity)}
+						{@const activityImg = activityImage(activity.assets?.large_image, activity.application_id)}
 						{@const paused = activity.assets?.small_image?.includes('pause') || activity.assets?.small_text?.toLowerCase() === 'paused'}
 						{@const twitchUrl = isTwitch ? `https://twitch.tv/${activity.state || activity.name}` : null}
 						{@const osuSongName = isOsu && activity.details ? activity.details.replace(/\[.*?\]\s*$/, '').trim() : null}
@@ -538,40 +539,47 @@
 								{activity.type === 3 ? 'watching' : 'playing'}
 								{#if paused} · paused{:else if activity.timestamps?.start} · {hours > 0 ? `${hours}:${minutes.toString().padStart(2, '0')}` : minutes}:{seconds.toString().padStart(2, '0')}{/if}
 							</div>
-							{#if twitchUrl}
-								<a href={twitchUrl} target="_blank" rel="noopener noreferrer" class="text-lg {strong} hover:underline">{activity.name}</a>
-							{:else}
-								<div class="text-lg {strong}">{activity.name}</div>
-							{/if}
-							{#if activity.details}
-								<div class="text-sm text-ocean-700 dark:text-ocean-300">
-									{#if isOsu}{osuSongName}{#if osuDifficulty}{' '}<span class={muted}>[{osuDifficulty}]</span>{/if}{:else}{activity.details}{/if}
-								</div>
-							{/if}
-							<div class="flex flex-wrap items-center gap-3 mt-1">
-								{#if activity.state && !isTwitch}
-									{#if isOsu}
-										{@const watchingUser = parseWatchingUsername(activity.state)}
-										{@const osuUser = watchingUser ? osuUserCache[watchingUser] : isSelfOsuState(activity.state) ? osuUserCache[OSU_SELF_USERNAME] : null}
-										<div class="relative group w-fit text-sm">
-											{#if watchingUser}
-												<a href="https://osu.ppy.sh/users/{watchingUser}" target="_blank" rel="noopener noreferrer" class="{muted} hover:underline">{activity.state}</a>
-											{:else}
-												<span class="{muted} cursor-default">{activity.state}</span>
-											{/if}
-											{#if osuUser}
-												<div class="absolute bottom-full left-0 pb-2 z-50 w-64 pointer-events-none group-hover:pointer-events-auto opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 ease-out">
-													<a href="https://osu.ppy.sh/users/{osuUser.id ?? OSU_SELF_USERNAME}" target="_blank" rel="noopener noreferrer" class="block"><OsuTooltip {osuUser} /></a>
-												</div>
-											{/if}
-										</div>
+							<div class="flex items-center gap-4 min-w-0">
+								{#if activityImg}
+									<img src={activityImg} alt="" class="w-16 h-16 rounded-lg shadow-lg shrink-0 object-cover" on:error={(e) => (e.currentTarget.style.display = 'none')} />
+								{/if}
+								<div class="min-w-0 flex-1">
+									{#if twitchUrl}
+										<a href={twitchUrl} target="_blank" rel="noopener noreferrer" class="text-lg {strong} hover:underline">{activity.name}</a>
 									{:else}
-										<span class="text-sm {muted}">{activity.state}</span>
+										<div class="text-lg {strong}">{activity.name}</div>
 									{/if}
-								{/if}
-								{#if isOsu && (resolvedOsuUrl ?? osuFallbackUrl)}
-									<a href={resolvedOsuUrl ?? osuFallbackUrl} target="_blank" rel="noopener noreferrer" class="text-xs px-2.5 py-0.5 rounded-full border border-ocean-300/70 dark:border-ocean-700/70 {muted} hover:text-ocean-900 dark:hover:text-ocean-100 hover:border-ocean-500 transition-colors">beatmap ↗</a>
-								{/if}
+									{#if activity.details}
+										<div class="text-sm text-ocean-700 dark:text-ocean-300">
+											{#if isOsu}{osuSongName}{#if osuDifficulty}{' '}<span class={muted}>[{osuDifficulty}]</span>{/if}{:else}{activity.details}{/if}
+										</div>
+									{/if}
+									<div class="flex flex-wrap items-center gap-3 mt-1">
+										{#if activity.state && !isTwitch}
+											{#if isOsu}
+												{@const watchingUser = parseWatchingUsername(activity.state)}
+												{@const osuUser = watchingUser ? osuUserCache[watchingUser] : isSelfOsuState(activity.state) ? osuUserCache[OSU_SELF_USERNAME] : null}
+												<div class="relative group w-fit text-sm">
+													{#if watchingUser}
+														<a href="https://osu.ppy.sh/users/{watchingUser}" target="_blank" rel="noopener noreferrer" class="{muted} hover:underline">{activity.state}</a>
+													{:else}
+														<span class="{muted} cursor-default">{activity.state}</span>
+													{/if}
+													{#if osuUser}
+														<div class="absolute bottom-full left-0 pb-2 z-50 w-64 pointer-events-none group-hover:pointer-events-auto opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 ease-out">
+															<a href="https://osu.ppy.sh/users/{osuUser.id ?? OSU_SELF_USERNAME}" target="_blank" rel="noopener noreferrer" class="block"><OsuTooltip {osuUser} /></a>
+														</div>
+													{/if}
+												</div>
+											{:else}
+												<span class="text-sm {muted}">{activity.state}</span>
+											{/if}
+										{/if}
+										{#if isOsu && (resolvedOsuUrl ?? osuFallbackUrl)}
+											<a href={resolvedOsuUrl ?? osuFallbackUrl} target="_blank" rel="noopener noreferrer" class="text-xs px-2.5 py-0.5 rounded-full border border-ocean-300/70 dark:border-ocean-700/70 {muted} hover:text-ocean-900 dark:hover:text-ocean-100 hover:border-ocean-500 transition-colors">beatmap ↗</a>
+										{/if}
+									</div>
+								</div>
 							</div>
 						</li>
 					{/each}

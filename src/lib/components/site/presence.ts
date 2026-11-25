@@ -70,6 +70,15 @@ export const nowPlaying = writable<any>(null, (set) => {
 });
 
 
+// Discord activity pictures: "mp:external/…" is proxied through Discord's media server, a bare
+// number is one of the app's uploaded assets.
+export function activityImage(image: string | undefined, appId: string | undefined): string | undefined {
+	if (!image) return undefined;
+	if (image.startsWith('mp:')) return `https://media.discordapp.net/${image.slice(3)}`;
+	if (/^\d+$/.test(image) && appId) return `https://cdn.discordapp.com/app-assets/${appId}/${image}.png?size=128`;
+	return undefined;
+}
+
 const statusWords = { online: 'online', idle: 'away', dnd: 'busy', offline: 'offline' } as const;
 
 export const presence = derived([lanyard, nowPlaying], ([$l, $np]): Presence | null => {
@@ -84,6 +93,7 @@ export const presence = derived([lanyard, nowPlaying], ([$l, $np]): Presence | n
 			label: a.type === 3 ? 'watching' : 'playing',
 			title: a.name,
 			sub: osu ? [a.details, a.state].filter(Boolean).join(' · ') : a.details || a.state,
+			image: activityImage(a.assets?.large_image, a.application_id),
 			live: !paused
 		});
 	}
