@@ -1,10 +1,7 @@
 <script context="module" lang="ts">
-	// A blog post written in the admin panel. Hand-written posts (like /blog/welcome) have their
-	// own folder, which SvelteKit matches before this route.
+	// A blog post written in the admin panel.
 	import type { Load } from '@sveltejs/kit';
 
-	// Posts written in the admin panel. Hand-written posts (like /blog/welcome) have their own
-	// folder, which SvelteKit matches before this route.
 	export const load: Load = async ({ params, fetch }) => {
 		const res = await fetch(`/api/blog/${params.slug}?kind=post`);
 		if (!res.ok) return { status: 404, error: new Error('post not found') };

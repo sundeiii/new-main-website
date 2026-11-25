@@ -1,6 +1,5 @@
 import { marked } from 'marked';
 import { ensureSchema, sql } from '$lib/server/db';
-import { builtInPosts } from '$lib/builtInPosts';
 
 // One table holds blog posts, events (/events) and project pages (/projects), told apart by kind.
 export const KINDS = ['post', 'event', 'project'] as const;
@@ -21,8 +20,6 @@ export interface BlogPost {
 	location: string | null; // events
 	link: string | null; // projects: repo or live site
 }
-
-export { builtInPosts } from '$lib/builtInPosts';
 
 export const ensureTable = ensureSchema;
 
@@ -96,7 +93,6 @@ export function cleanPost(input: any): BlogPost | string {
 		if (value && (value.length > 500 || !/^https?:\/\//.test(value))) return `${name} must be an http(s) url`;
 	}
 	if ((post.location?.length ?? 0) > 200) return 'location is too long';
-	if (builtInPosts.some((p) => p.slug === post.slug)) return `"${post.slug}" is already used by a built-in post`;
 	return post;
 }
 

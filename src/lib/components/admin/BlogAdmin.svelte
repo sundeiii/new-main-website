@@ -191,7 +191,7 @@
 				{:else}
 					<p class="text-ocean-600 dark:text-ocean-400 text-sm">
 						{#if kindFilter === 'post'}
-							no posts written here yet. your welcome post is a hand-written page, so it doesn't show up in this list, but it stays on the blog.
+							no posts written here yet.
 						{:else if kindFilter === 'event'}
 							no events yet. add LANs and meetups here; upcoming ones show a countdown on /events.
 						{:else}

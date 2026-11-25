@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Rendered markdown for a blog post, styled like the hand-written welcome post.
+	// Rendered markdown for a blog post.
 	// Clicking an image opens it full screen.
 	export let html: string;
 

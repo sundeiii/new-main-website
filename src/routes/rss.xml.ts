@@ -1,6 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { isMissingTable } from '$lib/server/db';
-import { builtInPosts, listPosts, postPath } from '$lib/server/blog';
+import { listPosts, postPath } from '$lib/server/blog';
 
 const SITE = 'https://sundei.ee';
 
@@ -8,7 +8,7 @@ const esc = (s: string) => s.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&g
 
 // RSS feed of blog posts and events, for feed readers (and old-web vibes).
 export const GET: RequestHandler = async () => {
-	let items: { kind: 'post' | 'event' | 'project'; slug: string; title: string; excerpt: string; date: string }[] = [...builtInPosts];
+	let items: { kind: 'post' | 'event' | 'project'; slug: string; title: string; excerpt: string; date: string }[] = [];
 	try {
 		const posts = await listPosts({ createTable: false });
 		items.push(...posts.filter((p) => p.kind !== 'project'));

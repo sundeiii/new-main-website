@@ -2,7 +2,7 @@
 	// The blog: the newest post as a big banner and the rest as a numbered list.
 	import type { Load } from '@sveltejs/kit';
 
-	// Posts come from the admin panel (database) plus the hand-written ones like /blog/welcome.
+	// Posts come from the admin panel (database).
 	export const load: Load = async ({ fetch }) => {
 		const res = await fetch('/api/blog');
 		return { props: { posts: res.ok ? await res.json() : [] } };
