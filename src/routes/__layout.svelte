@@ -6,6 +6,7 @@
 	import { browser } from '$app/env';
 	import { goto, prefetch } from '$app/navigation';
 	import CursorTrail from '$lib/components/CursorTrail.svelte';
+	import Seasonal, { snowOff, snowSeason, toggleSnow } from '$lib/components/site/Seasonal.svelte';
 	import Nav from '$lib/components/site/Nav.svelte';
 	import Footer from '$lib/components/site/Footer.svelte';
 	import CommandPalette from '$lib/components/site/CommandPalette.svelte';
@@ -69,20 +70,46 @@
 	];
 
 	// ── dark mode: saved choice, or the system setting ──
-	let darkMode: boolean | null = null;
-	let systemDark = false;
+	// Read straight away in the browser (not in onMount), so the first theme applied while the page
+	// hydrates is already the right one; otherwise dark-mode visitors flash light for a moment.
+	const saved = (key: string) => {
+		try {
+			return browser ? localStorage.getItem(key) : null;
+		} catch {
+			return null;
+		}
+	};
+	let darkMode: boolean | null = saved('dark-mode') === 'dark' ? true : saved('dark-mode') === 'light' ? false : null;
+	let systemDark = browser && matchMedia('(prefers-color-scheme: dark)').matches;
 	$: isDarkMode = darkMode ?? systemDark;
 	function toggleDarkMode() {
-		darkMode = !isDarkMode;
-		localStorage.setItem('dark-mode', darkMode ? 'dark' : 'light');
+		setDarkMode(!isDarkMode);
+	}
+	function setDarkMode(on: boolean) {
+		darkMode = on;
+		localStorage.setItem('dark-mode', on ? 'dark' : 'light');
 	}
 
 	// ── themes, edited in /admin → pages → themes (see $lib/themes) ──
-	let themes: Theme[] = themeDefaults.items;
-	let defaultTheme = themeDefaults.default;
-	let themeId = '';
-	let unlocked: string[] = [];
-	let transUnlocked = false;
+	const cachedThemes = (() => {
+		try {
+			const c = JSON.parse(saved('themes-cache') ?? 'null');
+			return Array.isArray(c?.items) && c.items.length ? c : null;
+		} catch {
+			return null;
+		}
+	})();
+	let themes: Theme[] = cachedThemes?.items ?? themeDefaults.items;
+	let defaultTheme: string = cachedThemes?.default ?? themeDefaults.default;
+	let themeId = saved('site-theme') ?? '';
+	let unlocked: string[] = (() => {
+		try {
+			return JSON.parse(saved('themes-unlocked') ?? '[]');
+		} catch {
+			return [];
+		}
+	})();
+	let transUnlocked = saved('trans-unlocked') === '1';
 	const isUnlocked = (t: Theme) => !t.secret || unlocked.includes(t.id) || (t.id === 'trans' && transUnlocked);
 	$: visibleThemes = themes.filter((t) => !t.hidden && isUnlocked(t));
 	$: theme = themes.find((t) => t.id === themeId && isUnlocked(t)) ?? visibleThemes.find((t) => t.id === defaultTheme) ?? visibleThemes[0] ?? themes[0];
@@ -122,7 +149,12 @@
 					gradient: t.background === 'gradient' ? t.gradient : '',
 					fit: t.fit,
 					blur: t.blur,
-					dim: t.dim
+					dim: t.dim,
+					// Cards' glass and the accent, so they look right before the page has loaded.
+					accent: t.accent,
+					glassLight: withAlpha(t.light, t.glass / 100),
+					glassDark: withAlpha(t.dark, t.glass / 100),
+					glassBlur: t.glassBlur
 				})
 			);
 		} catch {}
@@ -371,19 +403,25 @@
 
 <svelte:window on:click|capture={onLinkClick} on:keydown={handleKeydown} on:mouseover={onHover} on:touchstart|passive={onHover} on:focusin={onHover} />
 
-<!-- Link preview defaults (Discord, Twitter, …). Pages add their own og:title/description,
-     and posts/events/projects their banner as og:image. There's deliberately no default image,
-     and "summary" makes Discord show a page's image as a small thumbnail instead of a big one. -->
+<!-- Link preview defaults (Discord, Twitter, …). Pages add their own og:title/description; the
+     picture is a card made for each page by /og, or a post's own banner. -->
 <svelte:head>
 	<meta property="og:site_name" content="sundei" />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="https://sundei.ee{$page.url.pathname}" />
-	<meta name="twitter:card" content="summary" />
+	<!-- Posts, events and projects set their own (their banner), see PostPage. -->
+	{#if !detailSlug($page.url.pathname)}
+		<meta property="og:image" content="https://sundei.ee/og?path={encodeURIComponent($page.url.pathname)}" />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+	{/if}
+	<meta name="twitter:card" content="summary_large_image" />
 	<link rel="alternate" type="application/rss+xml" title="sundei" href="/rss.xml" />
 </svelte:head>
 
 <Backdrop {theme} {dark} />
 <CursorTrail />
+<Seasonal />
 
 {#if progressVisible}
 	<div class="fixed top-0 left-0 right-0 z-[100] h-[2px]">
@@ -445,6 +483,8 @@
 	on:close={() => (paletteOpen = false)}
 	on:navigate={(e) => navigate(e.detail)}
 	on:toggleDark={toggleDarkMode}
+	on:setDark={(e) => setDarkMode(e.detail)}
+	extraActions={$snowSeason ? [{ label: $snowOff ? 'turn the snow on' : 'turn the snow off', hint: 'snow', icon: '❄', run: toggleSnow }] : []}
 	on:setTheme={(e) => setTheme(e.detail)}
 />
 

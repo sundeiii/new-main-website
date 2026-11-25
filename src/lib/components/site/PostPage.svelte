@@ -76,7 +76,8 @@
 	<meta property="og:title" content={post.title} />
 	<meta name="description" content={post.excerpt} />
 	<meta property="og:description" content={post.excerpt} />
-	{#if post.banner}<meta property="og:image" content={post.banner} />{/if}
+	<!-- Its banner as the link preview, or the made-up card (/og) if it has none. -->
+	<meta property="og:image" content={post.banner || `https://sundei.ee/og?path=${encodeURIComponent($page.url.pathname)}`} />
 	{#if !post.published}<meta name="robots" content="noindex" />{/if}
 </svelte:head>
 

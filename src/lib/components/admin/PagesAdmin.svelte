@@ -9,7 +9,7 @@
 	import GalleryEditor from './GalleryEditor.svelte';
 	import ThemesEditor from './ThemesEditor.svelte';
 	import type { ThemesSettings } from '$lib/themes';
-	import type { AboutAltSettings, AboutSettings, ButtonsSettings, GallerySettings, HomeSettings, MusicSettings, NowSettings, OsuSettings, SkinsSettings, WeatherSettings } from '$lib/siteSettings';
+	import type { AboutAltSettings, AboutSettings, ButtonsSettings, GallerySettings, HomeSettings, MusicSettings, NowSettings, OsuSettings, SkinsSettings, WeatherSettings, LiveTournamentSettings, StatusSettings, SeasonalSettings } from '$lib/siteSettings';
 
 	export let onUnauthorized: () => void;
 	import type { PageSection } from './sections';
@@ -28,6 +28,9 @@
 	let aboutAlt: AboutAltSettings | null = null;
 	let themes: ThemesSettings | null = null;
 	let weather: WeatherSettings | null = null;
+	let live: LiveTournamentSettings | null = null;
+	let status: StatusSettings | null = null;
+	let seasonal: SeasonalSettings | null = null;
 	let changelog: { id: number; date: string; text: string }[] = [];
 
 	let error = '';
@@ -39,7 +42,7 @@
 	async function load() {
 		error = '';
 		try {
-			[home, now, osu, music, skins, gallery, buttons, about, aboutAlt, themes, weather, changelog] = await Promise.all([
+			[home, now, osu, music, skins, gallery, buttons, about, aboutAlt, themes, weather, live, status, seasonal, changelog] = await Promise.all([
 				api('/api/admin/site/home', 'GET'),
 				api('/api/admin/site/now', 'GET'),
 				api('/api/admin/site/osu', 'GET'),
@@ -51,6 +54,9 @@
 				api('/api/admin/site/aboutAlt', 'GET'),
 				api('/api/admin/site/themes', 'GET'),
 				api('/api/admin/site/weather', 'GET'),
+				api('/api/admin/site/live', 'GET'),
+				api('/api/admin/site/status', 'GET'),
+				api('/api/admin/site/seasonal', 'GET'),
 				api('/api/admin/changelog', 'GET')
 			]);
 		} catch (e) {
@@ -58,7 +64,7 @@
 		}
 	}
 
-	async function save(key: 'home' | 'now' | 'osu' | 'music' | 'skins' | 'gallery' | 'buttons' | 'about' | 'aboutAlt' | 'themes' | 'weather', value: unknown) {
+	async function save(key: 'home' | 'now' | 'osu' | 'music' | 'skins' | 'gallery' | 'buttons' | 'about' | 'aboutAlt' | 'themes' | 'weather' | 'live' | 'status' | 'seasonal', value: unknown) {
 		busy = true;
 		error = saved = '';
 		try {
@@ -74,6 +80,9 @@
 			if (key === 'aboutAlt') aboutAlt = result;
 			if (key === 'themes') themes = result;
 			if (key === 'weather') weather = result;
+			if (key === 'live') live = result;
+			if (key === 'status') status = result;
+			if (key === 'seasonal') seasonal = result;
 			saved = 'saved';
 			setTimeout(() => (saved = ''), 2000);
 		} catch (e) {
@@ -223,6 +232,37 @@
 		return copy;
 	}
 
+	// ── live tournament ──
+	// Match times are stored in UTC; the inputs show them in this computer's time.
+	const toLocalInput = (iso: string) => {
+		if (!iso) return '';
+		const d = new Date(iso);
+		return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+	};
+	const fromLocalInput = (v: string) => (v ? new Date(v).toISOString() : '');
+	const scoreValue = (v: string) => (v.trim() === '' ? null : Math.max(0, Math.round(Number(v)) || 0));
+	function addMatch() {
+		if (!live) return;
+		const last = live.matches[live.matches.length - 1];
+		// Start an hour after the last one, at the same stage.
+		const time = last?.time ? new Date(new Date(last.time).getTime() + 3600e3).toISOString() : new Date(Math.ceil(Date.now() / 3600e3) * 3600e3).toISOString();
+		live.matches = [...live.matches, { time, stage: last?.stage ?? live.stage, red: '', blue: '', redScore: null, blueScore: null, mp: '' }];
+	}
+	// Paste lines like "2026-12-05 18:00, team a, team b, quarterfinals" to add several at once.
+	let bulk = '';
+	const bulkExample = ['2026-12-05 18:00, team a, team b, quarterfinals', '2026-12-05 19:30, team c, team d'].join(String.fromCharCode(10));
+	function addBulk() {
+		if (!live) return;
+		const rows = bulk
+			.split('\n')
+			.map((line) => line.split(/[,\t;]/).map((x) => x.trim()))
+			.filter((c) => c.length >= 3 && !isNaN(new Date(c[0].replace(' ', 'T')).getTime()))
+			.map((c) => ({ time: new Date(c[0].replace(' ', 'T')).toISOString(), red: c[1], blue: c[2], stage: c[3] ?? live?.stage ?? '', redScore: null, blueScore: null, mp: '' }));
+		if (!rows.length) return (error = 'no lines matched "date time, team, team, stage"');
+		live.matches = [...live.matches, ...rows].sort((a, b) => a.time.localeCompare(b.time));
+		bulk = '';
+	}
+
 	onMount(load);
 </script>
 
@@ -280,7 +320,7 @@
 				<input id="p-status" bind:value={now.status} maxlength="140" placeholder="grinding HR, reffing EDC, listening to Epitaph on repeat" class={field} />
 			</div>
 			<div class="max-w-xs">
-				<label for="p-updated" class={fieldLabel}>last updated</label>
+				<label for="p-updated" class={fieldLabel}>last updated (only shown if the save date is unknown; /now shows when you last saved)</label>
 				<input id="p-updated" bind:value={now.updated} placeholder="September 2026" class={field} />
 			</div>
 			{#each now.sections as section, i}
@@ -508,6 +548,104 @@
 				<button on:click={() => save('skins', skins)} class={primary} disabled={busy || Object.keys(oskProgress).length > 0}>save</button>
 			</div>
 			<p class="text-xs text-ocean-500">big .osk files upload in pieces, so a 30 MB skin takes a little while. skins without a name are dropped when you save.</p>
+		</div>
+
+	<!-- LIVE TOURNAMENT -->
+	{:else if active === 'live' && live}
+		<div class="flex flex-col gap-5">
+			<label class="flex items-center gap-2 text-sm text-ocean-700 dark:text-ocean-300">
+				<input type="checkbox" bind:checked={live.show} /> show it at the top of /tournaments (turn off when it's over)
+			</label>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<div><label for="l-name" class={fieldLabel}>tournament</label><input id="l-name" bind:value={live.name} maxlength="120" placeholder="Estonian Duo Cup 2026" class={field} /></div>
+				<div><label for="l-stage" class={fieldLabel}>current stage</label><input id="l-stage" bind:value={live.stage} maxlength="60" placeholder="quarterfinals" class={field} /></div>
+				<div><label for="l-role" class={fieldLabel}>my role</label><input id="l-role" bind:value={live.role} maxlength="60" placeholder="host / streamer" class={field} /></div>
+				<div><label for="l-twitch" class={fieldLabel}>twitch channel</label><input id="l-twitch" bind:value={live.twitch} maxlength="120" placeholder="channel name or twitch.tv link" class={field} /></div>
+				<div><label for="l-link" class={fieldLabel}>link (forum post or site)</label><input id="l-link" bind:value={live.link} type="url" placeholder="https://…" class={field} /></div>
+				<div>
+					<label for="l-banner" class={fieldLabel}>banner (optional)</label>
+					<div class="flex gap-2">
+						<input id="l-banner" bind:value={live.banner} placeholder="https://…" class={field} />
+						<UploadButton folder="tournaments" maxSize={1600} on:uploaded={(e) => live && (live.banner = e.detail)} on:error={(e) => (error = e.detail)} />
+					</div>
+				</div>
+			</div>
+			<div><label for="l-note" class={fieldLabel}>note (optional)</label><textarea id="l-note" bind:value={live.note} rows="2" maxlength="500" class={field} /></div>
+
+			<div class="flex flex-col gap-2">
+				<div class="flex items-baseline justify-between">
+					<span class={fieldLabel}>matches · times in your time zone, visitors see their own · fill both scores once it's played</span>
+				</div>
+				{#each live.matches as m, i}
+					<div class="flex flex-wrap lg:flex-nowrap gap-2 items-center">
+						<input type="datetime-local" value={toLocalInput(m.time)} on:change={(e) => live && (live.matches[i].time = fromLocalInput(e.currentTarget.value))} aria-label="time" class="{field} lg:!w-52" />
+						<input bind:value={m.red} placeholder="team / player" aria-label="first side" class={field} />
+						<input value={m.redScore ?? ''} on:input={(e) => live && (live.matches[i].redScore = scoreValue(e.currentTarget.value))} inputmode="numeric" placeholder="–" aria-label="first side score" class="{field} !w-14 text-center" />
+						<input value={m.blueScore ?? ''} on:input={(e) => live && (live.matches[i].blueScore = scoreValue(e.currentTarget.value))} inputmode="numeric" placeholder="–" aria-label="second side score" class="{field} !w-14 text-center" />
+						<input bind:value={m.blue} placeholder="team / player" aria-label="second side" class={field} />
+						<input bind:value={m.stage} placeholder="stage" aria-label="stage" class="{field} lg:!w-36" />
+						<input bind:value={m.mp} placeholder="mp link" aria-label="multiplayer link" class="{field} lg:!w-40" />
+						<button on:click={() => live && (live.matches = live.matches.filter((_, j) => j !== i))} class={danger} aria-label="remove match">✕</button>
+					</div>
+				{:else}
+					<p class="text-sm text-ocean-500">no matches yet</p>
+				{/each}
+				<div><button on:click={addMatch} class={subtle}>+ match</button></div>
+			</div>
+
+			<details class="text-sm">
+				<summary class="cursor-pointer text-ocean-600 dark:text-ocean-400">paste a schedule</summary>
+				<div class="flex flex-col gap-2 mt-2">
+					<textarea bind:value={bulk} rows="4" placeholder={bulkExample} class="{field} font-mono" />
+					<p class="text-xs text-ocean-500">one match per line: date time, side, side, stage (optional). commas, tabs or semicolons; straight from a spreadsheet works.</p>
+					<div><button on:click={addBulk} class={subtle} disabled={!bulk.trim()}>add these</button></div>
+				</div>
+			</details>
+			<div><button on:click={() => save('live', live)} class={primary} disabled={busy}>save</button></div>
+		</div>
+
+	<!-- SERVER STATUS -->
+	{:else if active === 'status' && status}
+		<div class="flex flex-col gap-4">
+			<label class="flex items-center gap-2 text-sm text-ocean-700 dark:text-ocean-300"><input type="checkbox" bind:checked={status.show} /> show the status cards on /projects</label>
+			<div class="sm:w-80"><label for="s-title" class={fieldLabel}>heading</label><input id="s-title" bind:value={status.title} maxlength="60" class={field} /></div>
+			{#each status.items as s, i}
+				<div class="rounded-2xl border border-ocean-300/60 dark:border-ocean-700/60 p-4 grid gap-3 sm:grid-cols-2">
+					<div><label for="s-name-{i}" class={fieldLabel}>name</label><input id="s-name-{i}" bind:value={s.name} maxlength="60" class={field} /></div>
+					<div><label for="s-link-{i}" class={fieldLabel}>link (where the card goes)</label><input id="s-link-{i}" bind:value={s.link} placeholder="https://…" class={field} /></div>
+					<div><label for="s-check-{i}" class={fieldLabel}>check this address (up = it answers)</label><input id="s-check-{i}" bind:value={s.check} placeholder="https://…/health" class={field} /></div>
+					<div><label for="s-players-{i}" class={fieldLabel}>player count (optional, json with "online")</label><input id="s-players-{i}" bind:value={s.players} placeholder="https://…/web/launcher/status" class={field} /></div>
+					<div class="sm:col-span-2 flex gap-2 items-end">
+						<div class="flex-1"><label for="s-note-{i}" class={fieldLabel}>note</label><input id="s-note-{i}" bind:value={s.note} maxlength="150" class={field} /></div>
+						<button on:click={() => status && (status.items = move(status.items, i, -1))} class={subtle} aria-label="move up">▲</button>
+						<button on:click={() => status && (status.items = status.items.filter((_, j) => j !== i))} class={danger} aria-label="remove">✕</button>
+					</div>
+				</div>
+			{/each}
+			<div><button on:click={() => status && (status.items = [...status.items, { name: '', link: '', check: '', players: '', note: '' }])} class={subtle}>+ server</button></div>
+			<p class="text-xs text-ocean-500">checked from this site's server about once a minute. cards without a name or check address are dropped when you save.</p>
+			<div><button on:click={() => save('status', status)} class={primary} disabled={busy}>save</button></div>
+		</div>
+
+	<!-- SEASONAL -->
+	{:else if active === 'seasonal' && seasonal}
+		<div class="flex flex-col gap-5 max-w-xl">
+			<div class="flex flex-col gap-2">
+				<span class={fieldLabel}>snow</span>
+				<div class="flex flex-wrap gap-4 text-sm text-ocean-700 dark:text-ocean-300">
+					<label class="flex items-center gap-1.5"><input type="radio" bind:group={seasonal.snow} value="auto" /> december to jan 7</label>
+					<label class="flex items-center gap-1.5"><input type="radio" bind:group={seasonal.snow} value="on" /> always</label>
+					<label class="flex items-center gap-1.5"><input type="radio" bind:group={seasonal.snow} value="off" /> never</label>
+				</div>
+				<p class="text-xs text-ocean-500">visitors can still turn it off in ctrl+k, and it never shows for people who prefer reduced motion.</p>
+			</div>
+			<div class="grid gap-4 sm:grid-cols-[8rem_1fr]">
+				<div><label for="se-bday" class={fieldLabel}>birthday</label><input id="se-bday" bind:value={seasonal.birthday} maxlength="5" placeholder="MM-DD" class={field} /></div>
+				<div><label for="se-text" class={fieldLabel}>birthday note</label><input id="se-text" bind:value={seasonal.birthdayText} maxlength="120" class={field} /></div>
+			</div>
+			<p class="text-xs text-ocean-500 -mt-3">leave the birthday empty to turn it off. on the day, visitors get the note and one burst of confetti.</p>
+			<label class="flex items-center gap-2 text-sm text-ocean-700 dark:text-ocean-300"><input type="checkbox" bind:checked={seasonal.newYear} /> confetti and a note on new year's day</label>
+			<div><button on:click={() => save('seasonal', seasonal)} class={primary} disabled={busy}>save</button></div>
 		</div>
 
 	<!-- WEATHER -->

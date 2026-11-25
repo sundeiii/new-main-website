@@ -1,5 +1,5 @@
 // The admin sidebar: everything you can edit, grouped.
-export const pageSections = ['home', 'about', 'now', 'osu', 'music', 'gallery', 'buttons', 'skins', 'themes', 'weather', 'changelog'] as const;
+export const pageSections = ['home', 'about', 'now', 'osu', 'music', 'gallery', 'buttons', 'skins', 'live', 'status', 'themes', 'seasonal', 'weather', 'changelog'] as const;
 export type PageSection = (typeof pageSections)[number];
 export const contentSections = ['blog', 'tournaments', 'guestbook', 'media'] as const;
 export type Section = (typeof contentSections)[number] | PageSection;
@@ -18,6 +18,9 @@ export const sectionInfo: Record<Section, { icon: string; label: string; hint: s
 	buttons: { icon: '▭', label: 'buttons', hint: '88×31 buttons on the home page', view: '/' },
 	skins: { icon: '◈', label: 'skins', hint: 'osu! skins and downloads', view: '/skins' },
 	themes: { icon: '◐', label: 'themes', hint: 'colours, pictures and the default theme', view: '/' },
+	live: { icon: '◉', label: 'live tournament', hint: 'the tournament happening now, on top of /tournaments', view: '/tournaments#live' },
+	status: { icon: '◍', label: 'server status', hint: 'the up/down cards on /projects', view: '/projects' },
+	seasonal: { icon: '❄', label: 'seasonal', hint: 'snow, birthday and new year' },
 	weather: { icon: '☁', label: 'weather', hint: 'the city in the nav' },
 	changelog: { icon: '≡', label: 'changelog', hint: 'site updates', view: '/changelog' }
 };

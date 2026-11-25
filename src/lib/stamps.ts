@@ -14,5 +14,16 @@ export const STAMPS = [
 	{ id: 'skull', emoji: '💀', label: 'skull' }
 ] as const;
 
+// Reactions anyone can add to an entry (one of each per visitor).
+export const REACTIONS = [
+	{ id: 'heart', emoji: '❤️', label: 'love' },
+	{ id: 'laugh', emoji: '😂', label: 'funny' },
+	{ id: 'fire', emoji: '🔥', label: 'fire' },
+	{ id: 'eyes', emoji: '👀', label: 'eyes' },
+	{ id: 'frog', emoji: '🐸', label: 'frog' },
+	{ id: 'circle', emoji: '⭕', label: 'osu! circle' }
+] as const;
+export const reactionById = (id: string | null | undefined) => REACTIONS.find((r) => r.id === id) ?? null;
+
 export type StampId = typeof STAMPS[number]['id'];
 export const stampById = (id: string | null | undefined) => STAMPS.find((s) => s.id === id) ?? null;

@@ -5,8 +5,8 @@
 	// The list lives in the database now (managed at /admin); the API falls back to the old
 	// hardcoded list until it's been imported.
 	export const load: Load = async ({ fetch }) => {
-		const res = await fetch('/api/tournaments');
-		return { props: { tournaments: res.ok ? await res.json() : [] } };
+		const [res, live] = await Promise.all([fetch('/api/tournaments'), fetch('/api/site/live').catch(() => null)]);
+		return { props: { tournaments: res.ok ? await res.json() : [], live: live?.ok ? await live.json() : null } };
 	};
 </script>
 
@@ -19,8 +19,11 @@
 	import { countryName, flagUrl } from '$lib/flags';
 	import { app } from '$lib/components/site/app';
 	import { stickyAside } from '$lib/components/site/sticky';
+	import LiveTournament from '$lib/components/site/LiveTournament.svelte';
+	import type { LiveTournamentSettings } from '$lib/siteSettings';
 
 	export let tournaments: TournamentYear[];
+	export let live: LiveTournamentSettings | null = null;
 
 	const rise = (i: number) => (app.hydrated ? { y: 12, duration: 500, delay: 60 + i * 60, easing: cubicOut } : { duration: 0 });
 
@@ -133,6 +136,9 @@
 
 	<!-- ── timeline ── -->
 	<div class="flex flex-col gap-14 min-w-0">
+		{#if live?.show && live.name}
+			<div in:fly={rise(1)}><LiveTournament {live} /></div>
+		{/if}
 		{#each shownYears as { year, events }, yi (year)}
 			<div id="y{year}" class="scroll-mt-24 flex flex-col gap-6" in:fly={rise(1 + yi)}>
 				<div class="flex items-baseline gap-3">
@@ -142,7 +148,7 @@
 				<ol class="relative border-l border-ocean-300/70 dark:border-ocean-700/70 ml-1.5 flex flex-col gap-5">
 					{#each events as event (event.id ?? event.name)}
 						{@const roles = rolesOf(event.role)}
-						<li class="relative pl-7">
+						<li id={event.id != null ? `t-${event.id}` : undefined} class="relative pl-7 scroll-mt-28">
 							<span class="absolute -left-[6px] top-6 w-[11px] h-[11px] rounded-full ring-4 ring-transparent" style="background: {roleColor(roles[0] ?? '')}" />
 							<div class="group relative overflow-hidden rounded-2xl border border-ocean-300/50 dark:border-ocean-700/50 {event.banner ? '' : 'glass'}">
 								{#if event.banner}
@@ -215,6 +221,19 @@
 </section>
 
 <style>
+	/* Opened from the command palette (/tournaments#t-12): outline that card for a moment. */
+	li:target > div {
+		animation: found 2.4s ease-out;
+	}
+	@keyframes found {
+		0%,
+		60% {
+			box-shadow: 0 0 0 2px var(--accent), 0 0 24px -4px var(--accent);
+		}
+		100% {
+			box-shadow: 0 0 0 0 transparent;
+		}
+	}
 	/* A soft shadow keeps white text readable on bright parts of a banner. */
 	.banner-text {
 		text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 0, 0, 0.6);

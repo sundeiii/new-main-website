@@ -1,19 +1,17 @@
-import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { ensureSchema, run, sql } from '$lib/server/db';
 import { stampById } from '$lib/stamps';
+import { allReactions, hashIp } from '$lib/server/guestbook';
 
 // Posts per IP per window. IPs are stored only as salted hashes, in their own table, so the
 // guestbook table (and its exports) never contain them.
 const IP_LIMIT = 3;
 const IP_WINDOW_MINUTES = 10;
 
-const hashIp = (ip: string) =>
-	createHash('sha256').update(`${process.env.GUESTBOOK_SALT || process.env.DB_TOKEN || ''}:${ip}`).digest('hex');
-
 export async function GET() {
 	try {
-		const rows = await sql('SELECT * FROM guestbook ORDER BY created_at DESC');
+		const [rows, reactions] = await Promise.all([sql('SELECT * FROM guestbook ORDER BY created_at DESC'), allReactions()]);
+		for (const row of rows) row.reactions = reactions[row.id] ?? {};
 		return new Response(JSON.stringify(rows), {
 			headers: { 'Content-Type': 'application/json' }
 		});

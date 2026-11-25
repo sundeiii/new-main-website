@@ -10,7 +10,9 @@
 	export let pages: { href: string; label: string }[];
 	export let themes: { id: string; name: string }[];
 
-	const dispatch = createEventDispatcher<{ navigate: string; toggleDark: void; setTheme: string; close: void }>();
+	export let extraActions: { label: string; hint?: string; icon: string; run: () => void }[] = [];
+
+	const dispatch = createEventDispatcher<{ navigate: string; toggleDark: void; setDark: boolean; setTheme: string; close: void }>();
 
 	interface Item {
 		group: string;
@@ -27,6 +29,7 @@
 	let input: HTMLInputElement;
 	let listEl: HTMLDivElement;
 	let content: Item[] = [];
+	let latest: Item[] = []; // newest guestbook messages, shown before you type anything
 	let loaded = false;
 	let loading = false;
 
@@ -35,20 +38,28 @@
 	async function loadContent() {
 		if (loaded || loading) return;
 		loading = true;
-		const [posts, events, projects, tournaments, osu] = await Promise.all([
+		const [posts, events, projects, tournaments, osu, guestbook, live] = await Promise.all([
 			getJson('/api/blog'),
 			getJson('/api/blog?kind=event'),
 			getJson('/api/blog?kind=project'),
 			getJson('/api/tournaments'),
-			getJson('/api/site/osu')
+			getJson('/api/site/osu'),
+			getJson('/api/guestbook'),
+			getJson('/api/site/live')
 		]);
+		const short = (s: string, n = 70) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+		const notes = ((guestbook ?? []) as any[]).map((g) => ({ group: 'guestbook', label: `${g.name}: ${short(g.message.replace(/\s+/g, ' '))}`, hint: new Date(g.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), icon: '✉', href: '/guestbook' }));
+		latest = notes.slice(0, 3).map((n) => ({ ...n, group: 'latest in the guestbook' }));
 		content = [
 			...(posts ?? []).map((p: any) => ({ group: 'posts', label: p.title, hint: p.date, icon: '✎', href: `/blog/${p.slug}` })),
 			...(events ?? []).map((e: any) => ({ group: 'events', label: e.title, hint: [e.date, e.location].filter(Boolean).join(' · '), icon: '◷', href: `/events/${e.slug}` })),
 			...(projects ?? []).map((p: any) => ({ group: 'projects', label: p.title, hint: p.excerpt, icon: '◇', href: `/projects/${p.slug}` })),
+			...(live?.show && live.name ? [{ group: 'tournaments', label: `live: ${live.name}`, hint: live.stage || 'happening now', icon: '●', href: '/tournaments#live' }] : []),
+			// Jumps to the card on /tournaments (the forum post is linked from there).
 			...(tournaments ?? []).flatMap((y: any) =>
-				y.events.map((t: any) => ({ group: 'tournaments', label: t.name, hint: `${t.role} · ${y.year}`, icon: '◎', url: t.link }))
+				y.events.map((t: any) => ({ group: 'tournaments', label: t.name, hint: `${t.role} · ${y.year}`, icon: '◎', href: t.id != null ? `/tournaments#t-${t.id}` : undefined, url: t.id != null ? undefined : t.link }))
 			),
+			...notes,
 			...(osu?.maps ?? []).map((m: any) => ({ group: 'maps i love', label: m.title, hint: [m.mapper, m.stars ? `${m.stars}★` : ''].filter(Boolean).join(' · '), icon: '●', url: m.url }))
 		];
 		loaded = true;
@@ -58,19 +69,23 @@
 	$: base = [
 		...pages.map((p) => ({ group: 'pages', label: p.label, hint: p.href, icon: '→', href: p.href })),
 		{ group: 'actions', label: 'toggle dark mode', icon: '◐', run: () => dispatch('toggleDark') },
-		...themes.map((t) => ({ group: 'actions', label: `theme: ${t.name}`, icon: '◉', run: () => dispatch('setTheme', t.id) })),
-		{ group: 'actions', label: 'copy email address', hint: 'sundei@sundei.ee', icon: '@', run: () => navigator.clipboard?.writeText('sundei@sundei.ee') },
-		{ group: 'actions', label: 'back to the old layout', icon: '↩', href: '/' }
+		{ group: 'actions', label: 'dark mode', hint: 'dark', icon: '☾', run: () => dispatch('setDark', true) },
+		{ group: 'actions', label: 'light mode', hint: 'light', icon: '☀', run: () => dispatch('setDark', false) },
+		...themes.map((t) => ({ group: 'actions', label: `theme ${t.name}`, hint: 'theme', icon: '◉', run: () => dispatch('setTheme', t.id) })),
+		...extraActions.map((a) => ({ group: 'actions', ...a })),
+		{ group: 'actions', label: 'copy email address', hint: 'sundei@sundei.ee', icon: '@', run: () => navigator.clipboard?.writeText('sundei@sundei.ee') }
 	] as Item[];
 
 	// Every word has to appear somewhere; matches at the start of the name come first.
 	$: words = query.toLowerCase().split(/\s+/).filter(Boolean);
-	$: results = (words.length ? [...base, ...content] : base)
+	// Typing just "dark", "light" or a theme's name puts that action first.
+	$: exact = words.length === 1 ? base.find((i) => i.hint === words[0] || i.label === `theme ${words[0]}`) : undefined;
+	$: results = (words.length ? [...base, ...content] : [...base, ...latest])
 		.map((item) => {
 			const name = item.label.toLowerCase();
 			const hay = `${name} ${item.hint ?? ''} ${item.group}`.toLowerCase();
 			if (!words.every((w) => hay.includes(w))) return null;
-			const score = (name.startsWith(words[0] ?? '') ? 0 : name.includes(words[0] ?? '') ? 1 : 2) + (item.group === 'pages' ? -0.5 : 0);
+			const score = item === exact ? -10 : (name.startsWith(words[0] ?? '') ? 0 : name.includes(words[0] ?? '') ? 1 : 2) + (item.group === 'pages' ? -0.5 : 0);
 			return { item, score };
 		})
 		.filter((r): r is { item: Item; score: number } => !!r)
@@ -126,7 +141,7 @@
 					bind:this={input}
 					bind:value={query}
 					on:keydown={onKey}
-					placeholder="search pages, posts, tournaments, maps…"
+					placeholder="search everything… or try “dark”"
 					class="flex-1 bg-transparent py-4 text-sm text-ocean-900 dark:text-ocean-100 placeholder:text-ocean-500 outline-none"
 					aria-label="search"
 					aria-activedescendant={flat[active] ? `cmd-${active}` : undefined}

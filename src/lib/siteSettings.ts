@@ -156,6 +156,64 @@ export interface AboutAltSettings {
 	bio: string;
 }
 
+/** A server or site shown with a live up/down check on /projects. */
+export interface StatusService {
+	name: string;
+	/** Where the card links. */
+	link: string;
+	/** Address that's checked: up if it answers with a 2xx. */
+	check: string;
+	/** Optional JSON address with an "online" player count, like Reprise's /web/launcher/status. */
+	players: string;
+	note: string;
+}
+export interface StatusSettings {
+	show: boolean;
+	title: string;
+	items: StatusService[];
+}
+
+/** One match on the live tournament's schedule. */
+export interface LiveMatch {
+	/** ISO time (UTC); shown in each visitor's own time zone. */
+	time: string;
+	stage: string;
+	red: string;
+	blue: string;
+	/** Both null until it's played. */
+	redScore: number | null;
+	blueScore: number | null;
+	/** osu! multiplayer link, once there is one. */
+	mp: string;
+}
+/** A tournament happening now, shown at the top of /tournaments while "show" is on. */
+export interface LiveTournamentSettings {
+	show: boolean;
+	name: string;
+	/** Forum post or website. */
+	link: string;
+	banner: string;
+	/** e.g. "quarterfinals". */
+	stage: string;
+	/** Twitch channel name (or full twitch.tv link). */
+	twitch: string;
+	/** Your role this time, e.g. "referee / streamer". */
+	role: string;
+	note: string;
+	matches: LiveMatch[];
+}
+
+/** Little seasonal touches. */
+export interface SeasonalSettings {
+	/** Snow in december and the first week of january ('auto'), always, or never. */
+	snow: 'auto' | 'on' | 'off';
+	/** MM-DD; on that day a small note and some confetti. Empty = off. */
+	birthday: string;
+	birthdayText: string;
+	/** Confetti and a note on new year's day. */
+	newYear: boolean;
+}
+
 /** The weather in the nav. */
 export interface WeatherSettings {
 	show: boolean;
@@ -179,11 +237,30 @@ export interface SiteSettings {
 	/** Themes (see $lib/themes). */
 	themes: ThemesSettings;
 	weather: WeatherSettings;
+	status: StatusSettings;
+	live: LiveTournamentSettings;
+	seasonal: SeasonalSettings;
 }
 
 export const settingDefaults: SiteSettings = {
 	themes: themeDefaults,
 	weather: { show: true, city: 'Tartu', label: '', units: 'c' },
+	live: { show: false, name: '', link: '', banner: '', stage: '', twitch: '', role: '', note: '', matches: [] },
+	seasonal: { snow: 'auto', birthday: '', birthdayText: "it's my birthday today :)", newYear: true },
+	status: {
+		show: true,
+		title: 'running right now',
+		items: [
+			{
+				name: 'Reprise',
+				link: 'https://osu.reprise.pw',
+				check: 'https://c.reprise.pw/health',
+				players: 'https://osu.reprise.pw/web/launcher/status',
+				note: 'osu! private server, stable and lazer'
+			},
+			{ name: 'Reprise MSN', link: 'https://msn.reprise.pw', check: 'https://msn.reprise.pw', players: '', note: 'an MSN Messenger server, for some reason' }
+		]
+	},
 	home: {
 		intro: 'my corner of the internet — osu! tournaments, IT garbage, music & whatever else i feel like putting here.',
 		wip: [

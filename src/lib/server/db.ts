@@ -92,6 +92,21 @@ export const SCHEMA = [
 		created_at TEXT NOT NULL DEFAULT ${NOW}
 	)`,
 	`CREATE INDEX IF NOT EXISTS guestbook_rate_ip ON guestbook_rate (ip_hash, created_at)`,
+	// Guestbook reactions: counts per entry and emoji, plus who reacted (salted IP hashes only)
+	// so the same person can't stack the same one.
+	`CREATE TABLE IF NOT EXISTS guestbook_reactions (
+		entry_id TEXT NOT NULL,
+		reaction TEXT NOT NULL,
+		count INTEGER NOT NULL DEFAULT 0,
+		PRIMARY KEY (entry_id, reaction)
+	)`,
+	`CREATE TABLE IF NOT EXISTS guestbook_reacted (
+		ip_hash TEXT NOT NULL,
+		entry_id TEXT NOT NULL,
+		reaction TEXT NOT NULL,
+		created_at TEXT NOT NULL DEFAULT ${NOW},
+		PRIMARY KEY (ip_hash, entry_id, reaction)
+	)`,
 	// Hit counter: views per page, and per day for the graph on /stats.
 	`CREATE TABLE IF NOT EXISTS page_views (
 		path TEXT PRIMARY KEY,

@@ -43,5 +43,8 @@ export const DELETE: RequestHandler = async ({ request }) => {
 	if (!Array.isArray(ids) || ids.length === 0) return json({ error: 'ids is required' }, 400);
 
 	const result = await run(`DELETE FROM guestbook WHERE id IN (${placeholders(ids.length)})`, ids.map(String));
+	// Their reactions go too (ignored if nobody has reacted to anything yet).
+	for (const table of ['guestbook_reactions', 'guestbook_reacted'])
+		await run(`DELETE FROM ${table} WHERE entry_id IN (${placeholders(ids.length)})`, ids.map(String)).catch(() => {});
 	return json({ deleted: result.changes });
 };

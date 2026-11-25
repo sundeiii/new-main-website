@@ -118,6 +118,46 @@ const clean: { [K in keyof SiteSettings]: (v: any) => SiteSettings[K] } = {
 		),
 		achievements: list(v?.achievements, 50, (a) => (str(a?.text, 300) ? { date: str(a?.date, 20), text: str(a.text, 300) } : null))
 	}),
+	live: (v) => {
+		const score = (x: unknown) => (typeof x === 'number' && isFinite(x) ? Math.max(0, Math.min(99, Math.round(x))) : null);
+		const time = (x: unknown) => {
+			const d = new Date(str(x, 40));
+			return isNaN(d.getTime()) ? '' : d.toISOString();
+		};
+		return {
+			show: !!v?.show,
+			name: str(v?.name, 120),
+			link: url(v?.link),
+			banner: urlOrPath(v?.banner),
+			stage: str(v?.stage, 60),
+			twitch: str(v?.twitch, 120)
+				.replace(/^https?:\/\/(www\.)?twitch\.tv\//i, '')
+				.replace(/[^a-z0-9_]/gi, '')
+				.slice(0, 40),
+			role: str(v?.role, 60),
+			note: str(v?.note, 500),
+			matches: list(v?.matches, 80, (m: any) =>
+				time(m?.time) && (str(m?.red, 60) || str(m?.blue, 60))
+					? { time: time(m.time), stage: str(m?.stage, 60), red: str(m?.red, 60), blue: str(m?.blue, 60), redScore: score(m?.redScore), blueScore: score(m?.blueScore), mp: url(m?.mp) }
+					: null
+			).sort((a, b) => a.time.localeCompare(b.time))
+		};
+	},
+	seasonal: (v) => ({
+		snow: pick(v?.snow, ['auto', 'on', 'off'] as const, 'auto'),
+		birthday: /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(str(v?.birthday, 5)) ? str(v.birthday, 5) : '',
+		birthdayText: str(v?.birthdayText, 120),
+		newYear: v?.newYear !== false
+	}),
+	status: (v) => ({
+		show: v?.show !== false,
+		title: str(v?.title, 60) || 'running right now',
+		items: list(v?.items, 12, (s: any) =>
+			str(s?.name, 60) && url(s?.check)
+				? { name: str(s.name, 60), link: url(s?.link), check: url(s.check), players: url(s?.players), note: str(s?.note, 150) }
+				: null
+		)
+	}),
 	weather: (v) => ({
 		show: v?.show !== false,
 		city: str(v?.city, 80) || 'Tartu',

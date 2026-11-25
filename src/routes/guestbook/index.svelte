@@ -13,7 +13,7 @@
 	import { onMount } from 'svelte';
 	import { fade, fly, scale } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { STAMPS, stampById } from '$lib/stamps';
+	import { REACTIONS, STAMPS, stampById } from '$lib/stamps';
 	import { app } from '$lib/components/site/app';
 	import { stickyAside } from '$lib/components/site/sticky';
 
@@ -33,9 +33,46 @@
 	let submitError = '';
 	let submitSuccess = false;
 
+	// Reactions this browser has given, as "entryId:reaction" (the server keeps the real record).
+	let mine = new Set<string>();
+	let picker = ''; // entry whose reaction picker is open
 	onMount(() => {
 		nameInput = localStorage.getItem('guestbook-name') ?? '';
+		try {
+			mine = new Set(JSON.parse(localStorage.getItem('guestbook-reacted') ?? '[]'));
+		} catch {}
 	});
+	const reactionsOf = (entry: any) =>
+		REACTIONS.filter((r) => entry.reactions?.[r.id] > 0).map((r) => ({ ...r, count: entry.reactions[r.id] as number }));
+
+	async function react(entry: any, reaction: string) {
+		picker = '';
+		const key = `${entry.id}:${reaction}`;
+		const had = mine.has(key);
+		// Show it straight away; the server's counts replace this when they arrive.
+		const set = (reactions: Record<string, number>, on: boolean) => {
+			entries = entries.map((e) => (e.id === entry.id ? { ...e, reactions } : e));
+			on ? mine.add(key) : mine.delete(key);
+			mine = mine;
+			try {
+				localStorage.setItem('guestbook-reacted', JSON.stringify([...mine]));
+			} catch {}
+		};
+		const before = entry.reactions ?? {};
+		set({ ...before, [reaction]: Math.max(0, (before[reaction] ?? 0) + (had ? -1 : 1)) }, !had);
+		try {
+			const res = await fetch('/api/guestbook/react', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ id: entry.id, reaction })
+			});
+			if (!res.ok) throw new Error();
+			const data = await res.json();
+			set(data.reactions, data.on);
+		} catch {
+			set(before, had);
+		}
+	}
 	$: if (typeof window !== 'undefined' && nameInput) localStorage.setItem('guestbook-name', nameInput);
 
 	async function submitEntry() {
@@ -91,6 +128,8 @@
 	const strong = 'text-ocean-900 dark:text-ocean-100';
 	const input = 'w-full rounded-xl glass border border-ocean-300/60 dark:border-ocean-700/60 px-3 py-2 text-sm text-ocean-900 dark:text-ocean-100 placeholder:text-ocean-500 outline-none focus:border-[color:var(--accent)] transition-colors';
 </script>
+
+<svelte:window on:click={() => (picker = '')} on:keydown={(e) => e.key === 'Escape' && (picker = '')} />
 
 <svelte:head>
 	<title>guestbook</title>
@@ -182,6 +221,37 @@
 										<span class="text-xs text-ocean-500">{timeAgo(entry.created_at)}</span>
 									</div>
 									<p class="text-sm text-ocean-800 dark:text-ocean-200 whitespace-pre-wrap break-words leading-relaxed">{entry.message}</p>
+									<div class="flex flex-wrap items-center gap-1 mt-3">
+										{#each reactionsOf(entry) as r (r.id)}
+											<button
+												on:click={() => react(entry, r.id)}
+												class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-all active:scale-90 {mine.has(`${entry.id}:${r.id}`)
+													? 'accent-soft border-[color:var(--accent)] text-ocean-900 dark:text-ocean-100'
+													: 'border-ocean-300/60 dark:border-ocean-700/60 text-ocean-600 dark:text-ocean-400 hover:border-ocean-500'}"
+												title={r.label}
+												aria-pressed={mine.has(`${entry.id}:${r.id}`)}
+												in:scale|local={{ start: 0.6, duration: 200 }}
+											>
+												<span>{r.emoji}</span><span class="tabular-nums">{r.count}</span>
+											</button>
+										{/each}
+										<div class="relative">
+											<button
+												on:click|stopPropagation={() => (picker = picker === entry.id ? '' : entry.id)}
+												class="w-7 h-6 grid place-items-center rounded-full text-xs text-ocean-500 border border-transparent hover:border-ocean-300/60 dark:hover:border-ocean-700/60 transition-colors {reactionsOf(entry).length ? '' : 'opacity-50 hover:opacity-100'}"
+												aria-label="react"
+												aria-expanded={picker === entry.id}
+												title="react">☺+</button
+											>
+											{#if picker === entry.id}
+												<div class="absolute left-full ml-1 top-1/2 -translate-y-1/2 z-20 flex gap-0.5 p-1 rounded-full glass-strong border border-ocean-300/60 dark:border-ocean-700/60 shadow-lg" transition:fly|local={{ x: -4, duration: 150 }}>
+													{#each REACTIONS as r}
+														<button on:click|stopPropagation={() => react(entry, r.id)} class="w-8 h-8 grid place-items-center rounded-full text-base hover:bg-ocean-200/60 dark:hover:bg-ocean-800/60 hover:scale-125 transition-transform {mine.has(`${entry.id}:${r.id}`) ? 'accent-soft' : ''}" title={r.label} aria-label={r.label}>{r.emoji}</button>
+													{/each}
+												</div>
+											{/if}
+										</div>
+									</div>
 								</article>
 							{/each}
 						</div>

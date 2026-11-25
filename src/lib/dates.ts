@@ -31,3 +31,14 @@ export function eventTiming(e: { date: string; endDate?: string | null }, on = t
 	if (on <= (e.endDate || e.date)) return 'now';
 	return 'past';
 }
+
+/** "today", "yesterday", "3 days ago", "2 weeks ago", "4 months ago" for an ISO timestamp. */
+export function ago(iso: string, now = Date.now()) {
+	const days = Math.floor((now - new Date(iso).getTime()) / 864e5);
+	if (days <= 0) return 'today';
+	if (days === 1) return 'yesterday';
+	if (days < 14) return `${days} days ago`;
+	if (days < 60) return `${Math.round(days / 7)} weeks ago`;
+	if (days < 730) return `${Math.round(days / 30)} months ago`;
+	return `${Math.round(days / 365)} years ago`;
+}

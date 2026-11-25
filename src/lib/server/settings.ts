@@ -28,3 +28,16 @@ export async function setSetting<K extends keyof SiteSettings>(key: K, value: Si
 		[key, JSON.stringify(value), new Date()]
 	);
 }
+
+/** When each of these settings was last saved (ISO strings), or null if never / unknown. */
+export async function settingsUpdated(keys: (keyof SiteSettings)[]): Promise<Record<string, string | null>> {
+	const out: Record<string, string | null> = Object.fromEntries(keys.map((k) => [k, null]));
+	if (!keys.length) return out;
+	try {
+		const rows = await sql(`SELECT k, updated_at FROM site_settings WHERE k IN (${keys.map(() => '?').join(', ')})`, keys);
+		for (const r of rows) out[r.k] = r.updated_at ?? null;
+	} catch (error) {
+		if (!isMissingTable(error)) console.error('Failed to load setting dates:', error);
+	}
+	return out;
+}

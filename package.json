@@ -3,7 +3,7 @@
 	"version": "0.0.1",
 	"scripts": {
 		"dev": "node scripts/generate-buildtime.cjs && node scripts/generate-changelog.cjs && vite dev",
-		"build": "node scripts/generate-buildtime.cjs && node scripts/generate-changelog.cjs && vite build && node scripts/copy-kuromoji-dict.cjs",
+		"build": "node scripts/generate-buildtime.cjs && node scripts/generate-changelog.cjs && vite build && node scripts/copy-kuromoji-dict.cjs && node scripts/copy-resvg-wasm.cjs",
 		"package": "svelte-kit package",
 		"preview": "vite preview",
 		"check": "svelte-check --tsconfig ./tsconfig.json",
@@ -38,6 +38,7 @@
 	"type": "module",
 	"dependencies": {
 		"@libsql/client": "^0.18.0",
+		"@resvg/resvg-wasm": "^2.6.2",
 		"@spotify/web-api-ts-sdk": "^1.2.0",
 		"dotenv": "^17.2.4",
 		"kuroshiro": "^1.2.0",
@@ -45,6 +46,7 @@
 		"luxon": "^3.0.1",
 		"marked": "^18.0.14",
 		"node-fetch": "^2.7.0",
+		"satori": "^0.12.2",
 		"sk-lanyard": "^0.1.5",
 		"ssh2-sftp-client": "^12.1.1",
 		"uuid": "^13.0.0"
