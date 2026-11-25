@@ -63,8 +63,9 @@
 			.then((d) => d?.romanized && (romaji = { ...romaji, [text]: d.romanized }))
 			.catch(() => {});
 	}
-	const r = (text: string) => romaji[text] || text;
-	const joinArtists = (artists: { name: string }[] | undefined) => (artists ?? []).map((a) => r(a.name)).join(', ');
+	// Reactive ($:), so the lists redraw once the romaji comes back.
+	$: r = (text: string) => romaji[text] || text;
+	$: joinArtists = (artists: { name: string }[] | undefined) => (artists ?? []).map((a) => r(a.name)).join(', ');
 
 	// ── top tracks ──
 	const ranges: { name: string; value: SpotifyTimeRange }[] = [
