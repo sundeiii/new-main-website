@@ -106,6 +106,12 @@ const clean: { [K in keyof SiteSettings]: (v: any) => SiteSettings[K] } = {
 			str(s?.label, 50) || str(s?.value, 100) ? { label: str(s?.label, 50), value: str(s?.value, 100), sub: str(s?.sub, 150), image: urlOrPath(s?.image) } : null;
 		return {
 			bio: str(v?.bio, 5000),
+			affiliations: list(v?.affiliations, 20, (a) => {
+				const u = str(a?.url, 300);
+				return str(a?.name, 80)
+					? { name: str(a.name, 80), role: str(a?.role, 80), note: str(a?.note, 200), url: /^https?:\/\//.test(u) ? u : '', since: str(a?.since, 40) }
+					: null;
+			}),
 			pcBuild: list(v?.pcBuild, 30, spec),
 			peripherals: list(v?.peripherals, 30, spec),
 			languages: list(v?.languages, 30, (l) =>

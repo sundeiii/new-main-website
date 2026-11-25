@@ -35,6 +35,24 @@
 		</p>
 	</div>
 
+	<div class="flex flex-col gap-2">
+		<span class={fieldLabel}>where i'm involved (communities, teams, staff roles)</span>
+		{#each about.affiliations as a, i}
+			<div class="flex flex-wrap sm:flex-nowrap gap-2">
+				<input bind:value={a.name} placeholder="name (e.g. osu!frlive)" aria-label="name" class="{field} sm:!w-44" />
+				<input bind:value={a.role} placeholder="role" aria-label="role" class={field} />
+				<input bind:value={a.note} placeholder="note (optional)" aria-label="note" class={field} />
+				<input bind:value={a.url} placeholder="https://… (optional)" aria-label="link" class="{field} sm:!w-44" />
+				<input bind:value={a.since} placeholder="since (optional)" aria-label="since" class="{field} sm:!w-32" />
+				<button on:click={() => (about.affiliations = move(about.affiliations, i, -1))} class={subtle} aria-label="move up">▲</button>
+				<button on:click={() => (about.affiliations = about.affiliations.filter((_, j) => j !== i))} class={danger} aria-label="remove">✕</button>
+			</div>
+		{/each}
+		<div>
+			<button on:click={() => (about.affiliations = [...about.affiliations, { name: '', role: '', note: '', url: '', since: '' }])} class={subtle}>+ affiliation</button>
+		</div>
+	</div>
+
 	{#each [{ key: 'pcBuild', title: 'pc build' }, { key: 'peripherals', title: 'peripherals' }] as group}
 		{@const specs = about[group.key === 'pcBuild' ? 'pcBuild' : 'peripherals']}
 		<div class="flex flex-col gap-2">

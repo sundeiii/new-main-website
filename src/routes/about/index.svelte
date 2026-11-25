@@ -70,6 +70,32 @@
 			<div class="text-sm"><PostBody html={bioHtml} /></div>
 		</div>
 
+		<!-- Affiliations -->
+		{#if page.affiliations.length}
+		<div
+			class="mb-10"
+			in:fly={{ y: 20, duration: 300, delay: 150 }}
+		>
+			<h2 class="text-ocean-900 dark:text-ocean-100 text-lg mb-3">where i'm involved</h2>
+			<ul class="grid gap-2 sm:grid-cols-2 text-sm">
+				{#each page.affiliations as a}
+					<li class="rounded-lg border border-ocean-300 dark:border-ocean-700 px-4 py-3">
+						<div class="flex items-baseline justify-between gap-3">
+							{#if a.url}
+								<a href={a.url} target="_blank" rel="noopener noreferrer" class="text-ocean-900 dark:text-ocean-100 font-medium hover:underline">{a.name}</a>
+							{:else}
+								<span class="text-ocean-900 dark:text-ocean-100 font-medium">{a.name}</span>
+							{/if}
+							{#if a.since}<span class="text-xs text-ocean-500 shrink-0">{a.since}</span>{/if}
+						</div>
+						{#if a.role}<div class="text-ocean-700 dark:text-ocean-300">{a.role}</div>{/if}
+						{#if a.note}<div class="text-xs text-ocean-600 dark:text-ocean-400 mt-1">{a.note}</div>{/if}
+					</li>
+				{/each}
+			</ul>
+		</div>
+		{/if}
+
 		<!-- PC build -->
 		{#if pcSpecs.length}
 		<div

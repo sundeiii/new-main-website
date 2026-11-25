@@ -115,6 +115,17 @@ export interface ButtonsSettings {
 	mine: { image: string; alt: string };
 }
 
+/** A community, team or organisation you're part of, shown under "who?" on /about. */
+export interface Affiliation {
+	name: string;
+	role: string;
+	/** Optional extra line, e.g. what you worked on there. */
+	note: string;
+	url: string;
+	/** Free text, e.g. "since nov 2026". */
+	since: string;
+}
+
 export interface AboutSpec {
 	label: string;
 	value: string;
@@ -124,6 +135,7 @@ export interface AboutSpec {
 export interface AboutSettings {
 	/** Markdown. */
 	bio: string;
+	affiliations: Affiliation[];
 	pcBuild: AboutSpec[];
 	peripherals: AboutSpec[];
 	languages: { name: string; color: string }[];
@@ -231,6 +243,12 @@ export const settingDefaults: SiteSettings = {
 	},
 	about: {
 		bio: "hey, i'm sundei. i'm a student and developer from Estonia. i enjoy building things for the web, playing osu!, and listening to way too much music.\n\ni mostly work with TypeScript and Svelte these days. this portfolio is built with SvelteKit, Tailwind CSS, and a bunch of APIs stitched together.\n\nwhen i'm not coding, i'm probably watching streams, staffing osu! tournaments, or contributing to random wikis.",
+		affiliations: [
+			{ name: "Cavoe's osu! event (COE)", role: 'production staff', note: '', url: '', since: '' },
+			{ name: 'Akatsuki', role: 'community support', note: '', url: 'https://akatsuki.gg', since: '' },
+			{ name: 'osu!frlive', role: 'association member & broadcast staff', note: 'broadcast production for OFT 2026 and OWC 2026', url: '', since: 'since nov 2026' },
+			{ name: 'Centaurea', role: 'Estonian osu! community', note: '', url: 'https://centaurea.ee', since: '' }
+		],
 		pcBuild: [
 			{ label: 'processor', value: 'i5-13400F', sub: '10c / 16t • up to 4.6 GHz', image: '/images/pcbuild/13400f.webp' },
 			{ label: 'graphics card', value: 'GeForce RTX 3060 12GB', sub: 'asus • 12GB gddr6', image: '/images/pcbuild/rtx3060.webp' },
