@@ -156,7 +156,8 @@ const clean: { [K in keyof SiteSettings]: (v: any) => SiteSettings[K] } = {
 		items: list(v?.items, 60, (b) =>
 			urlOrPath(b?.image) ? { image: urlOrPath(b.image), href: url(b?.href), alt: str(b?.alt, 100), pixelated: !!b?.pixelated } : null
 		),
-		mine: { image: urlOrPath(v?.mine?.image), alt: str(v?.mine?.alt, 100) }
+		mine: { image: urlOrPath(v?.mine?.image), alt: str(v?.mine?.alt, 100) },
+		webring: { name: str(v?.webring?.name, 60), home: url(v?.webring?.home), prev: url(v?.webring?.prev), next: url(v?.webring?.next) }
 	}),
 	about: (v) => {
 		const spec = (s: any) =>

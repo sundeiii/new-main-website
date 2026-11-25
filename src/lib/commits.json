@@ -1,0 +1,482 @@
+[
+	{
+		"sha": "3e1d0f4c58405bd8fef1dbb4ceca33b60440fe07",
+		"date": "2026-11-25",
+		"text": "Remove the welcome post"
+	},
+	{
+		"sha": "94f5a5c27cef112b0ae317aa92b0b9c9709723da",
+		"date": "2026-11-25",
+		"text": "Weather settings and hover card, ryo as the default theme, new admin panel layout"
+	},
+	{
+		"sha": "d56c68aaca54f299987b04267714b05da7b1311d",
+		"date": "2026-11-25",
+		"text": "Show activity pictures in the status card and on the home page"
+	},
+	{
+		"sha": "ca278d096a9cef785e51c5878bd0646badcce863",
+		"date": "2026-11-25",
+		"text": "Music: show romaji once it arrives"
+	},
+	{
+		"sha": "5540ee9feb4869408362b2acea148744954baccb",
+		"date": "2026-11-25",
+		"text": "New site design"
+	},
+	{
+		"sha": "862e326b72936dfdc2057255214c086a079b9cd8",
+		"date": "2026-11-25",
+		"text": "Ryo theme: navy and blue with a touch of gold"
+	},
+	{
+		"sha": "38b374e3576c9e9363c0b02264c1ccc94d0cffa1",
+		"date": "2026-11-25",
+		"text": "About: \"where i'm involved\" section, editable in admin"
+	},
+	{
+		"sha": "4659e16ad1794b39bb1f6f1569f94ad33b155a6d",
+		"date": "2026-11-01",
+		"text": "Redeploy to pick up the Turso environment variables"
+	},
+	{
+		"sha": "4119842ad94dc6bb5b920196bf71fa2a01951e35",
+		"date": "2026-11-01",
+		"text": "Move the database from Bunny to Turso"
+	},
+	{
+		"sha": "5c9deb0eb9fcf012b5e3487bb2d9f8892e0a8bfb",
+		"date": "2026-09-24",
+		"text": "Move the database from MySQL to Bunny Database (libSQL)"
+	},
+	{
+		"sha": "674f52d797b5f195d59f8b4cd3a00a15ea93c7df",
+		"date": "2026-09-24",
+		"text": "Now: a one-line status for the home \"currently\" box and /now"
+	},
+	{
+		"sha": "e75655b0350788271e6b880f352b1c7bce411d9f",
+		"date": "2026-09-24",
+		"text": "Footer: show when the site was last updated"
+	},
+	{
+		"sha": "67b4764c83a7b591ef4f185e3e0fe33ec6f5ec76",
+		"date": "2026-09-24",
+		"text": "osu!: global rank graph for the last 90 days"
+	},
+	{
+		"sha": "6dc83c99a91ce032228fa652e6477c90faaf7c80",
+		"date": "2026-09-24",
+		"text": "Move the welcome post images to the new CDN and drop dead gallery fallbacks"
+	},
+	{
+		"sha": "c8a22a6f8e896823e5437e966f2c9846533cc6c7",
+		"date": "2026-09-24",
+		"text": "Smoother cursor trail without stray line segments on fast movement"
+	},
+	{
+		"sha": "be8c1a3e6eb4d623b7b8325b5e5296cba33cc463",
+		"date": "2026-09-24",
+		"text": "osu!: top and recent plays"
+	},
+	{
+		"sha": "93dc1a49e6f59a6fbb859329d678430bfe92586d",
+		"date": "2026-09-24",
+		"text": "Point GitHub links and stats at sundeiii; fit the navbar in narrower windows"
+	},
+	{
+		"sha": "b63f47d778b8c7221f82cd3007f675145aa50996",
+		"date": "2026-09-24",
+		"text": "Clean up type-check errors and drop node-fetch in favour of built-in fetch"
+	},
+	{
+		"sha": "abe4c9f52691d733f98d08cba65babb6f762acb4",
+		"date": "2026-09-24",
+		"text": "About: \"things i like\" section with an editable heading, shown as tags"
+	},
+	{
+		"sha": "89700008a9d89eeaf81232755d16685c8b300238",
+		"date": "2026-09-24",
+		"text": "Say \"badged tournaments\" instead of \"badges\" in tournament stats"
+	},
+	{
+		"sha": "e873ffe07272d17472bb6d46dc9d73f7a693c878",
+		"date": "2026-09-24",
+		"text": "Keep the footer at the bottom of short pages"
+	},
+	{
+		"sha": "29f35a43c12fbcac973d3da0f5c48235259c15da",
+		"date": "2026-09-24",
+		"text": "Drop the duplicate listening line from the home \"currently\" box"
+	},
+	{
+		"sha": "c2d434f40a571aab3b2aabf20920b621a1d75100",
+		"date": "2026-09-24",
+		"text": "Fix invisible text on map cards and other unsupported opacity classes"
+	},
+	{
+		"sha": "8b7f08fc93cdcaf827d1b069c3fb5f3613e5b247",
+		"date": "2026-09-24",
+		"text": "Add /uses page with a software list; remove /activities from the nav"
+	},
+	{
+		"sha": "51a16f0448112d56220860a6ef0e145ce1c8a3b7",
+		"date": "2026-09-24",
+		"text": "Terminal: lastfm, events, cat and secret commands"
+	},
+	{
+		"sha": "7e6cd7d0b3d1363bb693aa451aa0cc471324e367",
+		"date": "2026-09-24",
+		"text": "Role badges on tournament cards"
+	},
+	{
+		"sha": "23fd3b32bacb6dbb9555c788ba747c0f629f1327",
+		"date": "2026-09-24",
+		"text": "Home: latest post/event card, \"currently\" box, renamable section headings"
+	},
+	{
+		"sha": "27fcee076773a29e654e2912f629998e70aa0ba5",
+		"date": "2026-09-23",
+		"text": "Editable home lists, song link lookup, tidier markdown spacing, more about page options"
+	},
+	{
+		"sha": "28859a10b5384e2965e917efb31d7c640db7603a",
+		"date": "2026-09-23",
+		"text": "Music notes replace the default subtitle; example text in the notes editor"
+	},
+	{
+		"sha": "635a2354f69cc19953e45540b42cc1cf0d6f774f",
+		"date": "2026-09-23",
+		"text": "RSS feed, tournament stats, and no favicon in link previews"
+	},
+	{
+		"sha": "ecf7c69730ad21c04e217a7c588325e5e8418829",
+		"date": "2026-09-23",
+		"text": "Last.fm stats tab on the music page"
+	},
+	{
+		"sha": "3d31ccd2ef7e864e204e358059248765cf7b5dfe",
+		"date": "2026-09-23",
+		"text": "Multi-day events and a \"currently at\" status on the home page"
+	},
+	{
+		"sha": "06497946bfc4eee613c62f577f9eb2ea2570791e",
+		"date": "2026-09-23",
+		"text": "Gallery albums, 88x31 buttons and about page managed in admin"
+	},
+	{
+		"sha": "c154d6bf2f147f99b77a8609cbee26a92f7ecd67",
+		"date": "2026-09-23",
+		"text": "Make text readable on light event and tournament banners"
+	},
+	{
+		"sha": "9d6d4220ff55de64e9b11a7374f669e0ea146cad",
+		"date": "2026-09-23",
+		"text": "New favicon and advelos button"
+	},
+	{
+		"sha": "25c49f55e4ea58aae57e403b73e7819c836a1985",
+		"date": "2026-09-23",
+		"text": "Skins managed in admin, with chunked .osk uploads to the CDN"
+	},
+	{
+		"sha": "b2a40ee2b23b22f3b39d6757a0e46a09a0b0e135",
+		"date": "2026-09-23",
+		"text": "Music: cards design, song of the month, hidden artists, Last.fm backfill"
+	},
+	{
+		"sha": "dd87099d804448657809d99a6f9464334a74b52d",
+		"date": "2026-09-23",
+		"text": "Guestbook stamps"
+	},
+	{
+		"sha": "95678980644c2ed3229f23472d7d899be5514c5d",
+		"date": "2026-09-23",
+		"text": "Tournaments: tier, region and memory, role filters, host lookup, card fixes"
+	},
+	{
+		"sha": "c37430a429cbcb717290ad7caea40514c052db8f",
+		"date": "2026-09-23",
+		"text": "Editable pages: home intro, /now, events, projects, changelog"
+	},
+	{
+		"sha": "c4e7f5ca37f867a40b61c4b9301bbf6b648c64db",
+		"date": "2026-09-23",
+		"text": "Replace the osu! mini-game with an editable osu! page"
+	},
+	{
+		"sha": "afd834ddf895a8ccdfae71c08c549e96ad241e53",
+		"date": "2026-09-23",
+		"text": "Add centaurea.ee button to friends"
+	},
+	{
+		"sha": "ea788dcad3a3f1a4346d6dc438a8e7d2831f1b44",
+		"date": "2026-09-23",
+		"text": "Render page content on the server so crawlers and link previews see it"
+	},
+	{
+		"sha": "a030e554967093c6d48d5b7b93313655d9f11644",
+		"date": "2026-09-23",
+		"text": "Harden public APIs, shrink images, tidy up"
+	},
+	{
+		"sha": "9579cdbc36847c4226a42e9273dd9f947d56c702",
+		"date": "2026-09-23",
+		"text": "Admin panel: blog, tournaments, guestbook and image uploads"
+	},
+	{
+		"sha": "555dfcbeb9faea59ed9787a0f00939a72478fc11",
+		"date": "2026-09-23",
+		"text": "Romanize in-process again instead of the dead external service"
+	},
+	{
+		"sha": "4327709dd191916269031d123abbd7278a078676",
+		"date": "2026-09-23",
+		"text": "Fix dark mode, add secret trans theme, fix link previews"
+	},
+	{
+		"sha": "8345034d9e92b5577158cd05bfc72a51400eb6d2",
+		"date": "2026-09-23",
+		"text": "Fix site lag: leaked sockets and timers, cheaper effects"
+	},
+	{
+		"sha": "39ffa13f02716482d4dd4fe7476f3f2cf496f798",
+		"date": "2026-09-17",
+		"text": "centaurea & edc"
+	},
+	{
+		"sha": "ffe9ff527738b88bd47f43f3699970130a5645c7",
+		"date": "2026-08-09",
+		"text": "hello bro"
+	},
+	{
+		"sha": "e4db332f2cada0e4603895675cf8b9a05ca96a21",
+		"date": "2026-07-19",
+		"text": "more tournaments :3"
+	},
+	{
+		"sha": "318ea4ef91b4d0736972acc51392d94cb53745af",
+		"date": "2026-06-10",
+		"text": "Update index.svelte"
+	},
+	{
+		"sha": "fcc306eb842f5b2ddb6350da9928a2b466138042",
+		"date": "2026-06-10",
+		"text": "Update index.svelte"
+	},
+	{
+		"sha": "7cc6d49016bfa81c8de8648f6f51be5147f01766",
+		"date": "2026-06-10",
+		"text": "blooxoo"
+	},
+	{
+		"sha": "4dc20acb0836cfda005c1cbbf1820155e1f51fb5",
+		"date": "2026-06-10",
+		"text": "Update index.svelte"
+	},
+	{
+		"sha": "4d00bc88b6b072f428828633ae57c9515376d04b",
+		"date": "2026-06-10",
+		"text": "Update index.svelte"
+	},
+	{
+		"sha": "fcb3753e9ec33e5195dfaaeca93e65af4660d5f4",
+		"date": "2026-06-10",
+		"text": "Update index.svelte"
+	},
+	{
+		"sha": "3c4e0f3d8c1b711fe570b2267f2ca8e638da6e2c",
+		"date": "2026-06-10",
+		"text": "Update index.svelte"
+	},
+	{
+		"sha": "3eb077fe980dace541413d7f0dff0ec2b0cf37c2",
+		"date": "2026-06-10",
+		"text": "jashinbot"
+	},
+	{
+		"sha": "1ccbf650592289134e0147cd5b871d722fa037c3",
+		"date": "2026-05-04",
+		"text": "botb badge"
+	},
+	{
+		"sha": "69ebfac371f45e0aeceb243b53622f427636766a",
+		"date": "2026-04-22",
+		"text": "SAT"
+	},
+	{
+		"sha": "1be8fe38192eae211ad802d69fad0b38edd17f37",
+		"date": "2026-04-21",
+		"text": "Update index.svelte"
+	},
+	{
+		"sha": "f6dc518ac9f18132fb838b3d2cef2ed49ad4e904",
+		"date": "2026-04-19",
+		"text": "fame"
+	},
+	{
+		"sha": "07aa28e601e440bf0d1800182411c8383a3f4fba",
+		"date": "2026-04-19",
+		"text": "4 tournaments"
+	},
+	{
+		"sha": "c97fb99c904d70af5e36bbd6138db86f45248eac",
+		"date": "2026-04-02",
+		"text": "Update __layout.svelte"
+	},
+	{
+		"sha": "2772a00f1d1604fbf9b49faed629bdf56aaa35a1",
+		"date": "2026-04-02",
+		"text": "SODAAAAAAAAA"
+	},
+	{
+		"sha": "1bbc2146cb9d83b88d1443fc6c534b96745a7022",
+		"date": "2026-03-23",
+		"text": "aaa"
+	},
+	{
+		"sha": "faa49700acc10aecd20fe3d8b6b7640bbed6d0e9",
+		"date": "2026-03-23",
+		"text": "buttons"
+	},
+	{
+		"sha": "dd5452b8c17235660e6b558eeda6bc31fb4d59ad",
+		"date": "2026-03-19",
+		"text": "Update index.svelte"
+	},
+	{
+		"sha": "fc2c0951bd4e0b6a57f4ae46292dbdc15b528329",
+		"date": "2026-03-17",
+		"text": "Update index.svelte"
+	},
+	{
+		"sha": "e3307944ed6e9f8ddd220c65add2d5867f5e4f37",
+		"date": "2026-03-17",
+		"text": "peripherals"
+	},
+	{
+		"sha": "08f5af6fc712bd1f4d968eae6b2ce6ec8d8e9d29",
+		"date": "2026-03-17",
+		"text": "fix"
+	},
+	{
+		"sha": "90e5d2e52a4daa1217b13e454e99d207b5e87750",
+		"date": "2026-03-17",
+		"text": "o kurwa"
+	},
+	{
+		"sha": "3a00d329855ace0a5bc359eaf8d9cb6feb3a243f",
+		"date": "2026-03-17",
+		"text": "spotify implementation"
+	},
+	{
+		"sha": "7bfd1cf3308cc3176e725660afb1a6cc3113dd28",
+		"date": "2026-03-09",
+		"text": "Fix"
+	},
+	{
+		"sha": "4370daac193a3f17bd16b4751e4784adc9840d18",
+		"date": "2026-03-09",
+		"text": "Skillcap"
+	},
+	{
+		"sha": "fc6c7df245069ce04e4f2b58b7a0d708064cdd80",
+		"date": "2026-03-03",
+		"text": "BOTB update"
+	},
+	{
+		"sha": "78288ba599c847049cc4a75186dca03655c5cbf7",
+		"date": "2026-02-19",
+		"text": "miaw"
+	},
+	{
+		"sha": "2ca9cfaccdc4042890f3ac03f20dd82cc772f99e",
+		"date": "2026-02-18",
+		"text": "Update index.svelte"
+	},
+	{
+		"sha": "d5fa4c4be7365ce570a8bb3d13b9bf545a17518a",
+		"date": "2026-02-18",
+		"text": "Update index.svelte"
+	},
+	{
+		"sha": "89ff6a1980c364d79c267519c79f32e7f4803181",
+		"date": "2026-02-18",
+		"text": "width fix"
+	},
+	{
+		"sha": "e0a0071b96736f0cdf9293ddcd475c238894f55e",
+		"date": "2026-02-18",
+		"text": "fix"
+	},
+	{
+		"sha": "4587c63d09c4485f54de92b79755b9780cd946c0",
+		"date": "2026-02-18",
+		"text": "hivemind!"
+	},
+	{
+		"sha": "bf6731a276d18342e294092caa22300bc4a51726",
+		"date": "2026-02-16",
+		"text": "mrekk tournament + static banners"
+	},
+	{
+		"sha": "141321de60bfc9b7680d254bc0aa900aa8276324",
+		"date": "2026-02-12",
+		"text": "Fix for romanize"
+	},
+	{
+		"sha": "6dc892ef347d08a92e18ce03c074d6c99091a904",
+		"date": "2026-02-12",
+		"text": "guh"
+	},
+	{
+		"sha": "f04a3b8ba350b99feb72f78f9340f256b2dfa7aa",
+		"date": "2026-02-12",
+		"text": "yar matar"
+	},
+	{
+		"sha": "dff301b5b54efeebebe73e94fe5b07af847f66f6",
+		"date": "2026-02-12",
+		"text": "Romanize fix."
+	},
+	{
+		"sha": "521784ff77960494822a1db34d6501d9cd527a4a",
+		"date": "2026-02-12",
+		"text": "Update index.svelte"
+	},
+	{
+		"sha": "076365b51438a97dd5bf49004479b14f577c04d9",
+		"date": "2026-02-12",
+		"text": "Quick tweaks"
+	},
+	{
+		"sha": "ddb0ca50cae9181e23a11f933f29894eb8270d39",
+		"date": "2026-02-11",
+		"text": "L cloudflare"
+	},
+	{
+		"sha": "10960e1bad7bab4325e339473e7b80881903ee5a",
+		"date": "2026-02-11",
+		"text": "Romanize fix"
+	},
+	{
+		"sha": "5041d99fc4dafcfb80b2e290fa83901b8b144908",
+		"date": "2026-02-11",
+		"text": "New updates :3"
+	},
+	{
+		"sha": "3c2bf1c8fdc064c52d5070442881ac22b732e290",
+		"date": "2026-02-10",
+		"text": "guh"
+	},
+	{
+		"sha": "e051730cfff2ea87c73fa6c04390643225d2eb1f",
+		"date": "2026-02-10",
+		"text": "guh"
+	},
+	{
+		"sha": "0582f5744925a77e601ac2e26750dcd6837eb7bd",
+		"date": "2026-02-10",
+		"text": "Initial commit"
+	}
+]

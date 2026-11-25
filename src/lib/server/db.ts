@@ -91,7 +91,16 @@ export const SCHEMA = [
 		ip_hash TEXT NOT NULL,
 		created_at TEXT NOT NULL DEFAULT ${NOW}
 	)`,
-	`CREATE INDEX IF NOT EXISTS guestbook_rate_ip ON guestbook_rate (ip_hash, created_at)`
+	`CREATE INDEX IF NOT EXISTS guestbook_rate_ip ON guestbook_rate (ip_hash, created_at)`,
+	// Hit counter: views per page, and per day for the graph on /stats.
+	`CREATE TABLE IF NOT EXISTS page_views (
+		path TEXT PRIMARY KEY,
+		views INTEGER NOT NULL DEFAULT 0
+	)`,
+	`CREATE TABLE IF NOT EXISTS daily_views (
+		day TEXT PRIMARY KEY,
+		views INTEGER NOT NULL DEFAULT 0
+	)`
 ];
 
 /** Creates any missing tables. Admin writes call this; public pages don't need to. */

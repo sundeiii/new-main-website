@@ -2,8 +2,8 @@
 	"name": "portfolio",
 	"version": "0.0.1",
 	"scripts": {
-		"dev": "node scripts/generate-buildtime.cjs && vite dev",
-		"build": "node scripts/generate-buildtime.cjs && vite build && node scripts/copy-kuromoji-dict.cjs",
+		"dev": "node scripts/generate-buildtime.cjs && node scripts/generate-changelog.cjs && vite dev",
+		"build": "node scripts/generate-buildtime.cjs && node scripts/generate-changelog.cjs && vite build && node scripts/copy-kuromoji-dict.cjs",
 		"package": "svelte-kit package",
 		"preview": "vite preview",
 		"check": "svelte-check --tsconfig ./tsconfig.json",

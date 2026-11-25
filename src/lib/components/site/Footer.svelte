@@ -2,6 +2,7 @@
 	export let links: { href: string; label: string }[];
 	export let updatedAgo: string;
 	export let updatedFull: string;
+	export let visits: number | null = null;
 
 	const socials = [
 		{ href: 'https://github.com/sundeiii', label: 'github' },
@@ -33,6 +34,7 @@
 				© {new Date().getFullYear()} sundei ·
 				<a href="https://github.com/sundeiii/new-main-website" target="_blank" rel="noopener noreferrer" class="underline {linkClass}">source</a>
 				· <span title={updatedFull}>updated {updatedAgo}</span>
+				{#if visits !== null}· <a href="/stats" class={linkClass} title="page views since the counter went up">{visits.toLocaleString()} visits</a>{/if}
 			</span>
 		</div>
 	</div>

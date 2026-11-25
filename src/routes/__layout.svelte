@@ -28,6 +28,23 @@
 	}
 	const updatedAgo = ago(BUILD_TIMESTAMP);
 
+	// Hit counter: each page counts once per tab, and the footer shows the site total.
+	let visits: number | null = null;
+	$: if (browser) countView($page.url.pathname, $page.status);
+	function countView(path: string, status: number) {
+		if (status !== 200 || /^\/admin(\/|$)/.test(path)) return;
+		let seen = false;
+		try {
+			seen = !!sessionStorage.getItem('viewed:' + path);
+			sessionStorage.setItem('viewed:' + path, '1');
+		} catch {}
+		if (seen && visits !== null) return;
+		const req = seen ? fetch('/api/hits') : fetch('/api/hits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path }) });
+		req.then((r) => (r.ok ? r.json() : null))
+			.then((d) => typeof d?.total === 'number' && (visits = d.total))
+			.catch(() => {});
+	}
+
 	let ready = false;
 
 	const navLinks = [
@@ -442,7 +459,7 @@
 	</main>
 {/key}
 
-<Footer links={footerLinks} {updatedAgo} updatedFull={new Date(BUILD_TIMESTAMP).toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short' })} />
+<Footer links={footerLinks} {visits} {updatedAgo}updatedFull={new Date(BUILD_TIMESTAMP).toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short' })} />
 
 <style>
 	/* Page changes (View Transitions): a crossfade (both pages overlap, so there's never an empty

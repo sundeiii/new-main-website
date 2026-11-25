@@ -115,6 +115,8 @@ export interface ButtonsSettings {
 	items: Button88x31[];
 	/** Your own button, with a "copy embed code" click. */
 	mine: { image: string; alt: string };
+	/** A webring you are a member of: "← prev · name · next →" under the buttons. Hidden until set. */
+	webring: { name: string; home: string; prev: string; next: string };
 }
 
 /** A community, team or organisation you're part of, shown under "who?" on /about. */
@@ -256,7 +258,8 @@ export const settingDefaults: SiteSettings = {
 			{ image: 'https://nyoemii.dev/media/img/button.png', href: 'https://nyoemii.dev/', alt: "noemi's puppyhouse", pixelated: true },
 			{ image: '/centaurea.gif', href: 'https://centaurea.ee/', alt: 'centaurea', pixelated: false }
 		],
-		mine: { image: 'https://sundei.ee/sfa.gif', alt: 'the house of kwanmendments' }
+		mine: { image: 'https://sundei.ee/sfa.gif', alt: 'the house of kwanmendments' },
+		webring: { name: '', home: '', prev: '', next: '' }
 	},
 	about: {
 		bio: "hey, i'm sundei. i'm a student and developer from Estonia. i enjoy building things for the web, playing osu!, and listening to way too much music.\n\ni mostly work with TypeScript and Svelte these days. this portfolio is built with SvelteKit, Tailwind CSS, and a bunch of APIs stitched together.\n\nwhen i'm not coding, i'm probably watching streams, staffing osu! tournaments, or contributing to random wikis.",

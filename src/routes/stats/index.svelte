@@ -1,544 +1,290 @@
 <script lang="ts">
-	const joinArtists = (artists: { name: string }[] | undefined) => (artists ?? []).map((a) => a.name).join(', ');
+	// Numbers about the site and me: visits (the hit counter), github, discord, osu! (titanic) and spotify.
+	// Everything loads in the browser at the same time, so one slow api doesn't hold up the rest.
+	import { onMount } from 'svelte';
+	import { fly } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import { lanyard } from '$lib/lanyard';
-	import { onMount, onDestroy } from 'svelte';
-	import { fade, fly } from 'svelte/transition';
+	import { app } from '$lib/components/site/app';
 	import { BUILD_TIMESTAMP } from '$lib/buildtime';
+	import commits from '$lib/commits.json';
+	import type { HitStats } from '$lib/server/hits';
 
-	let mounted = false;
+	const joinArtists = (artists: { name: string }[] | undefined) => (artists ?? []).map((a) => a.name).join(', ');
+	const fmt = (n: number | null | undefined, suffix = '') => (typeof n === 'number' && isFinite(n) ? Math.round(n).toLocaleString() + suffix : '—');
+	const pct = (n: number | null | undefined) => (typeof n === 'number' ? `${(n * 100).toFixed(2)}%` : '—');
 
-	const data = lanyard;
-	
-	// Site uptime - automatically set from build time
-	const siteStartDate = BUILD_TIMESTAMP;
-	let uptime = { days: 0, hours: 0, minutes: 0 };
-	
-	// Update uptime every minute
-	function updateUptime() {
-		const now = Date.now();
-		const diff = now - siteStartDate;
-		uptime.days = Math.floor(diff / (1000 * 60 * 60 * 24));
-		uptime.hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-		uptime.minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-	}
-	
-	updateUptime();
-	let uptimeId: ReturnType<typeof setInterval>;
-	onMount(() => { uptimeId = setInterval(updateUptime, 60000); });
-	onDestroy(() => clearInterval(uptimeId));
-
-
-
-	const TITANIC_USER_ID = 3505;
-
-	let githubStats = {
-		repos: 0,
-		stars: 0,
-		forks: 0,
-		followers: 0,
-		following: 0
-	};
-
-	let topPlays: any[] = [];
-	
-	let titanicUser: any = null;
-	let lastPlayedTrack: any = null;
-
-	// GitHub contributions
+	let hits: HitStats | null = null;
+	let github: { repos: number; stars: number; forks: number; followers: number } | null = null;
 	let contributions: { days: { date: string; count: number; level: number }[]; total: number } | null = null;
-	let contribLoading = true;
+	let titanicUser: any = null;
+	let topPlays: any[] = [];
+	let lastPlayed: any = null;
+	let loaded = { hits: false, github: false, contributions: false, titanic: false, plays: false, spotify: false };
 
-	$: contribWeeks = (() => {
-		if (!contributions?.days) return [];
-		const w: { date: string; count: number; level: number }[][] = [];
-		for (let i = 0; i < contributions.days.length; i += 7) {
-			w.push(contributions.days.slice(i, i + 7));
-		}
-		return w;
-	})();
+	const get = (url: string) => fetch(url).then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
-	// Romanization
-	let romanizedCache: Record<string, string> = {};
-	
-	async function romanizeText(text: string): Promise<string> {
-		if (!text) return text;
-		if (romanizedCache[text]) return romanizedCache[text];
-		if (!/[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/.test(text)) {
-			romanizedCache[text] = text;
-			return text;
-		}
-		try {
-			const res = await fetch('/api/romanize', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ text })
-			});
-			if (res.ok) {
-				const data = await res.json();
-				romanizedCache[text] = data.romanized;
-				return data.romanized;
-			}
-		} catch (e) {
-			console.error('Romanize failed:', e);
-		}
-		romanizedCache[text] = text;
-		return text;
-	}
-
-	let romanizedPlays: Record<number, { artist: string; title: string }> = {};
-	let romanizedLastSong = '';
-	let romanizedLastArtist = '';
-	let romanizedSpotifySong = '';
-
-	function romanizePlays(plays: any[]) {
-		plays.slice(0, 5).forEach((play, i) => {
-			const artist = play.beatmap?.beatmapset?.artist || '';
-			const title = play.beatmap?.beatmapset?.title || '';
-			romanizeText(artist).then(r => {
-				romanizedPlays[i] = { ...romanizedPlays[i], artist: r };
-				romanizedPlays = romanizedPlays;
-			});
-			romanizeText(title).then(r => {
-				romanizedPlays[i] = { ...romanizedPlays[i], title: r };
-				romanizedPlays = romanizedPlays;
-			});
+	onMount(() => {
+		get('/api/hits').then((d) => ((hits = d), (loaded.hits = true)));
+		get('/api/github').then((d) => ((github = d?.error ? null : d), (loaded.github = true)));
+		get('/api/github-contributions').then((d) => ((contributions = d?.days ? d : null), (loaded.contributions = true)));
+		get('/api/titanic-user').then((d) => ((titanicUser = d), (loaded.titanic = true)));
+		get('/api/titanic-osu').then((d) => {
+			topPlays = (d?.scores ?? []).slice(0, 5);
+			loaded.plays = true;
+			romanizePlays(topPlays);
 		});
-	}
-
-	$: if (lastPlayedTrack?.track?.name) {
-		romanizeText(lastPlayedTrack.track.name).then(r => romanizedLastSong = r);
-	}
-	$: if (lastPlayedTrack?.track?.artists) {
-		romanizeText(joinArtists(lastPlayedTrack.track.artists)).then(r => romanizedLastArtist = r);
-	}
-	$: if (spotify?.song) {
-		romanizeText(spotify.song).then(r => romanizedSpotifySong = r);
-	}
-
-	let loading = true;
-	let osuLoading = true;
-	let titanicLoading = true;
-	let spotifyLoading = true;
-
-	onMount(async () => {
-		mounted = true;
-
-		// Fetch GitHub stats
-		try {
-			const response = await fetch('/api/github');
-			if (response.ok) {
-				const data = await response.json();
-				githubStats = {
-					repos: data.repos || 0,
-					stars: data.stars || 0,
-					forks: data.forks || 0,
-					followers: data.followers || 0,
-					following: data.following || 0
-				};
-			}
-		} catch (error) {
-			console.error('Failed to fetch GitHub stats:', error);
-		} finally {
-			loading = false;
-		}
-
-		// Fetch osu! top plays from Titanic
-		try {
-			const response = await fetch('/api/titanic-osu');
-			if (response.ok) {
-				const data = await response.json();
-				topPlays = data.scores || [];
-				romanizePlays(topPlays);
-			}
-		} catch (error) {
-			console.error('Failed to fetch osu! stats:', error);
-		} finally {
-			osuLoading = false;
-		}
-
-		// Fetch Titanic user stats
-		try {
-			const response = await fetch('/api/titanic-user');
-			if (response.ok) {
-				titanicUser = await response.json();
-			}
-		} catch (error) {
-			console.error('Failed to fetch Titanic user stats:', error);
-		} finally {
-			titanicLoading = false;
-		}
-
-		// Fetch last played Spotify track
-		try {
-			const response = await fetch('/api/recent-tracks');
-			if (response.ok) {
-				lastPlayedTrack = await response.json();
-			}
-		} catch (error) {
-			console.error('Failed to fetch last played track:', error);
-		} finally {
-			spotifyLoading = false;
-		}
-
-		// Fetch GitHub contributions
-		try {
-			const response = await fetch('/api/github-contributions');
-			if (response.ok) {
-				contributions = await response.json();
-			}
-		} catch (error) {
-			console.error('Failed to fetch GitHub contributions:', error);
-		} finally {
-			contribLoading = false;
-		}
+		get('/api/recent-tracks').then((d) => ((lastPlayed = d), (loaded.spotify = true)));
 	});
 
-	// Calculate uptime/activity stats from Discord
-	$: discordUser = $data?.discord_user;
-	$: activities = $data?.activities || [];
-	$: spotify = $data?.spotify;
-	$: activePlatform = $data
-		? [
-				$data.active_on_discord_desktop ? 'desktop' : null,
-				$data.active_on_discord_web ? 'web' : null,
-				$data.active_on_discord_mobile ? 'mobile' : null
-			]
-				.filter(Boolean)
-				.join(', ') || 'offline'
-		: 'offline';
+	// Japanese titles get romaji next to them, like on /music.
+	let romaji: Record<string, string> = {};
+	const hasJapanese = (s: string) => /[぀-ヿ㐀-䶿一-龯＀-ﾟ]/.test(s);
+	function romanize(text: string) {
+		if (!text || !hasJapanese(text) || text in romaji) return;
+		romaji[text] = text;
+		fetch('/api/romanize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) })
+			.then((r) => (r.ok ? r.json() : null))
+			.then((d) => d?.romanized && (romaji = { ...romaji, [text]: d.romanized }))
+			.catch(() => {});
+	}
+	const rom = (text: string) => romaji[text] || text;
+	function romanizePlays(plays: any[]) {
+		for (const p of plays) {
+			romanize(p.beatmap?.beatmapset?.artist ?? '');
+			romanize(p.beatmap?.beatmapset?.title ?? '');
+		}
+	}
+	$: if (lastPlayed?.track) {
+		romanize(lastPlayed.track.name ?? '');
+		romanize(joinArtists(lastPlayed.track.artists));
+	}
+
+	// Visits over the last 30 days; hovering a bar shows that day.
+	let hoverDay: { day: string; views: number } | null = null;
+	$: days = hits?.days ?? [];
+	$: maxViews = Math.max(1, ...days.map((d) => d.views));
+	$: monthViews = days.reduce((n, d) => n + d.views, 0);
+	const dayLabel = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+	$: contribWeeks = (() => {
+		const w: { date: string; count: number; level: number }[][] = [];
+		for (let i = 0; i < (contributions?.days.length ?? 0); i += 7) w.push(contributions!.days.slice(i, i + 7));
+		return w;
+	})();
+	const contribColor = ['bg-ocean-200 dark:bg-ocean-800', 'bg-ocean-green/30', 'bg-ocean-green/50', 'bg-ocean-green/70', 'bg-ocean-green'];
+
+	$: d = $lanyard;
+	$: spotify = d?.spotify;
+	$: activePlatform = d
+		? [d.active_on_discord_desktop && 'desktop', d.active_on_discord_web && 'web', d.active_on_discord_mobile && 'mobile'].filter(Boolean).join(', ') || 'nowhere'
+		: '—';
+
+	$: osu = titanicUser?.stats?.[0];
+	$: ranks = titanicUser?.rankings?.['0'];
+
+	const deployedAgo = (() => {
+		const h = Math.floor((Date.now() - BUILD_TIMESTAMP) / 3600000);
+		return h < 1 ? 'just now' : h < 48 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`;
+	})();
+
+	const rise = (i: number) => (app.hydrated ? { y: 12, duration: 500, delay: 60 + i * 70, easing: cubicOut } : { duration: 0 });
+	const label = 'text-[11px] uppercase tracking-widest text-ocean-500';
+	const muted = 'text-ocean-600 dark:text-ocean-400';
+	const strong = 'text-ocean-900 dark:text-ocean-100';
+	const card = 'glass rounded-2xl border border-ocean-300/50 dark:border-ocean-700/50 p-4';
 </script>
 
 <svelte:head>
 	<title>stats</title>
 	<meta property="og:title" content="stats" />
-	<meta name="description" content="various statistics and metrics" />
-	<meta property="og:description" content="various statistics and metrics" />
-	<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f0f5" />
-	<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#281c21" />
+	<meta name="description" content="numbers about this site and me" />
+	<meta property="og:description" content="numbers about this site and me" />
 </svelte:head>
 
-{#if mounted}
-<section 
-	class="p-8 sm:p-12 lg:p-24 lg:py-16 font-cascadia"
-	in:fade={{ duration: 200 }}
->
-	<div class="flex flex-col gap-7">
-		<div>
-			<h1 
-				class="text-ocean-900 dark:text-ocean-100"
-				in:fly={{ y: -20, duration: 300 }}
-			>stats</h1>
-			<p 
-				class="text-ocean-700 dark:text-ocean-400"
-				in:fly={{ y: -20, duration: 300, delay: 50 }}
-			>various statistics and metrics</p>
+<section class="px-8 sm:px-12 lg:px-24 pt-8 sm:pt-12 pb-4 font-cascadia flex flex-col gap-14 max-w-6xl">
+	<header in:fly={rise(0)}>
+		<h1 class="text-3xl {strong}">stats</h1>
+		<p class="text-sm {muted} mt-2">numbers about this site and me, live</p>
+	</header>
+
+	<!-- this site -->
+	<div class="flex flex-col gap-3" in:fly={rise(1)}>
+		<span class={label}>this site</span>
+		<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+			{#each [{ k: 'visits', v: loaded.hits ? fmt(hits?.total) : '…' }, { k: 'today', v: loaded.hits ? fmt(hits?.today) : '…' }, { k: 'commits', v: fmt(commits.length) }, { k: 'last deploy', v: deployedAgo }] as t}
+				<div class={card}>
+					<span class="block {label}">{t.k}</span>
+					<span class="block text-2xl {strong} tabular-nums mt-1">{t.v}</span>
+				</div>
+			{/each}
 		</div>
 
-		<!-- Site Uptime -->
-		<div in:fly={{ y: 20, duration: 300, delay: 100 }}>
-			<h2 class="text-ocean-900 dark:text-ocean-100 text-xl mb-3">site uptime</h2>
-			<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-				<p class="text-ocean-900 dark:text-ocean-100 text-3xl font-medium">
-					{uptime.days}d {uptime.hours}h {uptime.minutes}m
-				</p>
-				<p class="text-ocean-700 dark:text-ocean-400 text-sm mt-1">since deployment</p>
-			</div>
-		</div>
-
-		<!-- Discord Stats -->
-		<div in:fly={{ y: 20, duration: 300, delay: 200 }}>
-			<h2 class="text-ocean-900 dark:text-ocean-100 text-xl mb-3">discord</h2>
-			<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-				<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-					<p class="text-ocean-700 dark:text-ocean-400 text-sm">status</p>
-					<p class="text-ocean-900 dark:text-ocean-100 text-2xl font-medium lowercase">
-						{$data?.discord_status || 'offline'}
-					</p>
+		<div class="grid gap-3 lg:grid-cols-[2fr_1fr]">
+			<div class={card}>
+				<div class="flex items-baseline justify-between gap-4 mb-3">
+					<span class={label}>visits, last 30 days</span>
+					<span class="text-xs {muted} tabular-nums">
+						{#if hoverDay}{dayLabel(hoverDay.day)}: <span class={strong}>{hoverDay.views.toLocaleString()}</span> visits{:else}{monthViews.toLocaleString()} in total{/if}
+					</span>
 				</div>
-				<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-					<p class="text-ocean-700 dark:text-ocean-400 text-sm">activities</p>
-					<p class="text-ocean-900 dark:text-ocean-100 text-2xl font-medium">
-						{activities.length}
-					</p>
-				</div>
-				<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-					<p class="text-ocean-700 dark:text-ocean-400 text-sm">listening to</p>
-					<p class="text-ocean-900 dark:text-ocean-100 text-2xl font-medium">
-						{spotify ? (romanizedSpotifySong || spotify.song) : 'nothing'}
-					</p>
-				</div>
-				<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-					<p class="text-ocean-700 dark:text-ocean-400 text-sm">active on</p>
-					<p class="text-ocean-900 dark:text-ocean-100 text-lg font-medium lowercase">
-						{activePlatform}
-					</p>
-				</div>
-			</div>
-		</div>
-
-		<!-- GitHub Stats -->
-		<div in:fly={{ y: 20, duration: 300, delay: 300 }}>
-			<h2 class="text-ocean-900 dark:text-ocean-100 text-xl mb-3">github</h2>
-			{#if loading}
-				<p class="text-ocean-700 dark:text-ocean-400">Loading...</p>
-			{:else}
-				<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-					<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-						<p class="text-ocean-700 dark:text-ocean-400 text-sm">repositories</p>
-						<p class="text-ocean-900 dark:text-ocean-100 text-2xl font-medium">
-							{githubStats.repos}
-						</p>
-					</div>
-					<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-						<p class="text-ocean-700 dark:text-ocean-400 text-sm">stars</p>
-						<p class="text-ocean-900 dark:text-ocean-100 text-2xl font-medium">
-							{githubStats.stars}
-						</p>
-					</div>
-					<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-						<p class="text-ocean-700 dark:text-ocean-400 text-sm">forks</p>
-						<p class="text-ocean-900 dark:text-ocean-100 text-2xl font-medium">
-							{githubStats.forks}
-						</p>
-					</div>
-					<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-						<p class="text-ocean-700 dark:text-ocean-400 text-sm">followers</p>
-						<p class="text-ocean-900 dark:text-ocean-100 text-2xl font-medium">
-							{githubStats.followers}
-						</p>
-					</div>
-					<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-						<p class="text-ocean-700 dark:text-ocean-400 text-sm">following</p>
-						<p class="text-ocean-900 dark:text-ocean-100 text-2xl font-medium">
-							{githubStats.following}
-						</p>
-					</div>
-				</div>
-			{/if}
-		</div>
-
-		<!-- GitHub Contributions -->
-		<div in:fly={{ y: 20, duration: 300, delay: 350 }}>
-			<h2 class="text-ocean-900 dark:text-ocean-100 text-xl mb-3">contributions</h2>
-			{#if contribLoading}
-				<p class="text-ocean-700 dark:text-ocean-400">Loading...</p>
-			{:else if contributions && contributions.days.length > 0}
-				<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-					<p class="text-ocean-700 dark:text-ocean-400 text-sm mb-3">
-						<span class="text-ocean-900 dark:text-ocean-100 font-medium">{contributions.total.toLocaleString()}</span> contributions in the last year
-					</p>
-					<div class="overflow-x-auto">
-						<div class="flex gap-[3px]" style="min-width: 720px">
-							{#each contribWeeks as week}
-								<div class="flex flex-col gap-[3px]">
-									{#each week as day}
-										<div 
-											class="w-[11px] h-[11px] rounded-sm {day.level === 0 
-												? 'bg-ocean-200 dark:bg-ocean-800' 
-												: day.level === 1 
-												? 'bg-ocean-green/30'
-												: day.level === 2 
-												? 'bg-ocean-green/50' 
-												: day.level === 3 
-												? 'bg-ocean-green/70' 
-												: 'bg-ocean-green'}"
-											title="{day.date}: {day.count} contribution{day.count !== 1 ? 's' : ''}"
-										/>
-									{/each}
-								</div>
-							{/each}
-						</div>
-					</div>
-					<div class="flex items-center gap-1.5 mt-3 justify-end text-ocean-600 dark:text-ocean-500 text-xs">
-						<span>less</span>
-						<div class="w-[11px] h-[11px] rounded-sm bg-ocean-200 dark:bg-ocean-800" />
-						<div class="w-[11px] h-[11px] rounded-sm bg-ocean-green/30" />
-						<div class="w-[11px] h-[11px] rounded-sm bg-ocean-green/50" />
-						<div class="w-[11px] h-[11px] rounded-sm bg-ocean-green/70" />
-						<div class="w-[11px] h-[11px] rounded-sm bg-ocean-green" />
-						<span>more</span>
-					</div>
-				</div>
-			{:else}
-				<p class="text-ocean-700 dark:text-ocean-400">No contribution data available</p>
-			{/if}
-		</div>
-
-		<div in:fly={{ y: 20, duration: 300, delay: 450 }}>
-			<h2 class="text-ocean-900 dark:text-ocean-100 text-xl mb-3">titanic user stats</h2>
-			{#if titanicLoading}
-				<p class="text-ocean-700 dark:text-ocean-400">Loading...</p>
-			{:else if titanicUser}
-				<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-					{#if titanicUser.stats && titanicUser.stats[0] && titanicUser.rankings}
-						{@const osuStats = titanicUser.stats[0]}
-						{@const rankings = titanicUser.rankings['0']}
-						<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4 overflow-hidden">
-							<p class="text-ocean-700 dark:text-ocean-400 text-sm">global rank (pp)</p>
-							<p class="text-ocean-900 dark:text-ocean-100 text-lg sm:text-2xl font-medium truncate">
-								#{rankings?.performance?.global?.toLocaleString() || osuStats.rank?.toLocaleString() || 'N/A'}
-							</p>
-						</div>
-						<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4 overflow-hidden">
-							<p class="text-ocean-700 dark:text-ocean-400 text-sm">country rank (pp)</p>
-							<p class="text-ocean-900 dark:text-ocean-100 text-lg sm:text-2xl font-medium truncate">
-								#{rankings?.performance?.country?.toLocaleString() || 'N/A'}
-							</p>
-						</div>
-						<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4 overflow-hidden">
-							<p class="text-ocean-700 dark:text-ocean-400 text-sm">performance points</p>
-							<p class="text-ocean-900 dark:text-ocean-100 text-lg sm:text-2xl font-medium truncate">
-								{osuStats.pp?.toFixed(0).toLocaleString() || 'N/A'}pp
-							</p>
-						</div>
-						<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4 overflow-hidden">
-							<p class="text-ocean-700 dark:text-ocean-400 text-sm">ppv1 rank</p>
-							<p class="text-ocean-900 dark:text-ocean-100 text-lg sm:text-2xl font-medium truncate">
-								#{rankings?.ppv1?.global?.toLocaleString() || 'N/A'}
-							</p>
-						</div>
-						<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4 overflow-hidden">
-							<p class="text-ocean-700 dark:text-ocean-400 text-sm">ppv1</p>
-							<p class="text-ocean-900 dark:text-ocean-100 text-lg sm:text-2xl font-medium truncate">
-								{osuStats.ppv1?.toFixed(0).toLocaleString() || 'N/A'}pp
-							</p>
-						</div>
-						<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4 overflow-hidden">
-							<p class="text-ocean-700 dark:text-ocean-400 text-sm">ranked score rank</p>
-							<p class="text-ocean-900 dark:text-ocean-100 text-lg sm:text-2xl font-medium truncate">
-								#{rankings?.rscore?.global?.toLocaleString() || 'N/A'}
-							</p>
-						</div>
-						<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4 overflow-hidden">
-							<p class="text-ocean-700 dark:text-ocean-400 text-sm">ranked score</p>
-							<p class="text-ocean-900 dark:text-ocean-100 text-base sm:text-2xl font-medium truncate">
-								{osuStats.rscore?.toLocaleString() || 'N/A'}
-							</p>
-						</div>
-						<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4 overflow-hidden">
-							<p class="text-ocean-700 dark:text-ocean-400 text-sm">total score rank</p>
-							<p class="text-ocean-900 dark:text-ocean-100 text-lg sm:text-2xl font-medium truncate">
-								#{rankings?.tscore?.global?.toLocaleString() || 'N/A'}
-							</p>
-						</div>
-						<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4 overflow-hidden">
-							<p class="text-ocean-700 dark:text-ocean-400 text-sm">total score</p>
-							<p class="text-ocean-900 dark:text-ocean-100 text-base sm:text-2xl font-medium truncate">
-								{osuStats.tscore?.toLocaleString() || 'N/A'}
-							</p>
-						</div>
-						<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4 overflow-hidden">
-							<p class="text-ocean-700 dark:text-ocean-400 text-sm">accuracy</p>
-							<p class="text-ocean-900 dark:text-ocean-100 text-lg sm:text-2xl font-medium truncate">
-								{osuStats.acc ? `${(osuStats.acc * 100).toFixed(2)}%` : 'N/A'}
-							</p>
-						</div>
-						<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-							<p class="text-ocean-700 dark:text-ocean-400 text-sm">playcount</p>
-							<p class="text-ocean-900 dark:text-ocean-100 text-2xl font-medium">
-								{osuStats.playcount?.toLocaleString() || 'N/A'}
-							</p>
-						</div>
-						<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-							<p class="text-ocean-700 dark:text-ocean-400 text-sm">max combo</p>
-							<p class="text-ocean-900 dark:text-ocean-100 text-2xl font-medium">
-								{osuStats.max_combo?.toLocaleString() || 'N/A'}x
-							</p>
-						</div>
-					{/if}
-					{#if titanicUser.name}
-						<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-							<p class="text-ocean-700 dark:text-ocean-400 text-sm">titanic username</p>
-							<p class="text-ocean-900 dark:text-ocean-100 text-lg font-medium">
-								{titanicUser.name}
-							</p>
-						</div>
-					{/if}
-					{#if titanicUser.country}
-						<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-							<p class="text-ocean-700 dark:text-ocean-400 text-sm">country</p>
-							<p class="text-ocean-900 dark:text-ocean-100 text-lg font-medium">
-								{titanicUser.country}
-							</p>
-						</div>
-					{/if}
-				</div>
-			{:else}
-				<p class="text-ocean-700 dark:text-ocean-400">Failed to load Titanic user stats</p>
-			{/if}
-		</div>
-
-		<div in:fly={{ y: 20, duration: 300, delay: 550 }}>
-			<h2 class="text-ocean-900 dark:text-ocean-100 text-xl mb-3">titanic top plays</h2>
-			{#if osuLoading}
-				<p class="text-ocean-700 dark:text-ocean-400">Loading...</p>
-			{:else if topPlays.length > 0}
-				<div class="flex flex-col gap-3">
-					{#each topPlays.slice(0, 5) as play, i}
-						<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-							<div class="flex items-start justify-between gap-4">
-								<div class="flex-1">
-									<p class="text-ocean-900 dark:text-ocean-100 font-medium">
-										#{i + 1} {romanizedPlays[i]?.artist || play.beatmap?.beatmapset?.artist} - {romanizedPlays[i]?.title || play.beatmap?.beatmapset?.title}
-									</p>
-									<p class="text-ocean-700 dark:text-ocean-400 text-sm">
-										[{play.beatmap?.version}]
-									</p>
-									<div class="flex gap-4 mt-2 text-sm">
-										<span class="text-ocean-800 dark:text-ocean-300">{play.pp?.toFixed(0)}pp</span>
-										<span class="text-ocean-800 dark:text-ocean-300">{play.acc ? `${(play.acc * 100).toFixed(2)}%` : 'N/A'}</span>
-										<span class="text-ocean-800 dark:text-ocean-300">{play.max_combo}x</span>
-										<span class="text-ocean-800 dark:text-ocean-300">{play.grade}</span>
-									</div>
-								</div>
+				{#if days.length}
+					<!-- one column per day; the whole column is the hover target, the bar sits on the baseline -->
+					<div class="flex items-end h-32 border-b border-ocean-300/70 dark:border-ocean-700/70" role="img" aria-label="visits per day for the last 30 days" on:mouseleave={() => (hoverDay = null)}>
+						{#each days as day}
+							<div class="flex-1 h-full flex items-end px-px" on:mouseenter={() => (hoverDay = day)} title="{dayLabel(day.day)}: {day.views} visits">
+								<div
+									class="w-full rounded-t accent-bg transition-opacity {hoverDay && hoverDay !== day ? 'opacity-40' : ''}"
+									style="height: {day.views ? Math.max(4, (day.views / maxViews) * 100) : 0}%"
+								/>
 							</div>
-						</div>
-					{/each}
-				</div>
-			{:else}
-				<p class="text-ocean-700 dark:text-ocean-400">No top plays found</p>
-			{/if}
-		</div>
-
-		<!-- Spotify Stats -->
-		<div in:fly={{ y: 20, duration: 300, delay: 650 }}>
-			<h2 class="text-ocean-900 dark:text-ocean-100 text-xl mb-3">spotify</h2>
-			{#if spotifyLoading}
-				<p class="text-ocean-700 dark:text-ocean-400">Loading...</p>
-			{:else if lastPlayedTrack}
-				<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4 mb-4">
-					<p class="text-ocean-700 dark:text-ocean-400 text-sm mb-2">last played</p>
-					<div class="flex items-center gap-3">
-						{#if lastPlayedTrack.track?.album?.images?.[0]?.url}
-							<img 
-								src={lastPlayedTrack.track.album.images[0].url} 
-								alt="Album art"
-								class="w-16 h-16 rounded shadow-lg"
-							/>
-						{/if}
-						<div class="flex flex-col">
-							<a 
-								href={lastPlayedTrack.track?.external_urls?.spotify}
-								target="_blank"
-								rel="noopener noreferrer"
-								class="text-ocean-900 dark:text-ocean-100 font-medium hover:underline"
-							>
-								{romanizedLastSong || lastPlayedTrack.track?.name}
-							</a>
-							<span class="text-ocean-800 dark:text-ocean-300">
-								{romanizedLastArtist || joinArtists(lastPlayedTrack.track?.artists)}
-							</span>
-							<span class="text-ocean-700 dark:text-ocean-400 text-sm">
-								{new Date(lastPlayedTrack.played_at).toLocaleString()}
-							</span>
-						</div>
+						{/each}
 					</div>
-				</div>
-			{/if}
-			<p class="text-ocean-700 dark:text-ocean-400">
-				Check out my <a href="/music" class="underline hover:text-ocean-900 dark:hover:text-ocean-100">top tracks</a>
-			</p>
+					<div class="flex justify-between text-[11px] {muted} mt-1.5 tabular-nums">
+						<span>{dayLabel(days[0].day)}</span><span>today</span>
+					</div>
+				{:else}
+					<p class="text-sm {muted}">{loaded.hits ? 'no visits counted yet' : 'loading…'}</p>
+				{/if}
+			</div>
+
+			<div class={card}>
+				<span class="block {label} mb-3">most viewed</span>
+				{#if hits?.top.length}
+					<ol class="flex flex-col gap-2 text-sm">
+						{#each hits.top as t}
+							<li class="flex justify-between gap-4">
+								<a href={t.path} class="truncate {strong} hover:underline">{t.path}</a>
+								<span class="{muted} tabular-nums shrink-0">{t.views.toLocaleString()}</span>
+							</li>
+						{/each}
+					</ol>
+				{:else}
+					<p class="text-sm {muted}">{loaded.hits ? 'nothing yet' : 'loading…'}</p>
+				{/if}
+			</div>
 		</div>
 	</div>
+
+	<!-- github -->
+	<div class="flex flex-col gap-3" in:fly={rise(2)}>
+		<span class={label}>github</span>
+		<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+			{#each [{ k: 'public repos', v: github?.repos }, { k: 'stars', v: github?.stars }, { k: 'forks', v: github?.forks }, { k: 'followers', v: github?.followers }] as t}
+				<div class={card}>
+					<span class="block {label}">{t.k}</span>
+					<span class="block text-2xl {strong} tabular-nums mt-1">{loaded.github ? fmt(t.v) : '…'}</span>
+				</div>
+			{/each}
+		</div>
+		<div class={card}>
+			{#if contributions?.days.length}
+				<p class="text-sm {muted} mb-3"><span class={strong}>{contributions.total.toLocaleString()}</span> contributions in the last year</p>
+				<div class="overflow-x-auto">
+					<div class="flex gap-[3px]" style="min-width: 720px">
+						{#each contribWeeks as week}
+							<div class="flex flex-col gap-[3px]">
+								{#each week as day}
+									<div class="w-[11px] h-[11px] rounded-sm {contribColor[day.level] ?? contribColor[0]}" title="{day.date}: {day.count} contribution{day.count !== 1 ? 's' : ''}" />
+								{/each}
+							</div>
+						{/each}
+					</div>
+				</div>
+				<div class="flex items-center gap-1.5 mt-3 justify-end text-xs {muted}">
+					<span>less</span>
+					{#each contribColor as c}<div class="w-[11px] h-[11px] rounded-sm {c}" />{/each}
+					<span>more</span>
+				</div>
+			{:else}
+				<p class="text-sm {muted}">{loaded.contributions ? 'no contribution data right now' : 'loading…'}</p>
+			{/if}
+		</div>
+	</div>
+
+	<!-- discord + spotify -->
+	<div class="grid gap-3 lg:grid-cols-2" in:fly={rise(3)}>
+		<div class="flex flex-col gap-3">
+			<span class={label}>discord</span>
+			<div class="grid grid-cols-2 gap-3">
+				<div class={card}>
+					<span class="block {label}">status</span>
+					<span class="block text-lg {strong} mt-1 lowercase">{d?.discord_status ?? '—'}</span>
+				</div>
+				<div class={card}>
+					<span class="block {label}">active on</span>
+					<span class="block text-lg {strong} mt-1 lowercase">{activePlatform}</span>
+				</div>
+			</div>
+		</div>
+		<div class="flex flex-col gap-3">
+			<span class={label}>{spotify ? 'listening now' : 'last played'}</span>
+			<div class="{card} flex items-center gap-4 min-w-0">
+				{#if spotify}
+					{#if spotify.album_art_url}<img src={spotify.album_art_url} alt="" class="w-14 h-14 rounded-lg shrink-0" />{/if}
+					<span class="min-w-0">
+						<a href="https://open.spotify.com/track/{spotify.track_id}" target="_blank" rel="noopener noreferrer" class="block truncate {strong} hover:underline">{rom(spotify.song)}</a>
+						<span class="block truncate text-sm {muted}">{spotify.artist}</span>
+					</span>
+				{:else if lastPlayed?.track}
+					{#if lastPlayed.track.album?.images?.[0]?.url}<img src={lastPlayed.track.album.images[0].url} alt="" class="w-14 h-14 rounded-lg shrink-0" />{/if}
+					<span class="min-w-0">
+						<a href={lastPlayed.track.external_urls?.spotify} target="_blank" rel="noopener noreferrer" class="block truncate {strong} hover:underline">{rom(lastPlayed.track.name)}</a>
+						<span class="block truncate text-sm {muted}">{rom(joinArtists(lastPlayed.track.artists))}</span>
+						<span class="block text-xs {muted}">{new Date(lastPlayed.played_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+					</span>
+				{:else}
+					<span class="text-sm {muted}">{loaded.spotify ? 'nothing played lately' : 'loading…'}</span>
+				{/if}
+			</div>
+			<a href="/music" class="text-xs {muted} hover:underline">top tracks on /music →</a>
+		</div>
+	</div>
+
+	<!-- osu! on titanic -->
+	<div class="flex flex-col gap-3" in:fly={rise(4)}>
+		<span class={label}>osu! · titanic{titanicUser?.name ? ` · ${titanicUser.name}` : ''}</span>
+		{#if osu}
+			<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+				{#each [{ k: 'global rank', v: fmt(ranks?.performance?.global ?? osu.rank, ''), pre: '#' }, { k: 'country rank', v: fmt(ranks?.performance?.country), pre: '#' }, { k: 'performance', v: fmt(osu.pp, 'pp') }, { k: 'accuracy', v: pct(osu.acc) }, { k: 'playcount', v: fmt(osu.playcount) }, { k: 'max combo', v: fmt(osu.max_combo, 'x') }] as t}
+					<div class={card}>
+						<span class="block {label}">{t.k}</span>
+						<span class="block text-xl {strong} tabular-nums mt-1 truncate">{t.v !== '—' && t.pre ? t.pre : ''}{t.v}</span>
+					</div>
+				{/each}
+			</div>
+			<dl class="grid sm:grid-cols-2 gap-x-10 text-sm">
+				{#each [{ k: 'ppv1', v: fmt(osu.ppv1, 'pp'), r: ranks?.ppv1?.global }, { k: 'ranked score', v: fmt(osu.rscore), r: ranks?.rscore?.global }, { k: 'total score', v: fmt(osu.tscore), r: ranks?.tscore?.global }, { k: 'country', v: titanicUser.country ?? '—' }] as row}
+					<div class="flex items-baseline justify-between gap-4 py-2.5 border-t border-ocean-300/50 dark:border-ocean-700/50">
+						<dt class="{label} shrink-0">{row.k}</dt>
+						<dd class="{strong} tabular-nums text-right">{row.v}{#if row.r}<span class={muted}> · #{row.r.toLocaleString()}</span>{/if}</dd>
+					</div>
+				{/each}
+			</dl>
+		{:else}
+			<p class="text-sm {muted}">{loaded.titanic ? "couldn't reach titanic right now" : 'loading…'}</p>
+		{/if}
+
+		{#if topPlays.length}
+			<span class="{label} mt-4">top plays</span>
+			<ol class="flex flex-col gap-2">
+				{#each topPlays as play, i}
+					{@const set = play.beatmap?.beatmapset}
+					<li class="{card} flex items-center gap-4">
+						<span class="{muted} tabular-nums w-5 shrink-0">{i + 1}</span>
+						<span class="min-w-0 flex-1">
+							<span class="block truncate {strong}">{rom(set?.artist ?? '')} - {rom(set?.title ?? '')}</span>
+							<span class="block truncate text-xs {muted}">[{play.beatmap?.version}]</span>
+						</span>
+						<span class="shrink-0 text-right text-sm tabular-nums">
+							<span class="block {strong}">{fmt(play.pp, 'pp')}</span>
+							<span class="block text-xs {muted}">{pct(play.acc)} · {play.max_combo}x · {play.grade}</span>
+						</span>
+					</li>
+				{/each}
+			</ol>
+		{:else if !loaded.plays}
+			<p class="text-sm {muted}">loading top plays…</p>
+		{/if}
+	</div>
 </section>
-{/if}

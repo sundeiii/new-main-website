@@ -46,4 +46,14 @@
 			<input bind:value={buttons.mine.alt} placeholder="name" aria-label="your button name" class="{field} !w-48" />
 		</div>
 	</div>
+
+	<div class="border-t border-ocean-300 dark:border-ocean-700 pt-4">
+		<span class={fieldLabel}>webring (shown as "← prev · name · next →" under the buttons; leave empty to hide)</span>
+		<div class="grid sm:grid-cols-2 gap-2">
+			<input bind:value={buttons.webring.name} placeholder="ring name" aria-label="webring name" class={field} />
+			<input bind:value={buttons.webring.home} placeholder="ring home page https://…" aria-label="webring home page" class={field} />
+			<input bind:value={buttons.webring.prev} placeholder="previous site link https://…" aria-label="previous site link" class={field} />
+			<input bind:value={buttons.webring.next} placeholder="next site link https://…" aria-label="next site link" class={field} />
+		</div>
+	</div>
 </div>

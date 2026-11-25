@@ -469,6 +469,16 @@
 					{/if}
 				</div>
 				{#if copied}<span class="text-xs {muted}">embed code copied :)</span>{/if}
+				{#if buttonWall.webring?.prev && buttonWall.webring?.next}
+					{@const ring = buttonWall.webring}
+					<nav aria-label="webring" class="flex items-center gap-2 text-xs {muted}">
+						<a href={ring.prev} rel="noopener noreferrer" class="hover:underline">← prev</a>
+						<span>·</span>
+						{#if ring.home}<a href={ring.home} target="_blank" rel="noopener noreferrer" class="hover:underline">{ring.name || 'webring'}</a>{:else}<span>{ring.name || 'webring'}</span>{/if}
+						<span>·</span>
+						<a href={ring.next} rel="noopener noreferrer" class="hover:underline">next →</a>
+					</nav>
+				{/if}
 			</div>
 		</aside>
 
