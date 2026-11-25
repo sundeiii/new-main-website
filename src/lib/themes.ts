@@ -46,6 +46,8 @@ export interface Theme {
 
 export interface ThemesSettings {
 	items: Theme[];
+	/** The theme new visitors start in (the id of one of the items). */
+	default: string;
 }
 
 const MESH = ['#8FA1B3', '#96B5B4', '#B48EAD', '#A3BE8C', '#EBCB8B', '#AB7967'];
@@ -77,6 +79,7 @@ const base = (id: string, name: string, light: string, dark: string, accent: str
 export const blankTheme = (): Theme => base('', '', '#f0f3f9', '#1c2128', '#8FA1B3');
 
 export const themeDefaults: ThemesSettings = {
+	default: 'ryo',
 	items: [
 		base('rose', 'rose', '#f9f0f5', '#281c21', '#B48EAD'),
 		base('ocean', 'ocean', '#f0f3f9', '#1c2128', '#8FA1B3'),

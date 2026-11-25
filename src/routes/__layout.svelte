@@ -62,12 +62,13 @@
 
 	// ── themes, edited in /admin → pages → themes (see $lib/themes) ──
 	let themes: Theme[] = themeDefaults.items;
+	let defaultTheme = themeDefaults.default;
 	let themeId = '';
 	let unlocked: string[] = [];
 	let transUnlocked = false;
 	const isUnlocked = (t: Theme) => !t.secret || unlocked.includes(t.id) || (t.id === 'trans' && transUnlocked);
 	$: visibleThemes = themes.filter((t) => !t.hidden && isUnlocked(t));
-	$: theme = themes.find((t) => t.id === themeId && isUnlocked(t)) ?? visibleThemes[0] ?? themes[0];
+	$: theme = themes.find((t) => t.id === themeId && isUnlocked(t)) ?? visibleThemes.find((t) => t.id === defaultTheme) ?? visibleThemes[0] ?? themes[0];
 	$: dark = theme.mode === 'both' ? isDarkMode : theme.mode === 'dark';
 	// What the nav's picker and the command palette show.
 	$: pickerThemes = visibleThemes.map((t) => ({ id: t.id, name: t.name, accent: t.accent, swatch: t.swatch || undefined }));
@@ -294,7 +295,7 @@
 		}
 	}
 
-	let weather: { temp: number; description: string; icon: string; city: string } | null = null;
+	let weather: { temp: number; unit?: string; description: string; icon: string; city: string; label?: string; feels_like?: number; humidity?: number } | null = null;
 
 	onMount(() => {
 		ready = true;
@@ -305,7 +306,10 @@
 		// Last known theme list first, so a saved custom theme shows straight away.
 		try {
 			const cached = JSON.parse(localStorage.getItem('themes-cache') ?? 'null');
-			if (Array.isArray(cached?.items) && cached.items.length) themes = cached.items;
+			if (Array.isArray(cached?.items) && cached.items.length) {
+				themes = cached.items;
+				if (cached.default) defaultTheme = cached.default;
+			}
 			unlocked = JSON.parse(localStorage.getItem('themes-unlocked') ?? '[]');
 		} catch {}
 		fetch('/api/site/themes')
@@ -313,6 +317,7 @@
 			.then((d) => {
 				if (!d?.items?.length) return;
 				themes = d.items;
+				if (d.default) defaultTheme = d.default;
 				localStorage.setItem('themes-cache', JSON.stringify(d));
 			})
 			.catch(() => {});

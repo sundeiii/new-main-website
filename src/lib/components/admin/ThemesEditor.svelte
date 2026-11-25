@@ -43,6 +43,13 @@
 		the site's themes. visitors pick from these in the nav and in ctrl+k. secret ones only show up once unlocked with a link like
 		<code>sundei.ee/?theme=ryo</code> (or <code>tf</code> for the trans one).
 	</p>
+	<label class="flex flex-wrap items-center gap-2 text-sm text-ocean-700 dark:text-ocean-300">
+		new visitors start in
+		<select bind:value={themes.default} class="{field} !w-44">
+			{#each themes.items.filter((t) => !t.hidden && !t.secret) as t}<option value={t.id}>{t.name}</option>{/each}
+		</select>
+		<span class="text-xs text-ocean-500">(anyone who already picked a theme keeps theirs)</span>
+	</label>
 
 	{#each themes.items as t, i (t.id + i)}
 		<div class="border border-ocean-300 dark:border-ocean-700 rounded-lg overflow-hidden">

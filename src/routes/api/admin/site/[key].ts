@@ -63,7 +63,11 @@ const clean: { [K in keyof SiteSettings]: (v: any) => SiteSettings[K] } = {
 		const used = new Set<string>();
 		const items = list(v?.items, 30, (t) => cleanTheme(t, used));
 		// Never save an empty list: the site needs at least one theme.
-		return { items: items.length ? items : themeDefaults.items };
+		const all = items.length ? items : themeDefaults.items;
+		// The default must be a theme everyone can see; otherwise fall back to ryo, then the first.
+		const ok = (id: unknown) => all.some((t) => t.id === id && !t.hidden && !t.secret);
+		const def = ok(v?.default) ? v.default : ok(themeDefaults.default) ? themeDefaults.default : all.find((t) => !t.hidden && !t.secret)?.id ?? all[0].id;
+		return { items: all, default: def };
 	},
 	home: (v) => {
 		// Site-relative (/projects/x), http(s) or mailto links.
@@ -113,6 +117,12 @@ const clean: { [K in keyof SiteSettings]: (v: any) => SiteSettings[K] } = {
 				: null
 		),
 		achievements: list(v?.achievements, 50, (a) => (str(a?.text, 300) ? { date: str(a?.date, 20), text: str(a.text, 300) } : null))
+	}),
+	weather: (v) => ({
+		show: v?.show !== false,
+		city: str(v?.city, 80) || 'Tartu',
+		label: str(v?.label, 30),
+		units: v?.units === 'f' ? 'f' : 'c'
 	}),
 	music: (v) => ({
 		design: v?.design === 'cards' ? 'cards' : 'list',

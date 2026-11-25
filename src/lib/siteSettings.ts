@@ -154,6 +154,16 @@ export interface AboutAltSettings {
 	bio: string;
 }
 
+/** The weather in the nav. */
+export interface WeatherSettings {
+	show: boolean;
+	/** What OpenWeather looks up, e.g. "Tartu" or "Tartu,EE". */
+	city: string;
+	/** Name shown next to the temperature (empty = the city OpenWeather returns). */
+	label: string;
+	units: 'c' | 'f';
+}
+
 export interface SiteSettings {
 	home: HomeSettings;
 	now: NowSettings;
@@ -166,10 +176,12 @@ export interface SiteSettings {
 	aboutAlt: AboutAltSettings;
 	/** Themes (see $lib/themes). */
 	themes: ThemesSettings;
+	weather: WeatherSettings;
 }
 
 export const settingDefaults: SiteSettings = {
 	themes: themeDefaults,
+	weather: { show: true, city: 'Tartu', label: '', units: 'c' },
 	home: {
 		intro: 'my corner of the internet — osu! tournaments, IT garbage, music & whatever else i feel like putting here.',
 		wip: [

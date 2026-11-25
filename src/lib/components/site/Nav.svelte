@@ -16,7 +16,7 @@
 	export let isDarkMode: boolean;
 	export let themes: Theme[];
 	export let currentTheme: Theme;
-	export let weather: { temp: number; description: string; icon: string; city: string } | null;
+	export let weather: { temp: number; unit?: string; description: string; icon: string; city: string; label?: string; feels_like?: number; humidity?: number } | null;
 
 	const dispatch = createEventDispatcher<{ toggleDark: void; setTheme: Theme; logoClick: void; openPalette: void }>();
 
@@ -157,10 +157,23 @@
 
 		<div class="flex items-center gap-1 justify-self-end">
 			{#if weather?.city}
-				<span in:fade={{ duration: 250 }} class="hidden 2xl:flex items-center gap-1 px-2 text-xs text-ocean-600 dark:text-ocean-400" title="{weather.description} in {weather.city}">
-					{#if weather.icon}<img src="https://openweathermap.org/img/wn/{weather.icon}.png" alt="" class="w-6 h-6 -my-1" />{/if}
-					{weather.temp}°
-				</span>
+				<!-- The temperature, with a hover card for the rest. -->
+				<div in:fade={{ duration: 250 }} class="group relative hidden 2xl:block" tabindex="-1">
+					<span class="flex items-center gap-1 px-2 py-1 rounded-full text-xs text-ocean-600 dark:text-ocean-400 cursor-default group-hover:bg-ocean-200/60 dark:group-hover:bg-ocean-800/60 transition-colors">
+						{#if weather.icon}<img src="https://openweathermap.org/img/wn/{weather.icon}.png" alt="" class="w-6 h-6 -my-1" />{/if}
+						<span class="lowercase">{weather.label ?? weather.city}</span> {weather.temp}°
+					</span>
+					<div class="absolute right-0 top-full pt-2 w-64 opacity-0 -translate-y-1 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-150">
+						<div class="rounded-2xl border border-ocean-300/60 dark:border-ocean-700/60 glass-strong p-3 shadow-xl text-xs flex items-center gap-3">
+							{#if weather.icon}<img src="https://openweathermap.org/img/wn/{weather.icon}@2x.png" alt="" class="w-12 h-12 -my-2 shrink-0" />{/if}
+							<div class="min-w-0">
+								<span class="block text-[10px] uppercase tracking-widest text-ocean-500">weather in {weather.label ?? weather.city}</span>
+								<span class="block text-ocean-900 dark:text-ocean-100">{weather.temp}°{weather.unit ?? 'C'} · {weather.description}</span>
+								{#if weather.feels_like !== undefined}<span class="block text-ocean-600 dark:text-ocean-400">feels like {weather.feels_like}°{#if weather.humidity !== undefined} · {weather.humidity}% humidity{/if}</span>{/if}
+							</div>
+						</div>
+					</div>
+				</div>
 			{/if}
 
 			<button
@@ -243,7 +256,7 @@
 				{/each}
 			</div>
 			{#if weather?.city}
-				<p class="px-4 pt-2 pb-1 text-xs text-ocean-500">{weather.description} in {weather.city} · {weather.temp}°C</p>
+				<p class="px-4 pt-2 pb-1 text-xs text-ocean-500">{weather.description} in {weather.label ?? weather.city} · {weather.temp}°{weather.unit ?? 'C'}</p>
 			{/if}
 		</div>
 	{/if}

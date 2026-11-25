@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fly } from 'svelte/transition';
 	import { adminApi, danger, field, fieldLabel, primary, subtle } from './styles';
 	import UploadButton from './UploadButton.svelte';
 	import { uploadImage, uploadLargeFile } from './upload';
@@ -8,12 +9,13 @@
 	import GalleryEditor from './GalleryEditor.svelte';
 	import ThemesEditor from './ThemesEditor.svelte';
 	import type { ThemesSettings } from '$lib/themes';
-	import type { AboutAltSettings, AboutSettings, ButtonsSettings, GallerySettings, HomeSettings, MusicSettings, NowSettings, OsuSettings, SkinsSettings } from '$lib/siteSettings';
+	import type { AboutAltSettings, AboutSettings, ButtonsSettings, GallerySettings, HomeSettings, MusicSettings, NowSettings, OsuSettings, SkinsSettings, WeatherSettings } from '$lib/siteSettings';
 
 	export let onUnauthorized: () => void;
+	import type { PageSection } from './sections';
 
-	const sections = ['home', 'about', 'now', 'osu', 'music', 'gallery', 'buttons', 'skins', 'themes', 'changelog'] as const;
-	let active: typeof sections[number] = 'home';
+	// Which page is open; picked in the admin sidebar.
+	export let active: PageSection = 'home';
 
 	let home: HomeSettings | null = null;
 	let now: NowSettings | null = null;
@@ -25,6 +27,7 @@
 	let about: AboutSettings | null = null;
 	let aboutAlt: AboutAltSettings | null = null;
 	let themes: ThemesSettings | null = null;
+	let weather: WeatherSettings | null = null;
 	let changelog: { id: number; date: string; text: string }[] = [];
 
 	let error = '';
@@ -36,7 +39,7 @@
 	async function load() {
 		error = '';
 		try {
-			[home, now, osu, music, skins, gallery, buttons, about, aboutAlt, themes, changelog] = await Promise.all([
+			[home, now, osu, music, skins, gallery, buttons, about, aboutAlt, themes, weather, changelog] = await Promise.all([
 				api('/api/admin/site/home', 'GET'),
 				api('/api/admin/site/now', 'GET'),
 				api('/api/admin/site/osu', 'GET'),
@@ -47,6 +50,7 @@
 				api('/api/admin/site/about', 'GET'),
 				api('/api/admin/site/aboutAlt', 'GET'),
 				api('/api/admin/site/themes', 'GET'),
+				api('/api/admin/site/weather', 'GET'),
 				api('/api/admin/changelog', 'GET')
 			]);
 		} catch (e) {
@@ -54,7 +58,7 @@
 		}
 	}
 
-	async function save(key: 'home' | 'now' | 'osu' | 'music' | 'skins' | 'gallery' | 'buttons' | 'about' | 'aboutAlt' | 'themes', value: unknown) {
+	async function save(key: 'home' | 'now' | 'osu' | 'music' | 'skins' | 'gallery' | 'buttons' | 'about' | 'aboutAlt' | 'themes' | 'weather', value: unknown) {
 		busy = true;
 		error = saved = '';
 		try {
@@ -69,6 +73,7 @@
 			if (key === 'about') about = result;
 			if (key === 'aboutAlt') aboutAlt = result;
 			if (key === 'themes') themes = result;
+			if (key === 'weather') weather = result;
 			saved = 'saved';
 			setTimeout(() => (saved = ''), 2000);
 		} catch (e) {
@@ -222,24 +227,9 @@
 </script>
 
 <div class="flex flex-col gap-5">
-	<div class="flex flex-wrap items-center justify-between gap-3">
-		<div class="flex flex-wrap gap-1">
-			{#each sections as s}
-				<button
-					on:click={() => (active = s)}
-					class="px-3 py-1 text-sm rounded {active === s ? 'bg-ocean-600 text-white' : 'text-ocean-600 dark:text-ocean-400 hover:bg-ocean-200 dark:hover:bg-ocean-800'}"
-				>
-					{s === 'osu' ? 'osu!' : s}
-				</button>
-			{/each}
-		</div>
-		<div class="flex items-center gap-2 text-sm">
-			{#if saved}<span class="text-ocean-green">{saved}</span>{/if}
-			{#if active !== 'changelog'}
-				<a href={active === 'home' || active === 'buttons' ? '/' : `/${active}`} target="_blank" class={subtle}>view ↗</a>
-			{/if}
-		</div>
-	</div>
+	{#if saved}
+		<div class="fixed bottom-6 right-6 z-50 px-4 py-2 rounded-full text-sm accent-bg shadow-lg" transition:fly={{ y: 8, duration: 200 }}>✓ {saved}</div>
+	{/if}
 
 	{#if error}<p class="text-red-600 dark:text-red-400 text-sm">{error}</p>{/if}
 
@@ -518,6 +508,31 @@
 				<button on:click={() => save('skins', skins)} class={primary} disabled={busy || Object.keys(oskProgress).length > 0}>save</button>
 			</div>
 			<p class="text-xs text-ocean-500">big .osk files upload in pieces, so a 30 MB skin takes a little while. skins without a name are dropped when you save.</p>
+		</div>
+
+	<!-- WEATHER -->
+	{:else if active === 'weather' && weather}
+		<div class="flex flex-col gap-4 max-w-xl">
+			<label class="flex items-center gap-2 text-sm text-ocean-700 dark:text-ocean-300"><input type="checkbox" bind:checked={weather.show} /> show the weather in the nav</label>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<div>
+					<label for="w-city" class={fieldLabel}>city to look up</label>
+					<input id="w-city" bind:value={weather.city} maxlength="80" placeholder="Tartu,EE" class={field} />
+					<p class="text-xs text-ocean-500 mt-1">add the country code if the name is ambiguous, e.g. <code>Tartu,EE</code></p>
+				</div>
+				<div>
+					<label for="w-label" class={fieldLabel}>name shown in the nav</label>
+					<input id="w-label" bind:value={weather.label} maxlength="30" placeholder="(the city's name)" class={field} />
+					<p class="text-xs text-ocean-500 mt-1">e.g. "home" or "tartu". empty uses the city's name</p>
+				</div>
+			</div>
+			<div class="flex items-center gap-4 text-sm text-ocean-700 dark:text-ocean-300">
+				<span class={fieldLabel + ' !mb-0'}>units</span>
+				<label class="flex items-center gap-1.5"><input type="radio" bind:group={weather.units} value="c" /> °C</label>
+				<label class="flex items-center gap-1.5"><input type="radio" bind:group={weather.units} value="f" /> °F</label>
+			</div>
+			<p class="text-xs text-ocean-500">the nav caches the weather for about 10 minutes, so a change can take a moment to show.</p>
+			<div><button on:click={() => save('weather', weather)} class={primary} disabled={busy}>save</button></div>
 		</div>
 
 	<!-- CHANGELOG -->
