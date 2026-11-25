@@ -1,11 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { fade, fly, slide } from 'svelte/transition';
+	import { fade, fly } from 'svelte/transition';
 	import { page, navigating } from '$app/stores';
 	import { cubicOut } from 'svelte/easing';
 	import { browser } from '$app/env';
-	import GradientMesh from '$lib/components/GradientMesh.svelte';
+	import { goto, prefetch } from '$app/navigation';
 	import CursorTrail from '$lib/components/CursorTrail.svelte';
+	import Nav from '$lib/components/site/Nav.svelte';
+	import Footer from '$lib/components/site/Footer.svelte';
+	import CommandPalette from '$lib/components/site/CommandPalette.svelte';
+	import Backdrop from '$lib/components/site/Backdrop.svelte';
+	import { app } from '$lib/components/site/app';
+	import { textOn, themeDefaults, withAlpha, type Theme } from '$lib/themes';
 	import { BUILD_TIMESTAMP } from '$lib/buildtime';
 
 	import '../app.css';
@@ -23,23 +29,113 @@
 	const updatedAgo = ago(BUILD_TIMESTAMP);
 
 	let ready = false;
-	let mobileMenuOpen = false;
-	let themeOpen = false;
 
-	// Dark mode toggle
+	const navLinks = [
+		{ href: '/', label: 'home' },
+		{ href: '/about', label: 'about' },
+		{ href: '/blog', label: 'blog' },
+		{ href: '/tournaments', label: 'tournaments' },
+		{ href: '/osu', label: 'osu!' },
+		{ href: '/events', label: 'events' },
+		{ href: '/gallery', label: 'gallery' },
+		{ href: '/music', label: 'music' },
+		{ href: '/guestbook', label: 'guestbook' }
+	];
+	// Smaller pages that only get a spot in the footer (and the command palette).
+	const footerLinks = [
+		...navLinks,
+		{ href: '/now', label: 'now' },
+		{ href: '/projects', label: 'projects' },
+		{ href: '/uses', label: 'uses' },
+		{ href: '/changelog', label: 'changelog' },
+		{ href: '/rss.xml', label: 'rss' }
+	];
+
+	// ── dark mode: saved choice, or the system setting ──
 	let darkMode: boolean | null = null;
-
+	let systemDark = false;
+	$: isDarkMode = darkMode ?? systemDark;
 	function toggleDarkMode() {
-		darkMode = !isDark();
+		darkMode = !isDarkMode;
 		localStorage.setItem('dark-mode', darkMode ? 'dark' : 'light');
-		applyTheme(document.hasFocus());
 	}
 
-	// Progress bar
+	// ── themes, edited in /admin → pages → themes (see $lib/themes) ──
+	let themes: Theme[] = themeDefaults.items;
+	let themeId = '';
+	let unlocked: string[] = [];
+	let transUnlocked = false;
+	const isUnlocked = (t: Theme) => !t.secret || unlocked.includes(t.id) || (t.id === 'trans' && transUnlocked);
+	$: visibleThemes = themes.filter((t) => !t.hidden && isUnlocked(t));
+	$: theme = themes.find((t) => t.id === themeId && isUnlocked(t)) ?? visibleThemes[0] ?? themes[0];
+	$: dark = theme.mode === 'both' ? isDarkMode : theme.mode === 'dark';
+	// What the nav's picker and the command palette show.
+	$: pickerThemes = visibleThemes.map((t) => ({ id: t.id, name: t.name, accent: t.accent, swatch: t.swatch || undefined }));
+	$: pickerCurrent = { id: theme.id, name: theme.name, accent: theme.accent, swatch: theme.swatch || undefined };
+
+	function setTheme(id: string) {
+		themeId = id;
+		localStorage.setItem('site-theme', id);
+	}
+
+	// The theme as CSS variables, used by the nav, cards, menus, text selection and cursor trail.
+	function applyTheme(t: Theme, dark: boolean, ready: boolean) {
+		const root = document.documentElement;
+		const bg = dark ? t.dark : t.light;
+		root.classList.toggle('dark', dark);
+		root.style.setProperty('--accent', t.accent);
+		root.style.setProperty('--accent-fg', textOn(t.accent));
+		root.style.setProperty('--glass', withAlpha(bg, t.glass / 100));
+		root.style.setProperty('--glass-blur', `${t.glassBlur}px`);
+		// Menus and the command palette: never see-through enough to make their text hard to read.
+		root.style.setProperty('--glass-strong', withAlpha(bg, Math.max(t.glass, 88) / 100));
+		root.style.setProperty('--trail-1', t.trail[0] ?? t.accent);
+		root.style.setProperty('--trail-2', t.trail[1] ?? t.trail[0] ?? t.accent);
+		document.body.style.backgroundColor = bg;
+		if (!ready) return;
+		// For the next refresh's first paint (see app.html), then let the real theme show.
+		try {
+			localStorage.setItem(
+				'theme-page',
+				JSON.stringify({
+					light: t.light,
+					dark: t.dark,
+					image: t.background === 'image' ? t.image : '',
+					gradient: t.background === 'gradient' ? t.gradient : '',
+					fit: t.fit,
+					blur: t.blur,
+					dim: t.dim
+				})
+			);
+		} catch {}
+		root.classList.remove('theme-preload');
+	}
+	$: if (browser) applyTheme(theme, dark, ready);
+
+	// ?theme=<id> switches to (and unlocks) that theme, so secret ones can be shared by link.
+	$: themeParam = $page.url.searchParams.get('theme');
+	$: if (browser && themeParam && themes.some((t) => t.id === themeParam)) {
+		if (!unlocked.includes(themeParam)) {
+			unlocked = [...unlocked, themeParam];
+			localStorage.setItem('themes-unlocked', JSON.stringify(unlocked));
+		}
+		if (themeId !== themeParam) setTheme(themeParam);
+	}
+
+	// `tf` (home page terminal, or the browser console) unlocks the trans theme.
+	let transToast = false;
+	function unlockTrans() {
+		transUnlocked = true;
+		localStorage.setItem('trans-unlocked', '1');
+		if (themes.some((t) => t.id === 'trans')) setTheme('trans');
+		transToast = true;
+		setTimeout(() => (transToast = false), 4000);
+	}
+
+	// ── progress bar while a page loads ──
 	let progressWidth = 0;
 	let progressVisible = false;
 	let progressInterval: ReturnType<typeof setInterval>;
-
 	$: if ($navigating) {
 		progressWidth = 0;
 		progressVisible = true;
@@ -55,169 +151,186 @@
 		}, 300);
 	}
 
-	// Easter eggs
+	// ── page changes ──
+	// They use the browser's View Transitions where it has them: the old page fades out as the
+	// new one rises in, and a post's card grows into its page. Elsewhere, or with reduced motion
+	// on, the Svelte transitions on <main> run instead.
+	let viewTransition = false;
+	const canTransition = () => !!(document as any).startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const internal = (href: string | null | undefined): href is string =>
+		!!href && href.startsWith('/') && !href.startsWith('//') && !/^\/(api|admin)(\/|$)|\.(xml|txt|json)$/.test(href);
+
+	// A banner only travels between a post/event/project page and a page that shows the same
+	// banner (the blog list, events, home's "latest"). Banners carry their name in data-vt and get
+	// it as a real view-transition-name only for that one transition, so a banner on a page that
+	// has nothing to match it doesn't animate on its own while the rest of the page fades.
+	const detailSlug = (path: string) => path.match(/^\/(?:blog|events|projects)\/([^/?#]+)/)?.[1] ?? null;
+	const nameBanners = (name: string | null, scope: ParentNode = document) =>
+		name &&
+		scope.querySelectorAll<HTMLElement>(`[data-vt="${CSS.escape(name)}"]`).forEach((el) => {
+			el.style.setProperty('view-transition-name', name);
+			el.style.setProperty('view-transition-class', 'banner');
+		});
+	const clearBanners = () =>
+		document.querySelectorAll<HTMLElement>('[data-vt]').forEach((el) => {
+			el.style.removeProperty('view-transition-name');
+			el.style.removeProperty('view-transition-class');
+		});
+
+	let running: any = null;
+	function transition(from: string, to: string, change: () => Promise<unknown>) {
+		// A quick second navigation cuts the first transition short instead of failing.
+		running?.skipTransition();
+		clearBanners();
+		const slug = detailSlug(to) ?? detailSlug(from);
+		const shared = slug ? `banner-${slug}` : null;
+		nameBanners(shared);
+		viewTransition = true;
+		document.documentElement.classList.add('vt-running');
+		const t = (running = (document as any).startViewTransition(async () => {
+			const old = document.querySelector('main');
+			await change();
+			// Svelte removes the old page a frame later; hide it now so it isn't in the snapshot
+			// (and a shared banner name isn't on the page twice, which cancels the transition).
+			if (old?.isConnected && document.querySelectorAll('main').length > 1) old.style.display = 'none';
+			const now = [...document.querySelectorAll('main')].find((m) => m !== old);
+			if (now) nameBanners(shared, now);
+		}));
+		t.finished.finally(() => {
+			if (running !== t) return;
+			running = null;
+			clearBanners();
+			viewTransition = false;
+			// Page entrance animations are skipped during the transition; let them finish first.
+			setTimeout(() => document.documentElement.classList.remove('vt-running'), 900);
+		});
+	}
+
+	// Load the next page's data first (with the progress bar showing), then switch: a transition
+	// freezes the screen until the new page is ready, so it should only start once it is.
+	// Hovering a link starts that loading early, so usually it's instant. SvelteKit keeps only the
+	// last prefetched page, so this asks again rather than assuming an earlier one is still there.
+	let lastPrefetch = { href: '', at: 0, done: Promise.resolve() as Promise<unknown> };
+	function preload(href: string) {
+		if (lastPrefetch.href !== href || Date.now() - lastPrefetch.at > 10000) {
+			lastPrefetch = { href, at: Date.now(), done: prefetch(href).catch(() => {}) };
+		}
+		return lastPrefetch.done;
+	}
+	let navToken = 0;
+	async function navigate(href: string) {
+		if (!canTransition()) return goto(href);
+		const token = ++navToken;
+		const slow = setTimeout(() => ((progressVisible = true), (progressWidth = 30)), 120);
+		await Promise.race([preload(href), new Promise((r) => setTimeout(r, 4000))]);
+		clearTimeout(slow);
+		if (token !== navToken) return; // clicked something else meanwhile
+		transition($page.url.pathname, href.split(/[?#]/)[0], () => goto(href));
+	}
+	function onHover(e: Event) {
+		const href = (e.target as HTMLElement)?.closest?.('a')?.getAttribute('href');
+		if (internal(href) && href.split(/[?#]/)[0] !== $page.url.pathname) preload(href);
+	}
+	// Every link to a page on this site goes through navigate(), for the transition. Runs in the
+	// capture phase, before SvelteKit's own link handling. Back/forward use the regular crossfade:
+	// their page can't be loaded ahead, and a transition would freeze the screen while it loads.
+	function onLinkClick(e: MouseEvent) {
+		if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+		const a = (e.target as HTMLElement).closest('a');
+		const href = a?.getAttribute('href');
+		if (!a || !internal(href) || a.target === '_blank' || a.hasAttribute('download')) return;
+		if (href.split(/[?#]/)[0] === $page.url.pathname && href.includes('#')) return; // same-page anchors
+		e.preventDefault();
+		navigate(href);
+	}
+
+	// Crossfade without a jump when there's no View Transition: the old page leaves the layout
+	// (absolutely positioned where it was) while it fades, so the new one doesn't stack below it.
+	function leave(node: HTMLElement, { duration }: { duration: number }) {
+		if (duration) {
+			const { offsetTop, offsetLeft, offsetWidth } = node;
+			Object.assign(node.style, { position: 'absolute', top: `${offsetTop}px`, left: `${offsetLeft}px`, width: `${offsetWidth}px` });
+		}
+		return { duration, css: (t: number) => `opacity: ${t}` };
+	}
+
+	// ── keyboard: command palette (ctrl/⌘+K, or "/"), and the konami code ──
+	let paletteOpen = false;
 	const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
 	let konamiIndex = 0;
 	let konamiActivated = false;
-	let clickCount = 0;
-	let clickEgg = false;
-
 	function handleKeydown(e: KeyboardEvent) {
+		const typing = (e.target as HTMLElement)?.closest?.('input, textarea, [contenteditable="true"]');
+		if ((e.key === 'k' || e.key === 'K') && (e.ctrlKey || e.metaKey)) {
+			e.preventDefault();
+			paletteOpen = !paletteOpen;
+			return;
+		}
+		if (e.key === '/' && !typing && !paletteOpen) {
+			e.preventDefault();
+			paletteOpen = true;
+			return;
+		}
 		if (e.key === konamiCode[konamiIndex]) {
 			konamiIndex++;
 			if (konamiIndex === konamiCode.length) {
 				konamiActivated = true;
 				konamiIndex = 0;
-				setTimeout(() => konamiActivated = false, 4000);
+				setTimeout(() => (konamiActivated = false), 4000);
 			}
 		} else {
 			konamiIndex = 0;
 		}
 	}
 
+	// Clicking the name ten times.
+	let clickCount = 0;
+	let clickEgg = false;
 	function handleLogoClick() {
-		clickCount++;
-		if (clickCount >= 10) {
+		if (++clickCount >= 10) {
 			clickEgg = true;
 			clickCount = 0;
-			setTimeout(() => clickEgg = false, 3000);
+			setTimeout(() => (clickEgg = false), 3000);
 		}
 	}
 
-	const themes = [
-		{ name: 'rose', light: '#f9f0f5', dark: '#281c21', lightBlur: '#f3f3f3', darkBlur: '#202020', accent: '#B48EAD' },
-		{ name: 'ocean', light: '#f0f3f9', dark: '#1c2128', lightBlur: '#f0f0f3', darkBlur: '#1a1e24', accent: '#8FA1B3' },
-		{ name: 'forest', light: '#f0f5f1', dark: '#1c2820', lightBlur: '#f0f3f0', darkBlur: '#1e2420', accent: '#A3BE8C' },
-		{ name: 'sunset', light: '#f5f2f0', dark: '#28211c', lightBlur: '#f3f2f0', darkBlur: '#242120', accent: '#EBCB8B' },
-		{ name: 'lavender', light: '#f3f0f9', dark: '#221c28', lightBlur: '#f1f0f3', darkBlur: '#201e24', accent: '#9B8EC4' },
-		{ name: 'mono', light: '#f5f5f5', dark: '#1a1a1a', lightBlur: '#f0f0f0', darkBlur: '#181818', accent: '#888888' },
-		// Ryo Yamada (Bocchi the Rock!): deep blue hair, golden eyes.
-		{
-			name: 'ryo', light: '#eef1f7', dark: '#141824', lightBlur: '#eceef2', darkBlur: '#13161e', accent: '#4A6A9C',
-			swatch: 'linear-gradient(135deg, #3B5584 0 62%, #E6C255 62%)'
-		}
-	];
-
-	// Secret theme: type `tf` in the browser console to unlock it.
-	const transTheme = {
-		name: 'trans', light: '#fdf1f5', dark: '#1f1c2a', lightBlur: '#f7f1f4', darkBlur: '#1c1a24', accent: '#F5A9B8',
-		swatch: 'linear-gradient(#5BCEFA 0 20%, #F5A9B8 20% 40%, #FFFFFF 40% 60%, #F5A9B8 60% 80%, #5BCEFA 80%)'
-	};
-	let transUnlocked = false;
-	let transToast = false;
-	$: visibleThemes = transUnlocked ? [...themes, transTheme] : themes;
-	const swatch = (theme: { accent: string; swatch?: string }) => `background: ${theme.swatch ?? theme.accent}`;
-
-	function unlockTrans() {
-		transUnlocked = true;
-		localStorage.setItem('trans-unlocked', '1');
-		setTheme(transTheme);
-		transToast = true;
-		setTimeout(() => (transToast = false), 4000);
-	}
-
-	let currentTheme: { name: string; light: string; dark: string; lightBlur: string; darkBlur: string; accent: string; swatch?: string } = themes[0];
-
-	function setTheme(theme: typeof currentTheme) {
-		currentTheme = theme;
-		localStorage.setItem('site-theme', theme.name);
-		applyTheme(true);
-		themeOpen = false;
-	}
-
-	function handleClickOutside(e: MouseEvent) {
-		const target = e.target as HTMLElement;
-		if (themeOpen && !target.closest('.theme-switcher')) {
-			themeOpen = false;
-		}
-	}
-
-	function isDark(): boolean {
-		if (darkMode !== null) return darkMode;
-		if (!browser) return false;
-		return window.matchMedia('(prefers-color-scheme: dark)').matches;
-	}
-
-	// Reactive dark mode flag for template (triggers re-render when darkMode changes)
-	$: isDarkMode = browser ? (darkMode !== null ? darkMode : window.matchMedia('(prefers-color-scheme: dark)').matches) : false;
-
-	function applyTheme(focused: boolean) {
-		const t = currentTheme;
-		document.documentElement.classList.toggle('dark', isDark());
-		document.documentElement.classList.toggle('trans', t.name === 'trans');
-		document.documentElement.classList.toggle('ryo', t.name === 'ryo');
-		document.body.className = `motion-safe:transition-colors motion-safe:duration-300`;
-		if (isDark()) {
-			document.body.style.backgroundColor = focused ? t.dark : t.darkBlur;
-		} else {
-			document.body.style.backgroundColor = focused ? t.light : t.lightBlur;
-		}
-	}
-
-	// Close mobile menu on navigation
-	$: if ($page.url.pathname) {
-		mobileMenuOpen = false;
-		themeOpen = false;
-	}
-
-	const navLinks = [
-		{ href: '/', label: 'home' },
-		{ href: '/about', label: 'about' },
-		//{ href: '/now', label: 'now' },
-		//{ href: '/stats', label: 'stats' },
-		{ href: '/blog', label: 'blog' },
-		{ href: '/tournaments', label: 'tournaments' },
-		{ href: '/osu', label: 'osu!' },
-		{ href: '/events', label: 'events' },
-		{ href: '/gallery', label: 'gallery' },
-		{ href: '/music', label: 'music' },
-		{ href: '/guestbook', label: 'guestbook' }
-	];
-
-	// Smaller pages that only get a spot in the footer.
-	const footerExtraLinks = [
-		{ href: '/now', label: 'now' },
-		{ href: '/projects', label: 'projects' },
-		{ href: '/uses', label: 'uses' },
-		{ href: '/changelog', label: 'changelog' },
-		{ href: '/rss.xml', label: 'rss' }
-	];
-
-	function isActive(linkHref: string, currentPath: string): boolean {
-		if (linkHref === '/') return currentPath === '/';
-		return currentPath.startsWith(linkHref);
-	}
-
-	let weather = {
-		temp: 0,
-		feels_like: 0,
-		description: '',
-		icon: '',
-		humidity: 0,
-		wind_speed: 0,
-		city: '',
-		country: ''
-	};
-	let weatherLoading = true;
+	let weather: { temp: number; description: string; icon: string; city: string } | null = null;
 
 	onMount(() => {
 		ready = true;
+		app.hydrated = true;
 
-		// Load saved theme
 		transUnlocked = localStorage.getItem('trans-unlocked') === '1';
-		const savedTheme = localStorage.getItem('site-theme');
-		if (savedTheme) {
-			const found = [...themes, ...(transUnlocked ? [transTheme] : [])].find(t => t.name === savedTheme);
-			if (found) currentTheme = found;
-		}
+		themeId = localStorage.getItem('site-theme') ?? '';
+		// Last known theme list first, so a saved custom theme shows straight away.
+		try {
+			const cached = JSON.parse(localStorage.getItem('themes-cache') ?? 'null');
+			if (Array.isArray(cached?.items) && cached.items.length) themes = cached.items;
+			unlocked = JSON.parse(localStorage.getItem('themes-unlocked') ?? '[]');
+		} catch {}
+		fetch('/api/site/themes')
+			.then((r) => (r.ok ? r.json() : null))
+			.then((d) => {
+				if (!d?.items?.length) return;
+				themes = d.items;
+				localStorage.setItem('themes-cache', JSON.stringify(d));
+			})
+			.catch(() => {});
+
+		const savedDarkMode = localStorage.getItem('dark-mode');
+		if (savedDarkMode === 'dark') darkMode = true;
+		else if (savedDarkMode === 'light') darkMode = false;
+		// Follow the system setting when nothing's saved.
+		const system = window.matchMedia('(prefers-color-scheme: dark)');
+		systemDark = system.matches;
+		system.addEventListener('change', (e) => (systemDark = e.matches));
 
 		// `tf` in the home page terminal toggles the trans theme.
 		window.addEventListener('trans-theme', (e) => {
 			if ((e as CustomEvent<boolean>).detail) unlockTrans();
-			else setTheme(themes[0]);
+			else setTheme(visibleThemes.find((t) => t.id !== 'trans')?.id ?? '');
 		});
-
-		// Bonus: typing `tf` in the browser devtools console does it too.
+		// …and typing `tf` in the browser devtools console does it too.
 		Object.defineProperty(window, 'tf', {
 			configurable: true,
 			get() {
@@ -227,43 +340,14 @@
 			}
 		});
 
-		// Load dark mode preference
-		const savedDarkMode = localStorage.getItem('dark-mode');
-		if (savedDarkMode === 'dark') darkMode = true;
-		else if (savedDarkMode === 'light') darkMode = false;
-
-		applyTheme(true);
-
-		// Listen for system color scheme changes
-		window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-			if (darkMode === null) {
-				darkMode = null; // re-run isDarkMode for the toggle icon
-				applyTheme(document.hasFocus());
-			}
-		});
-
-		onblur = () => applyTheme(false);
-		onfocus = () => applyTheme(true);
-
-		// Fetch weather
-		const fetchWeather = async () => {
-			try {
-				const response = await fetch('/api/weather');
-				if (response.ok) {
-					weather = await response.json();
-				}
-			} catch (error) {
-				console.error('Failed to fetch weather:', error);
-			} finally {
-				weatherLoading = false;
-			}
-		};
-
-		fetchWeather();
+		fetch('/api/weather')
+			.then((r) => (r.ok ? r.json() : null))
+			.then((w) => w?.city && (weather = w))
+			.catch(() => {});
 	});
 </script>
 
-<svelte:window on:click={handleClickOutside} on:keydown={handleKeydown} />
+<svelte:window on:click|capture={onLinkClick} on:keydown={handleKeydown} on:mouseover={onHover} on:touchstart|passive={onHover} on:focusin={onHover} />
 
 <!-- Link preview defaults (Discord, Twitter, …). Pages add their own og:title/description,
      and posts/events/projects their banner as og:image. There's deliberately no default image,
@@ -276,26 +360,21 @@
 	<link rel="alternate" type="application/rss+xml" title="sundei" href="/rss.xml" />
 </svelte:head>
 
-<GradientMesh />
+<Backdrop {theme} {dark} />
 <CursorTrail />
 
-<!-- Progress bar -->
 {#if progressVisible}
 	<div class="fixed top-0 left-0 right-0 z-[100] h-[2px]">
-		<div 
-			class="h-full bg-ocean-600 dark:bg-ocean-400 transition-all duration-100 ease-out"
-			style="width: {progressWidth}%"
-		/>
+		<div class="h-full accent-bg transition-all duration-100 ease-out" style="width: {progressWidth}%" />
 	</div>
 {/if}
 
-<!-- Konami code easter egg -->
+{#if theme.stripe}
+	<div class="fixed top-0 left-0 right-0 h-[3px] z-[60] pointer-events-none" style="background: {theme.stripe}" aria-hidden="true" />
+{/if}
+
 {#if konamiActivated}
-	<div 
-		class="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none"
-		in:fade={{ duration: 300 }}
-		out:fade={{ duration: 300 }}
-	>
+	<div class="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none" in:fade={{ duration: 300 }} out:fade={{ duration: 300 }}>
 		<div class="text-center">
 			<p class="text-6xl mb-4">🎮</p>
 			<p class="text-ocean-900 dark:text-ocean-100 text-2xl font-cascadia font-bold">+30 lives</p>
@@ -304,9 +383,8 @@
 	</div>
 {/if}
 
-<!-- Click egg -->
 {#if clickEgg}
-	<div 
+	<div
 		class="fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] bg-ocean-900 dark:bg-ocean-100 text-ocean-100 dark:text-ocean-900 px-4 py-2 rounded-full font-cascadia text-sm shadow-lg"
 		in:fly={{ y: 20, duration: 200 }}
 		out:fade={{ duration: 300 }}
@@ -315,7 +393,6 @@
 	</div>
 {/if}
 
-<!-- tf egg -->
 {#if transToast}
 	<div
 		class="fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-full font-cascadia text-sm shadow-lg text-[#1f1c2a]"
@@ -327,255 +404,128 @@
 	</div>
 {/if}
 
-{#if currentTheme.name === 'trans'}
-	<div class="trans-stripe fixed top-0 left-0 right-0 h-[3px] z-[60] pointer-events-none" aria-hidden="true" />
-{/if}
-
-<nav class="border-b border-ocean-300 dark:border-ocean-700 sticky top-0 backdrop-blur-md z-50">
-	<div class="px-6 sm:px-12 lg:px-24 py-3 sm:py-4 flex justify-between items-center gap-6 font-cascadia">
-		<a 
-			href="/" 
-			class="text-ocean-700 dark:text-ocean-300 hover:text-ocean-900 dark:hover:text-ocean-100 font-medium shrink-0"
-			on:click={handleLogoClick}
-		>
-			sundei
-		</a>
-
-		<!-- Desktop nav -->
-		<div class="hidden lg:flex gap-4 xl:gap-6 text-ocean-700 dark:text-ocean-400 text-sm items-center">
-			{#each navLinks as link}
-				<a 
-					href={link.href} 
-					class="transition-colors {isActive(link.href, $page.url.pathname) 
-						? 'text-ocean-900 dark:text-ocean-100' 
-						: 'hover:text-ocean-900 dark:hover:text-ocean-100'}"
-				>
-					{link.label}
-				</a>
-			{/each}
-			
-			{#if !weatherLoading && weather.city}
-				<div class="hidden xl:flex items-center gap-1.5 border-l border-ocean-300 dark:border-ocean-700 pl-6 text-ocean-600 dark:text-ocean-400 text-xs whitespace-nowrap">
-					{#if weather.icon}
-						<img 
-							src="https://openweathermap.org/img/wn/{weather.icon}.png" 
-							alt={weather.description}
-							class="w-6 h-6"
-					/>
-					{/if}
-					<span>{weather.description} in {weather.city}, {weather.country} · {weather.temp}°C</span>
-				</div>
-			{/if}
-
-			<!-- Dark mode toggle -->
-			<button
-				on:click={toggleDarkMode}
-				class="border-l border-ocean-300 dark:border-ocean-700 pl-4 xl:pl-6 text-ocean-600 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 transition-colors"
-				aria-label="Toggle dark mode"
-			>
-				{#if isDarkMode}
-					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-					</svg>
-				{:else}
-					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-					</svg>
-				{/if}
-			</button>
-			
-			<!-- Theme switcher -->
-			<div class="relative border-l border-ocean-300 dark:border-ocean-700 pl-4 xl:pl-6 theme-switcher">
-				<button
-					on:click={() => themeOpen = !themeOpen}
-					class="w-5 h-5 rounded-full ring-2 ring-ocean-400 dark:ring-ocean-600 hover:ring-ocean-600 dark:hover:ring-ocean-400 transition-all"
-					style={swatch(currentTheme)}
-					aria-label="Change theme"
-				/>
-				{#if themeOpen}
-					<div
-						class="absolute right-0 top-full mt-2 bg-ocean-100 dark:bg-ocean-900 border border-ocean-300 dark:border-ocean-700 rounded-lg p-2 flex gap-1.5 shadow-lg z-50"
-						transition:slide={{ duration: 150 }}
-					>
-						{#each visibleThemes as theme}
-							<button
-								on:click={() => setTheme(theme)}
-								class="w-6 h-6 rounded-full transition-all {currentTheme.name === theme.name ? 'ring-2 ring-ocean-900 dark:ring-ocean-100 scale-110' : 'hover:scale-110 ring-1 ring-ocean-300 dark:ring-ocean-700'}"
-								style={swatch(theme)}
-								aria-label="{theme.name} theme"
-								title={theme.name}
-							/>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		</div>
-
-		<!-- Mobile: weather + hamburger -->
-		<div class="flex lg:hidden items-center gap-3">
-			{#if !weatherLoading && weather.city}
-				<div class="flex items-center gap-1">
-					{#if weather.icon}
-						<img 
-							src="https://openweathermap.org/img/wn/{weather.icon}.png" 
-							alt={weather.description}
-							class="w-5 h-5"
-					/>
-					{/if}
-					<span class="text-ocean-600 dark:text-ocean-400 text-[10px]">{weather.description}, {weather.temp}°C</span>
-				</div>
-			{/if}
-			<button 
-				on:click={() => mobileMenuOpen = !mobileMenuOpen}
-				class="text-ocean-700 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 p-1"
-				aria-label="Toggle menu"
-			>
-				{#if mobileMenuOpen}
-					<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-					</svg>
-				{:else}
-					<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-					</svg>
-				{/if}
-			</button>
-		</div>
-	</div>
-
-	<!-- Mobile dropdown menu -->
-	{#if mobileMenuOpen}
-		<div 
-			class="lg:hidden border-t border-ocean-300 dark:border-ocean-700 font-cascadia"
-			transition:slide={{ duration: 200 }}
-		>
-			<div class="px-6 py-3 flex flex-col gap-1">
-				{#each navLinks as link}
-					<a 
-						href={link.href}
-						class="py-2 px-3 rounded text-sm transition-colors {isActive(link.href, $page.url.pathname) 
-							? 'text-ocean-900 dark:text-ocean-100 bg-ocean-200 dark:bg-ocean-800' 
-							: 'text-ocean-700 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 hover:bg-ocean-200/50 dark:hover:bg-ocean-800/50'}"
-					>
-						{link.label}
-					</a>
-				{/each}
-
-				<!-- Mobile dark mode + theme swatches -->
-				<div class="mt-2 pt-2 border-t border-ocean-200 dark:border-ocean-800 px-3">
-					<div class="flex items-center justify-between mb-3">
-						<span class="text-ocean-600 dark:text-ocean-500 text-xs">dark mode</span>
-						<button
-							on:click={toggleDarkMode}
-							class="w-9 h-5 rounded-full transition-colors {isDarkMode ? 'bg-ocean-600' : 'bg-ocean-300'} relative"
-							aria-label="Toggle dark mode"
-						>
-							<div class="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform {isDarkMode ? 'translate-x-[18px]' : 'translate-x-0.5'}" />
-						</button>
-					</div>
-					<span class="text-ocean-600 dark:text-ocean-500 text-xs mb-2 block">theme</span>
-					<div class="flex gap-2">
-						{#each visibleThemes as theme}
-							<button
-								on:click={() => setTheme(theme)}
-								class="w-7 h-7 rounded-full transition-all {currentTheme.name === theme.name ? 'ring-2 ring-ocean-900 dark:ring-ocean-100 scale-110' : 'ring-1 ring-ocean-300 dark:ring-ocean-700 hover:scale-110'}"
-								style={swatch(theme)}
-								aria-label="{theme.name} theme"
-							/>
-						{/each}
-					</div>
-				</div>
-			</div>
-		</div>
-	{/if}
-</nav>
+<Nav
+	links={navLinks}
+	pathname={$page.url.pathname}
+	{isDarkMode}
+	themes={pickerThemes}
+	currentTheme={pickerCurrent}
+	{weather}
+	on:toggleDark={toggleDarkMode}
+	on:setTheme={(e) => setTheme(e.detail.id)}
+	on:logoClick={handleLogoClick}
+	on:openPalette={() => (paletteOpen = true)}
+/>
+<CommandPalette
+	open={paletteOpen}
+	pages={footerLinks.filter((l) => !l.href.endsWith('.xml'))}
+	themes={pickerThemes}
+	on:close={() => (paletteOpen = false)}
+	on:navigate={(e) => navigate(e.detail)}
+	on:toggleDark={toggleDarkMode}
+	on:setTheme={(e) => setTheme(e.detail)}
+/>
 
 {#key $page.url.pathname}
 	<!-- flex-1: fills the leftover height so the footer stays at the bottom of short pages -->
-	<main 
+	<main
 		class="flex-1"
-		in:fly={{ y: 8, duration: ready ? 300 : 0, delay: ready ? 100 : 0, easing: cubicOut }}
-		out:fade={{ duration: ready ? 150 : 0 }}
+		in:fly={{ y: 12, duration: ready && !viewTransition ? 450 : 0, delay: ready && !viewTransition ? 100 : 0, easing: cubicOut }}
+		out:leave={{ duration: ready && !viewTransition ? 150 : 0 }}
 	>
 		<slot />
 	</main>
 {/key}
 
-<footer class="border-t border-ocean-300 dark:border-ocean-700 font-cascadia">
-	<div class="px-6 sm:px-12 lg:px-24 py-8 sm:py-10">
-		<div class="flex flex-col sm:flex-row justify-between gap-6">
-			<!-- Left: branding -->
-			<div class="flex flex-col gap-2">
-				<span class="text-ocean-900 dark:text-ocean-100 font-medium">sundei</span>
-				<span class="text-ocean-600 dark:text-ocean-500 text-xs">
-					"national geographic goddamn it" - ryan kwan
-				</span>
-			</div>
-
-			<!-- Middle: pages -->
-			<div class="flex flex-col gap-1.5 text-sm">
-				<span class="text-ocean-900 dark:text-ocean-200 text-xs font-medium mb-1">pages</span>
-				<div class="flex flex-wrap gap-x-4 gap-y-1">
-					{#each [...navLinks, ...footerExtraLinks] as link}
-						<a 
-							href={link.href}
-						class="text-ocean-600 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 transition-colors text-xs"
-					>
-						{link.label}
-					</a>
-				{/each}
-				</div>
-			</div>
-
-			<!-- Right: socials -->
-			<div class="flex flex-col gap-1.5 text-sm">
-				<span class="text-ocean-900 dark:text-ocean-200 text-xs font-medium mb-1">socials</span>
-				<div class="flex gap-4">
-					<a 
-						href="https://github.com/sundeiii" 
-						target="_blank" rel="noopener noreferrer"
-						class="text-ocean-700 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 transition-colors text-xs"
-					>
-						github
-					</a>
-					<a 
-						href="https://twitter.com/deprivedsundei" 
-						target="_blank" rel="noopener noreferrer"
-						class="text-ocean-700 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 transition-colors text-xs"
-					>
-						twitter
-					</a>
-					<a 
-						href="mailto:sundei@sundei.ee"
-						class="text-ocean-700 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 transition-colors text-xs"
-					>
-						email
-					</a>
-				</div>
-			</div>
-		</div>
-
-		<div class="mt-6 pt-4 border-t border-ocean-200 dark:border-ocean-800">
-			<p class="text-ocean-600 dark:text-ocean-600 text-xs">
-				© {new Date().getFullYear()} sundei. source on <a href="https://github.com/sundeiii/new-main-website" target="_blank" rel="noopener noreferrer" class="underline hover:text-ocean-800 dark:hover:text-ocean-400 transition-colors">github</a>.
-				<span title={new Date(BUILD_TIMESTAMP).toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short' })}>updated {updatedAgo}.</span>
-			</p>
-		</div>
-	</div>
-</footer>
+<Footer links={footerLinks} {updatedAgo} updatedFull={new Date(BUILD_TIMESTAMP).toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short' })} />
 
 <style>
-	.trans-stripe {
-		background: linear-gradient(90deg, #5bcefa 0 20%, #f5a9b8 20% 40%, #ffffff 40% 60%, #f5a9b8 60% 80%, #5bcefa 80%);
+	/* Page changes (View Transitions): a crossfade (both pages overlap, so there's never an empty
+	   moment) where the old page drifts up and the new one rises in. The nav and the background
+	   have their own names, so they stay put. */
+	:global(::view-transition-old(root)) {
+		animation: 260ms cubic-bezier(0.4, 0, 0.6, 1) both page-out;
+	}
+	:global(::view-transition-new(root)) {
+		animation: 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both page-in;
+	}
+	:global(::view-transition-group(*)) {
+		animation-duration: 450ms;
+		animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+	@keyframes -global-page-out {
+		to {
+			opacity: 0;
+			transform: translateY(-6px);
+		}
+	}
+	@keyframes -global-page-in {
+		from {
+			opacity: 0;
+			transform: translateY(14px);
+		}
+	}
+	/* A travelling banner stays a rounded box, and both snapshots fill it (cropped, not
+	   stretched) while it changes shape; the card and the post header crossfade inside. */
+	:global(::view-transition-image-pair(*.banner)) {
+		overflow: hidden;
+		border-radius: 1rem;
+	}
+	:global(::view-transition-old(*.banner)),
+	:global(::view-transition-new(*.banner)) {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: center;
+	}
+	:global(::view-transition-old(*.banner)) {
+		animation: 300ms ease both fade-out;
+	}
+	:global(::view-transition-new(*.banner)) {
+		animation: 300ms ease 80ms both fade-in;
+	}
+	@keyframes -global-fade-out {
+		to {
+			opacity: 0;
+		}
+	}
+	@keyframes -global-fade-in {
+		from {
+			opacity: 0;
+		}
+	}
+	/* Page entrance animations would play twice on top of the transition; skip them meanwhile. */
+	:global(html.vt-running main *) {
+		animation-duration: 0s !important;
+		animation-delay: 0s !important;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		:global(::view-transition-group(*)),
+		:global(::view-transition-old(*)),
+		:global(::view-transition-new(*)) {
+			animation: none !important;
+		}
 	}
 
-	:global(html.trans ::selection) {
-		background: #f5a9b8;
-		color: #1f1c2a;
+	/* Theme parts (colours come from the theme as CSS variables, see applyTheme) */
+	:global(::selection) {
+		background: var(--accent);
+		color: var(--accent-fg);
 	}
-
-	:global(html.ryo ::selection) {
-		background: #4a6a9c;
-		color: #ffffff;
+	:global(.glass) {
+		background: var(--glass);
+		-webkit-backdrop-filter: blur(var(--glass-blur));
+		backdrop-filter: blur(var(--glass-blur));
+	}
+	:global(.glass-strong) {
+		background: var(--glass-strong);
+		-webkit-backdrop-filter: blur(max(var(--glass-blur), 12px));
+		backdrop-filter: blur(max(var(--glass-blur), 12px));
+	}
+	:global(.accent-bg) {
+		background: var(--accent);
+	}
+	:global(.accent-soft) {
+		background: color-mix(in srgb, var(--accent) 22%, transparent);
 	}
 </style>

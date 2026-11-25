@@ -10,7 +10,11 @@ export const GET: RequestHandler = async ({ url }) => {
 
 	let items: any[] = [];
 	try {
-		items = (await listPosts({ kind, createTable: false })).map(({ content, published, id, ...rest }) => rest);
+		// Reading time instead of the text itself (about 200 words a minute).
+		items = (await listPosts({ kind, createTable: false })).map(({ content, published, id, ...rest }) => ({
+			...rest,
+			minutes: Math.max(1, Math.round(content.trim().split(/\s+/).filter(Boolean).length / 200))
+		}));
 	} catch (error: any) {
 		// Table not created yet (nothing written in the admin panel), or the database is down.
 		if (!isMissingTable(error)) console.error('Failed to load posts:', error);

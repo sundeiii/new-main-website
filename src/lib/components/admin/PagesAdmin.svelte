@@ -6,11 +6,13 @@
 	import AboutEditor from './AboutEditor.svelte';
 	import ButtonsEditor from './ButtonsEditor.svelte';
 	import GalleryEditor from './GalleryEditor.svelte';
+	import ThemesEditor from './ThemesEditor.svelte';
+	import type { ThemesSettings } from '$lib/themes';
 	import type { AboutAltSettings, AboutSettings, ButtonsSettings, GallerySettings, HomeSettings, MusicSettings, NowSettings, OsuSettings, SkinsSettings } from '$lib/siteSettings';
 
 	export let onUnauthorized: () => void;
 
-	const sections = ['home', 'about', 'now', 'osu', 'music', 'gallery', 'buttons', 'skins', 'changelog'] as const;
+	const sections = ['home', 'about', 'now', 'osu', 'music', 'gallery', 'buttons', 'skins', 'themes', 'changelog'] as const;
 	let active: typeof sections[number] = 'home';
 
 	let home: HomeSettings | null = null;
@@ -22,6 +24,7 @@
 	let buttons: ButtonsSettings | null = null;
 	let about: AboutSettings | null = null;
 	let aboutAlt: AboutAltSettings | null = null;
+	let themes: ThemesSettings | null = null;
 	let changelog: { id: number; date: string; text: string }[] = [];
 
 	let error = '';
@@ -33,7 +36,7 @@
 	async function load() {
 		error = '';
 		try {
-			[home, now, osu, music, skins, gallery, buttons, about, aboutAlt, changelog] = await Promise.all([
+			[home, now, osu, music, skins, gallery, buttons, about, aboutAlt, themes, changelog] = await Promise.all([
 				api('/api/admin/site/home', 'GET'),
 				api('/api/admin/site/now', 'GET'),
 				api('/api/admin/site/osu', 'GET'),
@@ -43,6 +46,7 @@
 				api('/api/admin/site/buttons', 'GET'),
 				api('/api/admin/site/about', 'GET'),
 				api('/api/admin/site/aboutAlt', 'GET'),
+				api('/api/admin/site/themes', 'GET'),
 				api('/api/admin/changelog', 'GET')
 			]);
 		} catch (e) {
@@ -50,7 +54,7 @@
 		}
 	}
 
-	async function save(key: 'home' | 'now' | 'osu' | 'music' | 'skins' | 'gallery' | 'buttons' | 'about' | 'aboutAlt', value: unknown) {
+	async function save(key: 'home' | 'now' | 'osu' | 'music' | 'skins' | 'gallery' | 'buttons' | 'about' | 'aboutAlt' | 'themes', value: unknown) {
 		busy = true;
 		error = saved = '';
 		try {
@@ -64,6 +68,7 @@
 			if (key === 'buttons') buttons = result;
 			if (key === 'about') about = result;
 			if (key === 'aboutAlt') aboutAlt = result;
+			if (key === 'themes') themes = result;
 			saved = 'saved';
 			setTimeout(() => (saved = ''), 2000);
 		} catch (e) {
@@ -441,6 +446,9 @@
 	{:else if active === 'gallery' && gallery}
 		<GalleryEditor bind:gallery on:error={(e) => (error = e.detail)} />
 		<div><button on:click={() => save('gallery', gallery)} class={primary} disabled={busy}>save</button></div>
+	{:else if active === 'themes' && themes}
+		<ThemesEditor bind:themes on:error={(e) => (error = e.detail)} />
+		<div><button on:click={() => save('themes', themes)} class={primary} disabled={busy}>save</button></div>
 	{:else if active === 'buttons' && buttons}
 		<ButtonsEditor bind:buttons on:error={(e) => (error = e.detail)} />
 		<div><button on:click={() => save('buttons', buttons)} class={primary} disabled={busy}>save</button></div>

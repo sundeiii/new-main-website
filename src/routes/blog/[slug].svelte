@@ -1,4 +1,6 @@
 <script context="module" lang="ts">
+	// A blog post written in the admin panel. Hand-written posts (like /blog/welcome) have their
+	// own folder, which SvelteKit matches before this route.
 	import type { Load } from '@sveltejs/kit';
 
 	// Posts written in the admin panel. Hand-written posts (like /blog/welcome) have their own
@@ -11,7 +13,7 @@
 </script>
 
 <script lang="ts">
-	import PostPage from '$lib/components/PostPage.svelte';
+	import PostPage from '$lib/components/site/PostPage.svelte';
 
 	export let post: any;
 </script>

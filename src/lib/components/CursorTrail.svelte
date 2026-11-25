@@ -69,10 +69,11 @@
 			const steps = 20;
 			const alpha = 0.07;
 
-			// Single trail layer — clean, no glow. Blue/pink stripes in the secret trans theme,
-			// blue fading into a gold tip in the Ryo theme.
-			const trans = document.documentElement.classList.contains('trans');
-			const ryo = document.documentElement.classList.contains('ryo');
+			// Single trail layer, no glow, in the theme's colours (CSS variables): the body, then a
+			// different colour at the tip if the theme has two.
+			const css = getComputedStyle(document.documentElement);
+			const body = css.getPropertyValue('--trail-1').trim() || '#00F0FF';
+			const tip = css.getPropertyValue('--trail-2').trim() || body;
 			ctx.lineWidth = 5;
 			ctx.lineCap = 'round';
 			ctx.lineJoin = 'round';
@@ -81,11 +82,8 @@
 				ctx.beginPath();
 				ctx.moveTo(path[startIdx].x, path[startIdx].y);
 				for (let i = startIdx + 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
-				ctx.strokeStyle = trans
-					? (s % 2 ? `rgba(245, 169, 184, ${alpha * 1.4})` : `rgba(91, 206, 250, ${alpha * 1.4})`)
-					: ryo
-						? (s >= steps - 4 ? `rgba(230, 194, 85, ${alpha * 1.6})` : `rgba(111, 143, 191, ${alpha * 1.6})`)
-						: `rgba(0, 240, 255, ${alpha})`;
+				ctx.globalAlpha = alpha * 1.6;
+				ctx.strokeStyle = s >= steps - 4 ? tip : body;
 				ctx.stroke();
 			}
 		}

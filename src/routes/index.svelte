@@ -1,9 +1,16 @@
 <script context="module" lang="ts">
 	import type { Load } from '@sveltejs/kit';
+	import { browser } from '$app/env';
+	import { DISCORD_ID } from '$lib/lanyard';
 
 	// Rendered per request (not prerendered) so the intro and project list edited in /admin
 	// show up without a redeploy.
+	// Coming back to the home page within a minute reuses what it loaded last time (the live
+	// parts come from the nav's connection anyway), so it opens instantly.
+	let recent: { at: number; props: Record<string, unknown> } | null = null;
+
 	export const load: Load = async ({ fetch }) => {
+		if (browser && recent && Date.now() - recent.at < 60000) return { props: { ...recent.props, discord: null, spotify: null } };
 		const [home, projects, events, buttons, posts, nowPage] = await Promise.all([
 			fetch('/api/site/home').then((r) => (r.ok ? r.json() : null)).catch(() => null),
 			fetch('/api/blog?kind=project').then((r) => (r.ok ? r.json() : [])).catch(() => []),
@@ -12,8 +19,29 @@
 			fetch('/api/blog').then((r) => (r.ok ? r.json() : [])).catch(() => []),
 			fetch('/api/site/now').then((r) => (r.ok ? r.json() : null)).catch(() => null)
 		]);
-		return { props: { home, projectPages: projects, events, buttons, posts, nowPage } };
+		// Server only: Discord status and Spotify in the first HTML, so "right now" isn't empty
+		// and nothing jumps when it fills in. (Moving between pages, the nav already has both.)
+		const live = browser ? { discord: null, spotify: null } : await liveStatus(fetch);
+		return { props: { home, projectPages: projects, events, buttons, posts, nowPage, ...live } };
 	};
+
+	// Gives up after a second and a half rather than holding the page back.
+	const within = <T,>(p: Promise<T>, ms = 1500) => Promise.race([p, new Promise<null>((r) => setTimeout(() => r(null), ms))]);
+	// Discord status, reused for 15 s so quick refreshes don't wait for it again.
+	let discordCache: { at: number; data: any } | null = null;
+	async function discordStatus(fetch: (url: string) => Promise<Response>) {
+		if (discordCache && Date.now() - discordCache.at < 15000) return discordCache.data;
+		const data = await fetch(`https://api.lanyard.rest/v1/users/${DISCORD_ID}`).then((r) => (r.ok ? r.json() : null)).then((j) => j?.data ?? null).catch(() => null);
+		if (data) discordCache = { at: Date.now(), data };
+		return data;
+	}
+	async function liveStatus(fetch: (url: string) => Promise<Response>) {
+		const [discord, spotify] = await Promise.all([
+			within(discordStatus(fetch), 2500),
+			within(fetch('/api/now-playing').then((r) => (r.ok ? r.json() : null)).catch(() => null))
+		]);
+		return { discord, spotify };
+	}
 </script>
 
 <script lang="ts">
@@ -29,6 +57,10 @@
 	export let buttons: import('$lib/siteSettings').ButtonsSettings | null;
 	export let posts: { slug: string; title: string; date: string; excerpt: string; banner: string | null }[];
 	export let nowPage: import('$lib/siteSettings').NowSettings | null;
+	// From the server, used until the live data arrives.
+	export let discord: any = null;
+	export let spotify: any = null;
+	$: if (typeof window !== 'undefined') recent = { at: recent?.props.home === home ? recent.at : Date.now(), props: { home, projectPages, events, buttons, posts, nowPage } };
 
 	// "latest": newest blog post or event that has already started.
 	$: latest = [
@@ -52,13 +84,22 @@
 	$: buttonWall = buttons ?? settingDefaults.buttons;
 	import Branch from '$lib/components/Branch.svelte';
 	import Language from '$lib/components/Language.svelte';
-	import ProjectItem from '$lib/components/ProjectItem.svelte';
 	import Workspace from '$lib/components/Workspace.svelte';
 	import Terminal from '$lib/components/Terminal.svelte';
 	import OsuTooltip from '$lib/components/OsuTooltip.svelte';
 	import { getCodeData } from '$lib/rpcUtils';
 	import { lanyard } from '$lib/lanyard';
+	import { nowPlaying as nowPlayingStore } from '$lib/components/site/presence';
 	import { onMount, onDestroy } from 'svelte';
+	import { fade, fly, slide } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
+	import { app } from '$lib/components/site/app';
+	import { stickyAside } from '$lib/components/site/sticky';
+	// Sections rise in one after another, but not on a refresh (see $lib/components/site/app).
+	// "right now" items that turn up (or end) while you're on the page slide open (or shut), so
+	// what's below glides instead of jumping. Not on first load, where they're already in the page.
+	const grow = { duration: 380, easing: cubicOut };
+	const rise = (i: number) => (app.hydrated ? { y: 12, duration: 500, delay: 60 + i * 70, easing: cubicOut } : { duration: 0 });
 
 	// ── types ──────────────────────────────────────────────────────────────
 	interface PrimaryGuild { tag: string; badge: string; identity_guild_id: string; identity_enabled: boolean; }
@@ -73,7 +114,7 @@
 
 	// ── lanyard ────────────────────────────────────────────────────────────
 	const store = lanyard;
-	$: d = $store as unknown as LanyardData | null;
+	$: d = ($store ?? discord) as unknown as LanyardData | null;
 	$: codeData = getCodeData($store);
 
 	// ── discord display ────────────────────────────────────────────────────
@@ -175,12 +216,10 @@
 		fetchedAt?: number;
 	}
 
-	let nowPlaying: NowPlayingResponse | null = null;
 	// For the "currently" box (listening is already shown in the now playing card).
 	$: playing = visibleActivities.find((a: Activity) => a.type === 0)?.name ?? '';
 	let nowPlayingTime = 0;
 	let nowPlayingStarted = 0;
-	let nowPlayingPollId: ReturnType<typeof setInterval>;
 	let nowPlayingTickId: ReturnType<typeof setInterval>;
 
 	function formatDuration(ms: number) {
@@ -189,22 +228,18 @@
 		return `${minutes}:${seconds}`;
 	}
 
-	async function loadNowPlaying() {
-		try {
-			const r = await fetch('/api/now-playing');
-			if (!r.ok) return;
-			const d: NowPlayingResponse = await r.json();
-			nowPlaying = d;
-			if (d.track) {
-				// The response may have sat in Vercel's cache for a few seconds; count from when
-				// Spotify was actually asked (never later than now, in case clocks disagree).
-				nowPlayingStarted = Math.min(d.fetchedAt ?? Date.now(), Date.now());
-				nowPlayingTime = d.progressMs ?? 0;
-			}
-		} catch {
-			// ignore
-		}
+	// Shared with the nav (see presence.ts), so it's already there when you open the page.
+	$: nowPlaying = ($nowPlayingStore ?? spotify) as NowPlayingResponse | null;
+	// The response may have sat in Vercel's cache for a few seconds; count from when Spotify was
+	// actually asked (never later than now, in case clocks disagree).
+	$: if (nowPlaying?.track) {
+		nowPlayingStarted = Math.min(nowPlaying.fetchedAt ?? Date.now(), Date.now());
+		nowPlayingTime = nowPlaying.progressMs ?? 0;
 	}
+	// Nothing playing: /api/now-playing already includes the last track, so use that until the
+	// exact "last played" time arrives.
+	$: lastTrack = lastPlayedTrack ?? (nowPlaying && !nowPlaying.isPlayingNow && nowPlaying.track ? { track: nowPlaying.track, played_at: null } : null);
+
 
 
 	// helper used in template to avoid inline (a: any) callbacks
@@ -233,8 +268,8 @@
 	$: if (nowPlaying?.track?.artists) romanizeText(artistNames(nowPlaying.track.artists)).then(r => (romanizedArtist = r));
 	$: if (nowPlaying?.track?.album?.name) romanizeText(nowPlaying.track.album.name).then(r => (romanizedAlbum = r));
 
-	$: if (lastPlayedTrack?.track?.name) romanizeText(lastPlayedTrack.track.name).then(r => (romanizedLastSong = r));
-	$: if (lastPlayedTrack?.track?.artists) romanizeText(artistNames(lastPlayedTrack.track.artists)).then(r => (romanizedLastArtist = r));
+	$: if (lastTrack?.track?.name) romanizeText(lastTrack.track.name).then(r => (romanizedLastSong = r));
+	$: if (lastTrack?.track?.artists) romanizeText(artistNames(lastTrack.track.artists)).then(r => (romanizedLastArtist = r));
 	// ── osu! ───────────────────────────────────────────────────────────────
 	const OSU_APP_IDS = new Set(['1216669957799018608', '367827983903490050']);
 	const OSU_SELF_USERNAME = 'sodanator';
@@ -294,14 +329,13 @@
 	onMount(async () => {
 		clockId = setInterval(() => { now = new Date(); }, 500);
 
-		try {
-			const r = await fetch('/api/recent-tracks');
-			if (r.ok) lastPlayedTrack = await r.json();
-		} catch {}
+		// Both at once: what's playing now shouldn't wait for "last played".
+		fetch('/api/recent-tracks')
+			.then((r) => (r.ok ? r.json() : null))
+			.then((t) => t && (lastPlayedTrack = t))
+			.catch(() => {});
 
 		// start now-playing polling and timer
-		loadNowPlaying();
-		nowPlayingPollId = setInterval(loadNowPlaying, 5000);
 
 		nowPlayingTickId = setInterval(() => {
 			if (!nowPlaying?.track) return;
@@ -326,7 +360,6 @@
 
 	onDestroy(() => {
 		clearInterval(clockId);
-		clearInterval(nowPlayingPollId);
 		clearInterval(nowPlayingTickId);
 	});
 </script>
@@ -340,315 +373,307 @@
 	<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#281c21" />
 </svelte:head>
 
-<section class="p-8 sm:p-12 lg:p-24 lg:py-16 font-cascadia z-10 flex flex-col sm:flex-row gap-y-10 justify-between">
-	<div class="flex flex-col gap-7 flex-1">
-		<div class="min-h-[3em] lg:min-h-0 flex items-center gap-3">
-			{#if d?.discord_user && discordAvatar}
-				<div class="relative flex-shrink-0">
-					<img src={discordAvatar} alt="Discord avatar" class="w-12 h-12 rounded-full" />
-					<div class="absolute bottom-0 right-0 w-3 h-3 {statusColor} rounded-full border-2 border-ocean-100 dark:border-ocean-900"></div>
-				</div>
-			{/if}
-			<h1 class="text-ocean-900 dark:text-ocean-300 break-words min-w-0 flex items-center gap-1 flex-wrap">
-				<span class="text-ocean-900 dark:text-ocean-blue flex items-center gap-2">
-					sundei
-					{#if clanBadge && d?.discord_user?.primary_guild?.tag}
-						<span class="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium bg-ocean-200 dark:bg-ocean-800 border border-ocean-300 dark:border-ocean-600 rounded text-ocean-900 dark:text-ocean-100">
-							<img src={clanBadge} alt="Clan badge" class="w-3 h-3" />
-							<span>{d.discord_user.primary_guild.tag}</span>
-						</span>
-					{/if}
-				</span>
-				<Workspace workspace={codeData?.workspace} />
-				<Branch name={codeData?.branch} />
-				<Language lang={codeData?.lang} />
-			</h1>
-		</div>
+<!-- Layout: a sticky profile column on the left, a live feed on the right. -->
+{#if true}
+	{@const label = 'text-[11px] uppercase tracking-widest text-ocean-500'}
+	{@const muted = 'text-ocean-600 dark:text-ocean-400'}
+	{@const strong = 'text-ocean-900 dark:text-ocean-100'}
+	{@const ringMap = { online: 'ring-green-500', idle: 'ring-yellow-500', dnd: 'ring-red-500', offline: 'ring-ocean-400 dark:ring-ocean-600' }}
+	{@const groups = [{ key: 'wip', title: homeSettings.titles.wip, items: homeSettings.wip }, { key: 'projects', title: homeSettings.titles.projects, items: projectList }].filter((g) => g.items.length)}
 
-		{#if intro}
-			<p class="text-ocean-700 dark:text-ocean-400 max-w-xl -mt-3">{intro}</p>
-		{/if}
-		<!-- "currently" box: all pulled from things the site already knows -->
-		{#if homeSettings.showCurrently && (nowStatus || workingOn || playing || happening || nextUp)}
-			<div class="-mt-2 border border-ocean-300 dark:border-ocean-700 rounded-lg px-4 py-3 text-sm flex flex-col gap-1.5 max-w-xl">
-				<span class="text-[11px] uppercase tracking-widest text-ocean-500">currently</span>
-				{#if nowStatus}
-					<a href="/now" class="text-ocean-900 dark:text-ocean-100 hover:underline">{nowStatus}</a>
+	<section class="px-8 sm:px-12 lg:px-24 pt-8 sm:pt-12 pb-4 font-cascadia grid gap-14 lg:grid-cols-[17rem_1fr] xl:gap-24">
+		<!-- ── profile (sticky on wide screens) ── -->
+		<aside use:stickyAside class="flex flex-col gap-7 lg:self-start" in:fly={rise(0)}>
+			<div class="flex flex-col gap-4">
+				<!-- The spot is always there (empty until Discord answers), so nothing below moves. -->
+				{#if d?.discord_user && discordAvatar}
+					<img
+						src={discordAvatar}
+						alt=""
+						class="w-20 h-20 rounded-full ring-[3px] ring-offset-4 ring-offset-transparent {ringMap[d.discord_status] ?? ringMap.offline}"
+						title={d.discord_status}
+						in:fade={{ duration: app.hydrated ? 300 : 0 }}
+					/>
+				{:else}
+					<div class="w-20 h-20 rounded-full ring-[3px] ring-offset-4 ring-offset-transparent {ringMap.offline} bg-ocean-300/30 dark:bg-ocean-700/30" />
 				{/if}
-				{#if happening}
-					<a href="/events/{happening.slug}" class="flex items-center gap-2 text-ocean-800 dark:text-ocean-200 hover:underline">
-						<span class="relative flex w-2 h-2 shrink-0"><span class="absolute inset-0 rounded-full bg-ocean-green animate-ping opacity-75" /><span class="relative w-2 h-2 rounded-full bg-ocean-green" /></span>
-						at {happening.title}{happening.location ? ` · ${happening.location}` : ''}
-					</a>
-				{/if}
-				{#if playing}
-					<div class="flex gap-2 min-w-0"><span class="shrink-0">🎮</span><span class="text-ocean-600 dark:text-ocean-400 shrink-0">playing</span><span class="text-ocean-800 dark:text-ocean-200 truncate">{playing}</span></div>
-				{/if}
-				{#if workingOn}
-					<a href="/now" class="flex gap-2 min-w-0 hover:underline"><span class="shrink-0">🔨</span><span class="text-ocean-600 dark:text-ocean-400 shrink-0">working on</span><span class="text-ocean-800 dark:text-ocean-200 truncate">{workingOn}</span></a>
-				{/if}
-				{#if !happening && nextUp}
-					<a href="/events/{nextUp.slug}" class="flex gap-2 min-w-0 hover:underline"><span class="shrink-0">📅</span><span class="text-ocean-600 dark:text-ocean-400 shrink-0">next event</span><span class="text-ocean-800 dark:text-ocean-200 truncate">{nextUp.title} · {daysBetween(today(), nextUp.date) === 1 ? 'tomorrow' : `in ${daysBetween(today(), nextUp.date)} days`}</span></a>
-				{/if}
-			</div>
-		{/if}
-
-		<!-- newest post or event -->
-		{#if homeSettings.showLatest && latest}
-			<a href={latest.href} class="group -mt-2 flex items-center gap-3 border border-ocean-300 dark:border-ocean-700 rounded-lg p-2 pr-4 max-w-xl hover:border-ocean-500 transition-colors">
-				{#if latest.banner}<img src={latest.banner} alt="" loading="lazy" class="w-20 h-12 object-cover rounded shrink-0" />{/if}
-				<div class="min-w-0 text-sm">
-					<div class="text-ocean-500 text-[11px] uppercase tracking-widest">latest {latest.kind === 'event' ? 'event' : 'post'}</div>
-					<div class="text-ocean-900 dark:text-ocean-100 truncate group-hover:underline">{latest.title}</div>
-					{#if latest.excerpt}<div class="text-ocean-600 dark:text-ocean-400 text-xs truncate">{latest.excerpt}</div>{/if}
-				</div>
-			</a>
-		{/if}
-		<!-- wip / projects / links, edited in /admin → pages → home -->
-		{#each [{ key: 'wip', title: homeSettings.titles.wip, items: homeSettings.wip }, { key: 'projects', title: homeSettings.titles.projects, items: projectList }, { key: 'links', title: homeSettings.titles.links, items: homeSettings.links }] as group}
-			{#if group.items.length}
 				<div>
-					<h1 class="text-ocean-900 dark:text-ocean-100">
-						{group.title}
-						{#if group.key === 'projects' && projectPages.length}<a href="/projects" class="text-xs text-ocean-600 dark:text-ocean-400 hover:underline ml-1">all →</a>{/if}
-					</h1>
-					<ul class="list-disc list-inside text-ocean-800 dark:text-ocean-blue">
-						{#each group.items as item}
-							<ProjectItem href={item.href} name={item.name} description={item.description || undefined} internal={item.href.startsWith('/')} />
-						{/each}
-					</ul>
-				</div>
-			{/if}
-		{/each}
-		<div>
-			<h1 class="text-ocean-900 dark:text-ocean-100">{homeSettings.titles.friends}</h1>
-			<!-- 88×31 buttons, edited in /admin → pages → buttons -->
-			<div class="flex flex-wrap gap-1 mt-2">
-				{#each buttonWall.items as b}
-					{#if b.href}
-						<a href={b.href} target="_blank" rel="noopener noreferrer" title={b.alt}>
-							<img src={b.image} alt={b.alt} width="88" height="31" class="h-[31px] w-[88px] {b.pixelated ? 'image-pixelated' : ''}" />
-						</a>
-					{:else}
-						<img src={b.image} alt={b.alt} title={b.alt} width="88" height="31" class="h-[31px] w-[88px] {b.pixelated ? 'image-pixelated' : ''}" />
-					{/if}
-				{/each}
-				{#if buttonWall.mine.image}
-					<button on:click={copyButtonCode} title={copied ? 'copied!' : 'my button: click to copy the embed code'} class="cursor-pointer">
-						<img src={buttonWall.mine.image} alt={buttonWall.mine.alt} width="88" height="31" class="h-[31px] w-[88px] image-pixelated" />
-					</button>
-				{/if}
-			</div>
-		</div>
-		<div class="mt-4 w-full sm:w-96">
-			<h2 class="text-ocean-900 dark:text-ocean-100 text-lg mb-2">kwan wisdom</h2>
-			<div class="border border-ocean-300 dark:border-ocean-700 rounded p-4">
-				<p class="text-ocean-800 dark:text-ocean-100 text-sm italic">"{currentQuote}"</p>
-				<button on:click={newQuote} class="mt-3 text-ocean-600 dark:text-ocean-400 hover:text-ocean-900 dark:hover:text-ocean-100 text-xs underline">
-					new quote
-				</button>
-			</div>
-		</div>
-
-		<div class="mt-2">
-			<Terminal />
-		</div>
-	</div>
-
-	<div class="text-ocean-900 dark:text-ocean-300 flex flex-col items-start sm:items-end gap-3 sm:gap-7 sm:text-right">
-		{#if !isTimeZoneSame}
-			<div class="flex flex-col items-start sm:items-end hover:underline cursor-pointer" on:click={() => (timeZoneToggle = !timeZoneToggle)}>
-				<span>{date}</span>
-				<span>{time} in {displayCity || 'loading...'}</span>
-			</div>
-		{:else}
-			<div class="flex flex-col items-start sm:items-end">
-				<span>{date}</span>
-				<span>{time}</span>
-			</div>
-		{/if}
-
-		{#if customStatus}
-			<div class="flex flex-col items-start sm:items-end gap-1">
-				<span class="text-ocean-900 dark:text-ocean-100 flex items-center gap-1.5 sm:flex-row-reverse">
-					{#if customStatus.emoji}
-						{#if customStatus.emoji.id}
-							<img src="https://cdn.discordapp.com/emojis/{customStatus.emoji.id}.{customStatus.emoji.animated ? 'gif' : 'png'}?size=20" alt={customStatus.emoji.name} class="w-5 h-5" />
-						{:else}
-							<span>{customStatus.emoji.name}</span>
-						{/if}
-					{/if}
-					{#if customStatus.state}
-						<span class="text-ocean-800 dark:text-ocean-300">{customStatus.state}</span>
-					{/if}
-				</span>
-			</div>
-		{/if}
-
-		{#if nowPlaying?.track && nowPlaying.isPlayingNow}
-			<!-- actively playing: show progress bar -->
-			<div class="flex flex-col items-start sm:items-end gap-2">
-				<div class="flex items-center gap-3 sm:flex-row-reverse">
-					{#if nowPlaying.track.album?.images?.[0]?.url}
-						<img src={nowPlaying.track.album.images[0].url} alt="Album art" class="w-16 h-16 rounded shadow-lg" />
-					{/if}
-					<div class="flex flex-col items-start sm:items-end">
-						<a
-							href={nowPlaying.track.external_urls.spotify}
-							target="_blank"
-							rel="noopener noreferrer"
-							class="text-ocean-900 dark:text-ocean-100 hover:underline"
-						>
-							{romanizedSong || nowPlaying.track.name}
-						</a>
-						<span class="text-ocean-800 dark:text-ocean-300">
-							{romanizedArtist || artistNames(nowPlaying.track.artists)}
-						</span>
-						<span class="text-ocean-700 dark:text-ocean-400">
-							{romanizedAlbum || nowPlaying.track.album.name}
-						</span>
-					</div>
-				</div>
-
-				<span class="text-ocean-700 dark:text-ocean-400 text-sm">
-					{formatDuration(nowPlayingTime)} / {formatDuration(nowPlaying.track.duration_ms)}
-				</span>
-				<div class="w-full max-w-[200px] h-1 bg-ocean-300 dark:bg-ocean-700 rounded-full overflow-hidden">
-					<div
-						class="h-full bg-ocean-700 dark:bg-ocean-300 transition-all duration-100"
-						style={`width: ${(nowPlayingTime / nowPlaying.track.duration_ms) * 100}%`}
-					></div>
-				</div>
-			</div>
-		{:else if lastPlayedTrack}
-			<!-- nothing playing: show last played info instead -->
-			<div class="flex flex-col items-start sm:items-end gap-2">
-				<span class="text-ocean-700 dark:text-ocean-400 text-sm">last played</span>
-				<div class="flex items-center gap-3 sm:flex-row-reverse">
-					{#if lastPlayedTrack.track?.album?.images?.[0]?.url}
-						<img src={lastPlayedTrack.track.album.images[0].url} alt="Album art" class="w-16 h-16 rounded shadow-lg" />
-					{/if}
-					<div class="flex flex-col items-start sm:items-end">
-						<a
-							href={lastPlayedTrack.track?.external_urls?.spotify}
-							target="_blank"
-							rel="noopener noreferrer"
-							class="text-ocean-900 dark:text-ocean-100 hover:underline"
-						>
-							{romanizedLastSong || lastPlayedTrack.track?.name}
-						</a>
-						<span class="text-ocean-800 dark:text-ocean-300">
-							{romanizedLastArtist || artistNames(lastPlayedTrack.track?.artists)}
-						</span>
-						<span class="text-ocean-700 dark:text-ocean-400 text-sm">
-							{new Date(lastPlayedTrack.played_at).toLocaleTimeString()}
-						</span>
-					</div>
-				</div>
-			</div>
-		{/if}
-
-		{#each visibleActivities as activity}
-			{@const isTwitch = activity.name?.toLowerCase().includes('twitch') || activity.application_id === '802958789555781663'}
-			{@const isOsu = isOsuActivity(activity)}
-			{@const twitchUrl = isTwitch ? `https://twitch.tv/${activity.state || activity.name}` : null}
-			{@const osuSongName = isOsu && activity.details ? activity.details.replace(/\[.*?\]\s*$/, '').trim() : null}
-			{@const osuDifficulty = isOsu && activity.details ? (activity.details.match(/\[(.+?)\]$/)?.[1] ?? null) : null}
-			{@const resolvedOsuUrl = isOsu && activity.details ? osuBeatmapUrls[activity.details] : null}
-			{@const osuFallbackUrl = osuSongName ? `https://osu.ppy.sh/beatmapsets?q=${encodeURIComponent(osuSongName)}` : null}
-
-			<div class="flex flex-col items-start sm:items-end gap-2">
-				<div class="flex items-center gap-3 sm:flex-row-reverse">
-					<div class="flex flex-col items-start sm:items-end">
-						{#if twitchUrl}
-							<a href={twitchUrl} target="_blank" rel="noopener noreferrer" class="text-ocean-900 dark:text-ocean-100 hover:underline">{activity.name}</a>
-						{:else}
-							<span class="text-ocean-900 dark:text-ocean-100">{activity.name}</span>
-						{/if}
-
-						{#if activity.details}
-							{#if isOsu}
-								<span class="text-ocean-800 dark:text-ocean-300 text-sm">{osuSongName}</span>
-								{#if osuDifficulty}
-									<span class="text-ocean-700 dark:text-ocean-400 text-sm">[{osuDifficulty}]</span>
-								{/if}
-							{:else}
-								<span class="text-ocean-800 dark:text-ocean-300">{activity.details}</span>
-							{/if}
-						{/if}
-
-						{#if activity.state && !isTwitch}
-							{#if isOsu}
-								{@const watchingUser = parseWatchingUsername(activity.state)}
-								{#if watchingUser}
-									{@const osuUser = osuUserCache[watchingUser]}
-									<div class="relative group">
-										<a href="https://osu.ppy.sh/users/{watchingUser}" target="_blank" rel="noopener noreferrer" class="text-ocean-700 dark:text-ocean-400 hover:underline text-sm">
-											{activity.state}
-										</a>
-										{#if osuUser}
-											<div class="absolute bottom-full right-0 pb-2 z-50 w-64 pointer-events-none group-hover:pointer-events-auto opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 ease-out">
-												<a href="https://osu.ppy.sh/users/{osuUser.id ?? OSU_SELF_USERNAME}" target="_blank" rel="noopener noreferrer" class="block"><OsuTooltip {osuUser} /></a>
-											</div>
-										{/if}
-									</div>
-								{:else if isSelfOsuState(activity.state)}
-									{@const osuUser = osuUserCache[OSU_SELF_USERNAME]}
-									<div class="relative group">
-										<span class="text-ocean-700 dark:text-ocean-400 text-sm cursor-default">{activity.state}</span>
-										{#if osuUser}
-											<div class="absolute bottom-full right-0 pb-2 z-50 w-64 pointer-events-none group-hover:pointer-events-auto opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 ease-out">
-												<a href="https://osu.ppy.sh/users/{osuUser.id ?? OSU_SELF_USERNAME}" target="_blank" rel="noopener noreferrer" class="block"><OsuTooltip {osuUser} /></a>
-											</div>
-										{/if}
-									</div>
-								{:else}
-									<span class="text-ocean-700 dark:text-ocean-400 text-sm">{activity.state}</span>
-								{/if}
-							{:else}
-								<span class="text-ocean-700 dark:text-ocean-400">{activity.state}</span>
-							{/if}
-						{/if}
-
-						{#if isOsu && (resolvedOsuUrl ?? osuFallbackUrl)}
-							<a href={resolvedOsuUrl ?? osuFallbackUrl} target="_blank" rel="noopener noreferrer"
-								class="text-xs px-1.5 py-0.5 rounded border border-ocean-400 dark:border-ocean-500 text-ocean-600 dark:text-ocean-400 hover:bg-ocean-200 dark:hover:bg-ocean-700 w-fit">
-								beatmap ↗
-							</a>
-						{/if}
-
-						{#if activity.assets?.small_image?.includes('pause') || activity.assets?.small_text?.toLowerCase() === 'paused'}
-							<span class="text-ocean-700 dark:text-ocean-400 text-sm">paused</span>
-						{:else if activity.timestamps?.start}
-							{@const elapsed = now.getTime() - activity.timestamps.start}
-							{@const hours = Math.floor(elapsed / 3600000)}
-							{@const minutes = Math.floor((elapsed % 3600000) / 60000)}
-							{@const seconds = Math.floor((elapsed % 60000) / 1000)}
-							<span class="text-ocean-700 dark:text-ocean-400 text-sm">
-								{#if hours > 0}
-									{hours}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')} elapsed
-								{:else}
-									{minutes}:{seconds.toString().padStart(2, '0')} elapsed
-								{/if}
+					<h1 class="text-3xl {strong} flex items-center gap-2 flex-wrap">
+						sundei
+						{#if clanBadge && d?.discord_user?.primary_guild?.tag}
+							<span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-ocean-200/70 dark:bg-ocean-800/70 {strong}">
+								<img src={clanBadge} alt="" class="w-3 h-3" />{d.discord_user.primary_guild.tag}
 							</span>
 						{/if}
+					</h1>
+					{#if intro}<p class="mt-3 text-sm leading-relaxed text-ocean-700 dark:text-ocean-300">{intro}</p>{/if}
+				</div>
+				{#if customStatus && (customStatus.state || customStatus.emoji)}
+					<p class="relative w-fit max-w-full rounded-2xl rounded-tl-sm glass border border-ocean-300/50 dark:border-ocean-700/50 px-3 py-2 text-sm flex items-center gap-2 text-ocean-800 dark:text-ocean-200">
+						{#if customStatus.emoji?.id}
+							<img src="https://cdn.discordapp.com/emojis/{customStatus.emoji.id}.{customStatus.emoji.animated ? 'gif' : 'png'}?size=48" alt={customStatus.emoji.name} class="h-5 w-auto max-w-[4rem] object-contain" />
+						{:else if customStatus.emoji}
+							<span>{customStatus.emoji.name}</span>
+						{/if}
+						{#if customStatus.state}<span class="min-w-0">{customStatus.state}</span>{/if}
+					</p>
+				{/if}
+			</div>
+
+			<!-- clock: click to switch between your time zone and mine -->
+			<button
+				class="text-left {isTimeZoneSame ? 'cursor-default' : 'group'}"
+				on:click={() => !isTimeZoneSame && (timeZoneToggle = !timeZoneToggle)}
+				title={isTimeZoneSame ? undefined : 'switch time zone'}
+			>
+				<div class="text-2xl tabular-nums {strong}">{time}</div>
+				<div class="text-xs {muted} mt-0.5 group-hover:underline">{date}{#if !isTimeZoneSame}<br />{displayCity || '…'}{/if}</div>
+			</button>
+
+			{#if homeSettings.links.length}
+				<div class="flex flex-col gap-2">
+					<span class={label}>{homeSettings.titles.links}</span>
+					<div class="flex flex-wrap gap-1.5">
+						{#each homeSettings.links as link}
+							{@const internal = link.href.startsWith('/')}
+							<a
+								href={link.href}
+								target={internal ? undefined : '_blank'}
+								rel={internal ? undefined : 'noopener noreferrer'}
+								title={link.description || undefined}
+								class="px-3 py-1 rounded-full text-xs border border-ocean-300/70 dark:border-ocean-700/70 {muted} hover:text-ocean-900 dark:hover:text-ocean-100 hover:border-ocean-500 transition-colors"
+								>{link.name}</a
+							>
+						{/each}
 					</div>
 				</div>
-			</div>
-		{/each}
+			{/if}
 
-		{#if codeData?.idling}
-			<div class="flex flex-col items-start sm:items-end">
-				<span class="text-ocean-900 dark:text-ocean-100">vsc</span>
-				<span class="text-ocean-700 dark:text-ocean-400">currently idling</span>
+			<!-- 88×31 buttons, edited in /admin → pages → buttons -->
+			<div class="flex flex-col gap-2">
+				<span class={label}>{homeSettings.titles.friends}</span>
+				<div class="flex flex-wrap gap-1">
+					{#each buttonWall.items as b}
+						{#if b.href}
+							<a href={b.href} target="_blank" rel="noopener noreferrer" title={b.alt} class="transition-transform duration-200 hover:-translate-y-0.5">
+								<img src={b.image} alt={b.alt} width="88" height="31" class="h-[31px] w-[88px] {b.pixelated ? 'image-pixelated' : ''}" />
+							</a>
+						{:else}
+							<img src={b.image} alt={b.alt} title={b.alt} width="88" height="31" class="h-[31px] w-[88px] {b.pixelated ? 'image-pixelated' : ''}" />
+						{/if}
+					{/each}
+					{#if buttonWall.mine.image}
+						<button on:click={copyButtonCode} title={copied ? 'copied!' : 'my button: click to copy the embed code'} class="transition-transform duration-200 hover:-translate-y-0.5">
+							<img src={buttonWall.mine.image} alt={buttonWall.mine.alt} width="88" height="31" class="h-[31px] w-[88px] image-pixelated" />
+						</button>
+					{/if}
+				</div>
+				{#if copied}<span class="text-xs {muted}">embed code copied :)</span>{/if}
 			</div>
-		{/if}
-		{#if codeData && !codeData.idling}
-			<div class="flex flex-col items-start sm:items-end">
-				<span class="text-ocean-900 dark:text-ocean-100">vsc</span>
-				<span class="text-ocean-800 dark:text-ocean-300">{codeData.workspace}{codeData.branch ? `/${codeData.branch}` : ''}</span>
-				<span class="text-ocean-700 dark:text-ocean-400">currently writing <span class="text-ocean-700 dark:text-ocean-200">{codeData.lang}</span></span>
+		</aside>
+
+		<!-- ── feed ── -->
+		<div class="flex flex-col gap-16 min-w-0">
+			<!-- right now, as a timeline: a pulsing dot means it's happening at this moment -->
+			<div class="flex flex-col gap-5" in:fly={rise(1)}>
+				<span class={label}>right now</span>
+				<ol class="relative border-l border-ocean-300/70 dark:border-ocean-700/70 ml-1.5 flex flex-col gap-9">
+					{#if nowPlaying?.track && nowPlaying.isPlayingNow}
+						<li class="relative pl-7" transition:slide|local={grow}>
+							{#if nowPlaying.isPaused}
+								<span class="absolute -left-[6px] top-1 w-[11px] h-[11px] rounded-full bg-ocean-yellow" />
+							{:else}
+								<span class="absolute -left-[6px] top-1 flex w-[11px] h-[11px]"><span class="absolute inset-0 rounded-full accent-bg animate-ping opacity-60" /><span class="relative w-[11px] h-[11px] rounded-full accent-bg" /></span>
+							{/if}
+							<div class="{label} mb-2">{nowPlaying.isPaused ? 'paused' : 'listening'} · {formatDuration(nowPlayingTime)} / {formatDuration(nowPlaying.track.duration_ms)}</div>
+							<div class="flex items-center gap-4 min-w-0">
+								{#if nowPlaying.track.album?.images?.[0]?.url}
+									<img src={nowPlaying.track.album.images[0].url} alt="" class="w-20 h-20 rounded-lg shadow-lg shrink-0" />
+								{/if}
+								<div class="min-w-0 flex-1">
+									<a href={nowPlaying.track.external_urls.spotify} target="_blank" rel="noopener noreferrer" class="block text-lg truncate {strong} hover:underline">{romanizedSong || nowPlaying.track.name}</a>
+									<div class="truncate text-sm text-ocean-700 dark:text-ocean-300">{romanizedArtist || artistNames(nowPlaying.track.artists)} · <span class={muted}>{romanizedAlbum || nowPlaying.track.album.name}</span></div>
+									<div class="mt-3 h-[3px] max-w-sm rounded-full bg-ocean-300/60 dark:bg-ocean-700/60 overflow-hidden">
+										<div class="h-full rounded-full accent-bg transition-all duration-100" style="width: {(nowPlayingTime / nowPlaying.track.duration_ms) * 100}%" />
+									</div>
+								</div>
+							</div>
+						</li>
+					{:else if lastTrack}
+						<li class="relative pl-7" transition:slide|local={grow}>
+							<span class="absolute -left-[6px] top-1 w-[11px] h-[11px] rounded-full bg-ocean-400 dark:bg-ocean-600" />
+							<div class="{label} mb-2">last played{lastTrack.played_at ? ` · ${new Date(lastTrack.played_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}</div>
+							<div class="flex items-center gap-4 min-w-0">
+								{#if lastTrack.track?.album?.images?.[0]?.url}
+									<img src={lastTrack.track.album.images[0].url} alt="" class="w-14 h-14 rounded-lg shrink-0" />
+								{/if}
+								<div class="min-w-0">
+									<a href={lastTrack.track?.external_urls?.spotify} target="_blank" rel="noopener noreferrer" class="block truncate {strong} hover:underline">{romanizedLastSong || lastTrack.track?.name}</a>
+									<div class="truncate text-sm text-ocean-700 dark:text-ocean-300">{romanizedLastArtist || artistNames(lastTrack.track?.artists)}</div>
+								</div>
+							</div>
+						</li>
+					{/if}
+
+					{#each visibleActivities as activity}
+						{@const isTwitch = activity.name?.toLowerCase().includes('twitch') || activity.application_id === '802958789555781663'}
+						{@const isOsu = isOsuActivity(activity)}
+						{@const paused = activity.assets?.small_image?.includes('pause') || activity.assets?.small_text?.toLowerCase() === 'paused'}
+						{@const twitchUrl = isTwitch ? `https://twitch.tv/${activity.state || activity.name}` : null}
+						{@const osuSongName = isOsu && activity.details ? activity.details.replace(/\[.*?\]\s*$/, '').trim() : null}
+						{@const osuDifficulty = isOsu && activity.details ? (activity.details.match(/\[(.+?)\]$/)?.[1] ?? null) : null}
+						{@const resolvedOsuUrl = isOsu && activity.details ? osuBeatmapUrls[activity.details] : null}
+						{@const osuFallbackUrl = osuSongName ? `https://osu.ppy.sh/beatmapsets?q=${encodeURIComponent(osuSongName)}` : null}
+						{@const elapsed = activity.timestamps?.start ? now.getTime() - activity.timestamps.start : 0}
+						{@const hours = Math.floor(elapsed / 3600000)}
+						{@const minutes = Math.floor((elapsed % 3600000) / 60000)}
+						{@const seconds = Math.floor((elapsed % 60000) / 1000)}
+						<li class="relative pl-7" transition:slide|local={grow}>
+							{#if paused}
+								<span class="absolute -left-[6px] top-1 w-[11px] h-[11px] rounded-full bg-ocean-yellow" />
+							{:else}
+								<span class="absolute -left-[6px] top-1 flex w-[11px] h-[11px]"><span class="absolute inset-0 rounded-full accent-bg animate-ping opacity-60" /><span class="relative w-[11px] h-[11px] rounded-full accent-bg" /></span>
+							{/if}
+							<div class="{label} mb-2">
+								{activity.type === 3 ? 'watching' : 'playing'}
+								{#if paused} · paused{:else if activity.timestamps?.start} · {hours > 0 ? `${hours}:${minutes.toString().padStart(2, '0')}` : minutes}:{seconds.toString().padStart(2, '0')}{/if}
+							</div>
+							{#if twitchUrl}
+								<a href={twitchUrl} target="_blank" rel="noopener noreferrer" class="text-lg {strong} hover:underline">{activity.name}</a>
+							{:else}
+								<div class="text-lg {strong}">{activity.name}</div>
+							{/if}
+							{#if activity.details}
+								<div class="text-sm text-ocean-700 dark:text-ocean-300">
+									{#if isOsu}{osuSongName}{#if osuDifficulty}{' '}<span class={muted}>[{osuDifficulty}]</span>{/if}{:else}{activity.details}{/if}
+								</div>
+							{/if}
+							<div class="flex flex-wrap items-center gap-3 mt-1">
+								{#if activity.state && !isTwitch}
+									{#if isOsu}
+										{@const watchingUser = parseWatchingUsername(activity.state)}
+										{@const osuUser = watchingUser ? osuUserCache[watchingUser] : isSelfOsuState(activity.state) ? osuUserCache[OSU_SELF_USERNAME] : null}
+										<div class="relative group w-fit text-sm">
+											{#if watchingUser}
+												<a href="https://osu.ppy.sh/users/{watchingUser}" target="_blank" rel="noopener noreferrer" class="{muted} hover:underline">{activity.state}</a>
+											{:else}
+												<span class="{muted} cursor-default">{activity.state}</span>
+											{/if}
+											{#if osuUser}
+												<div class="absolute bottom-full left-0 pb-2 z-50 w-64 pointer-events-none group-hover:pointer-events-auto opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 ease-out">
+													<a href="https://osu.ppy.sh/users/{osuUser.id ?? OSU_SELF_USERNAME}" target="_blank" rel="noopener noreferrer" class="block"><OsuTooltip {osuUser} /></a>
+												</div>
+											{/if}
+										</div>
+									{:else}
+										<span class="text-sm {muted}">{activity.state}</span>
+									{/if}
+								{/if}
+								{#if isOsu && (resolvedOsuUrl ?? osuFallbackUrl)}
+									<a href={resolvedOsuUrl ?? osuFallbackUrl} target="_blank" rel="noopener noreferrer" class="text-xs px-2.5 py-0.5 rounded-full border border-ocean-300/70 dark:border-ocean-700/70 {muted} hover:text-ocean-900 dark:hover:text-ocean-100 hover:border-ocean-500 transition-colors">beatmap ↗</a>
+								{/if}
+							</div>
+						</li>
+					{/each}
+
+					{#if codeData}
+						<li class="relative pl-7" transition:slide|local={grow}>
+							{#if codeData.idling}
+								<span class="absolute -left-[6px] top-1 w-[11px] h-[11px] rounded-full bg-ocean-yellow" />
+							{:else}
+								<span class="absolute -left-[6px] top-1 flex w-[11px] h-[11px]"><span class="absolute inset-0 rounded-full accent-bg animate-ping opacity-60" /><span class="relative w-[11px] h-[11px] rounded-full accent-bg" /></span>
+							{/if}
+							<div class="{label} mb-2">coding{codeData.idling ? ' · idle' : ''}</div>
+							{#if codeData.idling}
+								<div class="text-sm {muted}">vs code is open, nothing happening</div>
+							{:else}
+								<div class="text-lg {strong}">{codeData.workspace}{#if codeData.branch}<span class={muted}>/{codeData.branch}</span>{/if}</div>
+								<div class="text-sm {muted}">writing {codeData.lang}</div>
+							{/if}
+						</li>
+					{/if}
+
+					{#if homeSettings.showCurrently && (nowStatus || workingOn || happening || nextUp)}
+						<li class="relative pl-7" transition:slide|local={grow}>
+							<span class="absolute -left-[6px] top-1 w-[11px] h-[11px] rounded-full bg-ocean-400 dark:bg-ocean-600" />
+							<div class="{label} mb-2">up to</div>
+							<div class="flex flex-col gap-1 text-sm">
+								{#if nowStatus}<a href="/now" class="text-lg {strong} hover:underline">{nowStatus}</a>{/if}
+								{#if happening}
+									<a href="/events/{happening.slug}" class="text-ocean-800 dark:text-ocean-200 hover:underline">📍 at {happening.title}{happening.location ? ` · ${happening.location}` : ''}</a>
+								{/if}
+								{#if workingOn}<a href="/now" class="text-ocean-700 dark:text-ocean-300 hover:underline">🔨 {workingOn}</a>{/if}
+								{#if !happening && nextUp}
+									<a href="/events/{nextUp.slug}" class="text-ocean-700 dark:text-ocean-300 hover:underline">
+										📅 {nextUp.title} · {daysBetween(today(), nextUp.date) === 1 ? 'tomorrow' : `in ${daysBetween(today(), nextUp.date)} days`}
+									</a>
+								{/if}
+							</div>
+						</li>
+					{/if}
+				</ol>
 			</div>
-		{/if}
-	</div>
-</section>
+
+			<!-- latest post or event, as a banner -->
+			{#if homeSettings.showLatest && latest}
+				<!-- The whole card (title too) grows into the post's banner when it's opened. -->
+				<a href={latest.href} class="group relative block overflow-hidden rounded-2xl min-h-[11rem]" data-vt="banner-{latest.slug}" in:fly={rise(2)}>
+					{#if latest.banner}
+						<img src={latest.banner} alt="" loading="lazy" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+						<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/10" />
+					{:else}
+						<div class="absolute inset-0 bg-ocean-200/60 dark:bg-ocean-800/60" />
+					{/if}
+					<div class="relative h-full min-h-[11rem] flex flex-col justify-end gap-1 p-6 {latest.banner ? 'text-white' : strong}">
+						<span class="text-[11px] uppercase tracking-widest opacity-70">latest {latest.kind === 'event' ? 'event' : 'post'} · {latest.date}</span>
+						<span class="text-xl sm:text-2xl group-hover:underline">{latest.title}</span>
+						{#if latest.excerpt}<span class="text-sm opacity-80 truncate">{latest.excerpt}</span>{/if}
+					</div>
+				</a>
+			{/if}
+
+			<!-- wip / projects as a numbered index, edited in /admin → pages → home -->
+			{#each groups as group, gi}
+				<div class="flex flex-col gap-3" in:fly={rise(3 + gi)}>
+					<div class="flex items-baseline justify-between">
+						<span class={label}>{group.title}</span>
+						{#if group.key === 'projects' && projectPages.length}<a href="/projects" class="text-xs {muted} hover:underline">all →</a>{/if}
+					</div>
+					<ol class="flex flex-col">
+						{#each group.items as item, i}
+							{@const internal = item.href.startsWith('/')}
+							<li>
+								<a
+									href={item.href}
+									target={internal ? undefined : '_blank'}
+									rel={internal ? undefined : 'noopener noreferrer'}
+									class="group grid grid-cols-[2.5rem_1fr_auto] items-baseline gap-x-2 py-4 border-t border-ocean-300/50 dark:border-ocean-700/50 transition-colors"
+								>
+									<span class="text-xs tabular-nums text-ocean-400 dark:text-ocean-600">{String(i + 1).padStart(2, '0')}</span>
+									<span class="min-w-0">
+										<span class="block text-lg {strong} transition-transform duration-300 group-hover:translate-x-1">{item.name}</span>
+										{#if item.description}<span class="block text-sm {muted} transition-transform duration-300 group-hover:translate-x-1">{item.description}</span>{/if}
+									</span>
+									<span class="text-ocean-400 dark:text-ocean-600 group-hover:text-ocean-900 dark:group-hover:text-ocean-100 transition-colors">{internal ? '→' : '↗'}</span>
+								</a>
+							</li>
+						{/each}
+					</ol>
+				</div>
+			{/each}
+
+			<!-- kwan wisdom as a pull quote, then the terminal -->
+			<div class="flex flex-col gap-6" in:fly={rise(5)}>
+				<figure class="flex flex-col gap-3 border-l-2 border-ocean-500/60 pl-6">
+					<span class={label}>kwan wisdom</span>
+					<blockquote class="text-xl sm:text-2xl leading-snug italic text-ocean-800 dark:text-ocean-200">"{currentQuote}"</blockquote>
+					<figcaption class="flex items-center gap-4 text-xs {muted}">
+						<span>— ryan kwan</span>
+						<button on:click={newQuote} class="underline hover:text-ocean-900 dark:hover:text-ocean-100">another one</button>
+					</figcaption>
+				</figure>
+				<Terminal />
+			</div>
+		</div>
+	</section>
+{/if}

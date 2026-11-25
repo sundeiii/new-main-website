@@ -12,6 +12,22 @@
 			if (saved === 'dark' || (saved !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)) {
 				document.documentElement.classList.add('dark');
 			}
+			// Start in the last used theme (colours, and its picture or gradient) until the page
+			// has loaded its themes, so a refresh doesn't flash a different background first.
+			var page = JSON.parse(localStorage.getItem('theme-page') || 'null');
+			if (page && /^#[0-9a-f]{3,8}$/i.test(page.light) && /^#[0-9a-f]{3,8}$/i.test(page.dark)) {
+				var root = document.documentElement, set = function (k, v) { root.style.setProperty(k, v); };
+				root.classList.add('theme-preload');
+				set('--pre-light', page.light);
+				set('--pre-dark', page.dark);
+				var gradient = /^(repeating-)?(linear|radial|conic)-gradient\([^;{}<>"'\\]*\)$/i.test(page.gradient || '') && !/url\s*\(/i.test(page.gradient);
+				if (/^(https?:\/\/|\/(?!\/))/.test(page.image || '')) set('--pre-image', 'url("' + encodeURI(page.image) + '")');
+				else if (gradient) set('--pre-image', page.gradient);
+				set('--pre-size', page.fit === 'tile' ? 'auto' : page.fit === 'contain' ? 'contain' : 'cover');
+				set('--pre-repeat', page.fit === 'tile' ? 'repeat' : 'no-repeat');
+				set('--pre-blur', (Math.min(40, Math.max(0, +page.blur || 0))) + 'px');
+				set('--pre-dim', String(Math.min(90, Math.max(0, +page.dim || 0)) / 100));
+			}
 		} catch (e) {}
 	</script>
 	%sveltekit.head%

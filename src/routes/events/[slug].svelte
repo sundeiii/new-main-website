@@ -1,4 +1,5 @@
 <script context="module" lang="ts">
+	// One event, on the shared post page.
 	import type { Load } from '@sveltejs/kit';
 
 	export const load: Load = async ({ params, fetch }) => {
@@ -9,7 +10,7 @@
 </script>
 
 <script lang="ts">
-	import PostPage from '$lib/components/PostPage.svelte';
+	import PostPage from '$lib/components/site/PostPage.svelte';
 
 	export let post: any;
 </script>

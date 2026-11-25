@@ -17,6 +17,11 @@
 html {
 	scrollbar-color: hsla(0, 0%, 100%, 0.289) transparent;
 	scrollbar-width: thin;
+	/* Always keep room for the scrollbar, so the page doesn't shift sideways when moving
+	   between long pages (with a scrollbar) and short ones (without). Chrome only reserves
+	   the room when the page is explicitly scrollable, hence overflow-y. */
+	overflow-y: auto;
+	scrollbar-gutter: stable;
 }
 
 /* The yellow dot is a real cursor image, so the OS draws it with no lag. The cyan trail is

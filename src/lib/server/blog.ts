@@ -1,5 +1,6 @@
 import { marked } from 'marked';
 import { ensureSchema, sql } from '$lib/server/db';
+import { builtInPosts } from '$lib/builtInPosts';
 
 // One table holds blog posts, events (/events) and project pages (/projects), told apart by kind.
 export const KINDS = ['post', 'event', 'project'] as const;
@@ -21,20 +22,7 @@ export interface BlogPost {
 	link: string | null; // projects: repo or live site
 }
 
-// Posts that are hand-written Svelte pages under src/routes/blog/ rather than database rows.
-export const builtInPosts = [
-	{
-		kind: 'post' as const,
-		slug: 'welcome',
-		title: 'welcome to my corner of the internet',
-		date: '2026-02-10',
-		excerpt: "hey, i'm sundei. welcome to my little space on the web where i dump thoughts, projects, and whatever else feels worth remembering.",
-		banner: 'https://cdn.doitforjanice.eu/blog/banner-43f288.webp',
-		endDate: null,
-		location: null,
-		link: null
-	}
-];
+export { builtInPosts } from '$lib/builtInPosts';
 
 export const ensureTable = ensureSchema;
 

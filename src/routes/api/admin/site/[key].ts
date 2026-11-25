@@ -2,6 +2,7 @@ import type { RequestHandler } from '@sveltejs/kit';
 import { json, requireAdmin } from '$lib/server/adminAuth';
 import { getSetting, setSetting } from '$lib/server/settings';
 import { isSettingKey, type SiteSettings } from '$lib/siteSettings';
+import { isSafeGradient, themeDefaults, type Theme } from '$lib/themes';
 
 const str = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const url = (v: unknown) => {
@@ -16,8 +17,54 @@ const urlOrPath = (v: unknown) => {
 const list = <T>(v: unknown, max: number, item: (x: any) => T | null): T[] =>
 	(Array.isArray(v) ? v : []).slice(0, max).map(item).filter((x): x is T => x !== null);
 
+const hex = (v: unknown, fallback: string) => (/^#[0-9a-f]{3,8}$/i.test(str(v, 9)) ? str(v, 9) : fallback);
+const num = (v: unknown, min: number, max: number, fallback: number) => (typeof v === 'number' && isFinite(v) ? Math.round(Math.min(max, Math.max(min, v))) : fallback);
+const pick = <T extends string>(v: unknown, options: readonly T[], fallback: T): T => (options.includes(v as T) ? (v as T) : fallback);
+const gradient = (v: unknown) => {
+	const s = str(v, 400);
+	return isSafeGradient(s) ? s : '';
+};
+
+function cleanTheme(t: any, used: Set<string>): Theme | null {
+	const name = str(t?.name, 30);
+	if (!name) return null;
+	let id = (str(t?.id, 30) || name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'theme';
+	while (used.has(id)) id += '-2';
+	used.add(id);
+	const meshColours = list(t?.mesh, 6, (c) => (/^#[0-9a-f]{3,8}$/i.test(str(c, 9)) ? str(c, 9) : null));
+	return {
+		id,
+		name,
+		hidden: !!t?.hidden,
+		secret: !!t?.secret,
+		mode: pick(t?.mode, ['both', 'light', 'dark'] as const, 'both'),
+		light: hex(t?.light, '#f0f3f9'),
+		dark: hex(t?.dark, '#1c2128'),
+		accent: hex(t?.accent, '#8FA1B3'),
+		swatch: gradient(t?.swatch),
+		background: pick(t?.background, ['mesh', 'solid', 'gradient', 'image'] as const, 'mesh'),
+		mesh: meshColours.length >= 2 ? meshColours : themeDefaults.items[0].mesh,
+		meshStrength: num(t?.meshStrength, 0, 60, 15),
+		gradient: gradient(t?.gradient),
+		image: urlOrPath(t?.image),
+		fit: pick(t?.fit, ['cover', 'tile', 'contain'] as const, 'cover'),
+		blur: num(t?.blur, 0, 40, 0),
+		dim: num(t?.dim, 0, 90, 30),
+		glass: num(t?.glass, 0, 100, 65),
+		glassBlur: num(t?.glassBlur, 0, 40, 16),
+		stripe: gradient(t?.stripe),
+		trail: list(t?.trail, 2, (c) => (/^#[0-9a-f]{3,8}$/i.test(str(c, 9)) ? str(c, 9) : null))
+	};
+}
+
 // Coerces admin input into the exact shape each page expects, with length limits.
 const clean: { [K in keyof SiteSettings]: (v: any) => SiteSettings[K] } = {
+	themes: (v) => {
+		const used = new Set<string>();
+		const items = list(v?.items, 30, (t) => cleanTheme(t, used));
+		// Never save an empty list: the site needs at least one theme.
+		return { items: items.length ? items : themeDefaults.items };
+	},
 	home: (v) => {
 		// Site-relative (/projects/x), http(s) or mailto links.
 		const homeLinks = (items: unknown) =>

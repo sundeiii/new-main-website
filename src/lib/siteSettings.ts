@@ -1,3 +1,5 @@
+import { themeDefaults, type ThemesSettings } from '$lib/themes';
+
 // Editable page content, stored as JSON in the site_settings table and edited in /admin → pages.
 // Each key has defaults, so pages work before anything is saved.
 
@@ -162,9 +164,12 @@ export interface SiteSettings {
 	buttons: ButtonsSettings;
 	about: AboutSettings;
 	aboutAlt: AboutAltSettings;
+	/** Themes (see $lib/themes). */
+	themes: ThemesSettings;
 }
 
 export const settingDefaults: SiteSettings = {
+	themes: themeDefaults,
 	home: {
 		intro: 'my corner of the internet — osu! tournaments, IT garbage, music & whatever else i feel like putting here.',
 		wip: [

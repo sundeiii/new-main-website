@@ -330,7 +330,7 @@
 			hidden: true,
 			action: () => {
 				// The layout owns the theme; it listens for this and toggles the trans theme.
-				const on = !document.documentElement.classList.contains('trans');
+				const on = localStorage.getItem('site-theme') !== 'trans';
 				window.dispatchEvent(new CustomEvent('trans-theme', { detail: on }));
 				const flag = ['#5BCEFA', '#F5A9B8', '#FFFFFF', '#F5A9B8', '#5BCEFA']
 					.map((c) => `<span style="color: ${c}">██████</span>`)
