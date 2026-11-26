@@ -139,6 +139,34 @@
 	}
 	$: if (browser && activeTab === 'stats') loadStats(period);
 	$: s = stats[period];
+
+	// ── from my own play log: the listening clock and monthly recaps ──
+	type Recap = {
+		month: string;
+		partial: boolean;
+		plays: number;
+		minutes: number;
+		days: number;
+		topTrack: { name: string; artist: string; plays: number; image: string | null; url: string } | null;
+		topArtist: { name: string; plays: number } | null;
+		newArtists: string[] | null;
+		busiestDay: { day: string; plays: number } | null;
+	};
+	let insights: { clock: number[]; clockPlays: number; recaps: Recap[] } | null = null;
+	$: if (browser && activeTab === 'stats' && !insights)
+		fetch('/api/plays/insights')
+			.then((r) => (r.ok ? r.json() : null))
+			.then((d) => {
+				insights = d ?? { clock: [], clockPlays: 0, recaps: [] };
+				for (const rc of insights!.recaps) [rc.topTrack?.name, rc.topTrack?.artist, rc.topArtist?.name, ...(rc.newArtists ?? [])].forEach((t) => t && romanize(t));
+			})
+			.catch(() => (insights = { clock: [], clockPlays: 0, recaps: [] }));
+	let hoverHour: number | null = null;
+	$: clockMax = Math.max(1, ...(insights?.clock ?? []));
+	$: peakHour = insights?.clock.length ? insights.clock.indexOf(Math.max(...insights.clock)) : null;
+	const hh = (h: number) => `${String(h).padStart(2, '0')}:00`;
+	const monthName = (m: string) => new Date(m + '-01T12:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }).toLowerCase();
+	const dayName = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }).toLowerCase();
 	// Spotify (used when last.fm is down) has no play counts, so rows may come without plays.
 	type StatRow = { name: string; sub: string; plays?: number; url: string };
 	$: statLists = s
@@ -356,6 +384,54 @@
 						<p class="text-xs text-ocean-500">from <a href={s.url} target="_blank" rel="noopener noreferrer" class="underline">last.fm</a> · updates every ~10 minutes</p>
 					{/if}
 				{/if}
+
+				{#if insights?.clockPlays}
+					<!-- listening clock: plays per hour of the day (estonian time), last ~3 months -->
+					<div class="glass rounded-2xl border border-ocean-300/50 dark:border-ocean-700/50 p-4 mt-4">
+						<div class="flex items-baseline justify-between gap-4 mb-3">
+							<span class={label}>listening clock</span>
+							<span class="text-xs {muted} tabular-nums">
+								{#if hoverHour !== null}{hh(hoverHour)}–{hh((hoverHour + 1) % 24)}: <span class={strong}>{insights.clock[hoverHour]}</span> plays{:else if peakHour !== null}most at <span class={strong}>{hh(peakHour)}</span>{/if}
+							</span>
+						</div>
+						<div class="flex items-end h-28 border-b border-ocean-300/70 dark:border-ocean-700/70" role="img" aria-label="plays per hour of the day" on:mouseleave={() => (hoverHour = null)}>
+							{#each insights.clock as count, h}
+								<div class="flex-1 h-full flex items-end px-px" on:mouseenter={() => (hoverHour = h)} title="{hh(h)}: {count} plays">
+									<div class="w-full rounded-t accent-bg transition-opacity {hoverHour !== null && hoverHour !== h ? 'opacity-40' : ''}" style="height: {count ? Math.max(4, (count / clockMax) * 100) : 0}%" />
+								</div>
+							{/each}
+						</div>
+						<div class="flex justify-between text-[11px] {muted} mt-1.5 tabular-nums"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
+						<p class="text-xs text-ocean-500 mt-2">{insights.clockPlays.toLocaleString('en-US')} plays from the last ~3 months, in estonian time</p>
+					</div>
+				{/if}
+
+				{#each insights?.recaps ?? [] as recap}
+					<!-- monthly recap from the play log -->
+					<div class="glass rounded-2xl border border-ocean-300/50 dark:border-ocean-700/50 p-4 flex flex-col gap-4">
+						<span class={label}>{monthName(recap.month)}{recap.partial ? ' so far' : ''}</span>
+						<div class="grid grid-cols-3 gap-3 text-center">
+							{#each [{ k: 'plays', v: recap.plays }, { k: 'minutes', v: recap.minutes }, { k: 'days listening', v: recap.days }] as t}
+								<div><div class="text-2xl tabular-nums {strong}">{num(t.v)}</div><div class="text-xs {muted}">{t.k}</div></div>
+							{/each}
+						</div>
+						{#if recap.topTrack}
+							<div class="flex items-center gap-4 min-w-0">
+								{#if recap.topTrack.image}<img src={recap.topTrack.image} alt="" class="w-14 h-14 rounded-lg shrink-0" />{/if}
+								<div class="min-w-0">
+									<div class={label}>song of the month · {recap.topTrack.plays} plays</div>
+									<a href={recap.topTrack.url || undefined} target="_blank" rel="noopener noreferrer" class="block truncate {strong} hover:underline">{r(recap.topTrack.name)}</a>
+									<div class="truncate text-sm {muted}">{r(recap.topTrack.artist)}</div>
+								</div>
+							</div>
+						{/if}
+						<div class="flex flex-col gap-1 text-sm {muted}">
+							{#if recap.topArtist}<span>most played artist: <span class={strong}>{r(recap.topArtist.name)}</span> ({recap.topArtist.plays} plays)</span>{/if}
+							{#if recap.busiestDay}<span>busiest day: <span class={strong}>{dayName(recap.busiestDay.day)}</span> ({recap.busiestDay.plays} plays)</span>{/if}
+							{#if recap.newArtists?.length}<span>new artists: <span class={strong}>{recap.newArtists.length}</span> ({recap.newArtists.slice(0, 5).map(r).join(', ')}{recap.newArtists.length > 5 ? ', …' : ''})</span>{/if}
+						</div>
+					</div>
+				{/each}
 			</div>
 		{/if}
 	</div>

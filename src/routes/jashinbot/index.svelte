@@ -1,9 +1,16 @@
 <svelte:head>
 	<title>jashinbot</title>
-	<meta name="description" content="jashinbot — twitch bot for sundeiiii_ streams. commands, features, and setup info." />
+	<meta property="og:title" content="jashinbot" />
+	<meta name="description" content="jashinbot: the twitch bot on my streams. commands, features and how it works." />
+	<meta property="og:description" content="jashinbot: the twitch bot on my streams. commands, features and how it works." />
 </svelte:head>
 
 <script lang="ts">
+	// jashinbot, the twitch bot on my streams: what it does and every command.
+	import { fly } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
+	import { app } from '$lib/components/site/app';
+
 	let activeCategory = 'osu';
 
 	const categories = [
@@ -129,103 +136,61 @@
 			desc: 'local web dashboard with live chat, mod log, queue management, Spotify controls, and stream stats.'
 		},
 	];
+
+	const rise = (i: number) => (app.hydrated ? { y: 12, duration: 500, delay: 60 + i * 70, easing: cubicOut } : { duration: 0 });
+	const label = 'text-[11px] uppercase tracking-widest text-ocean-500';
+	const muted = 'text-ocean-600 dark:text-ocean-400';
+	const strong = 'text-ocean-900 dark:text-ocean-100';
+	const card = 'glass rounded-2xl border border-ocean-300/50 dark:border-ocean-700/50';
+	const segment = 'flex flex-wrap gap-1 p-1 rounded-full glass border border-ocean-300/50 dark:border-ocean-700/50 text-xs w-fit';
+	const segBtn = (on: boolean) => `px-3 py-1 rounded-full transition-colors ${on ? 'accent-soft ' + strong : muted + ' hover:text-ocean-900 dark:hover:text-ocean-100'}`;
 </script>
 
-<section class="p-8 sm:p-12 lg:p-24 lg:py-16 font-cascadia">
-	<div class="flex flex-col gap-16">
-
-		<!-- Hero -->
-		<div class="flex flex-col gap-4">
-			<div class="flex items-center gap-3">
-				<span class="text-3xl">🤖</span>
-				<h1 class="text-ocean-900 dark:text-ocean-100">jashinbot</h1>
-			</div>
-			<p class="text-ocean-600 dark:text-ocean-400 max-w-xl">
-				twitch bot running on <a href="https://twitch.tv/sundeiiii_" target="_blank" rel="noopener" class="text-ocean-800 dark:text-ocean-200 underline underline-offset-2 hover:text-ocean-600 dark:hover:text-ocean-400 transition-colors">sundeiiii_</a>'s stream.
-				osu! commands powered by <a href="https://github.com/tosuapp/tosu" target="_blank" rel="noopener" class="text-ocean-800 dark:text-ocean-200 underline underline-offset-2 hover:text-ocean-600 dark:hover:text-ocean-400 transition-colors">tosu</a> and the osu! API v2.
+<section class="px-8 sm:px-12 lg:px-24 pt-8 sm:pt-12 pb-4 font-cascadia flex flex-col gap-14 max-w-6xl">
+	<header class="flex flex-col gap-4" in:fly={rise(0)}>
+		<div>
+			<h1 class="text-3xl {strong}">jashinbot <span class="text-2xl">🤖</span></h1>
+			<p class="text-sm {muted} mt-2 max-w-xl">
+				the twitch bot on <a href="https://twitch.tv/sundeiiii_" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 {strong}">sundeiiii_</a>'s streams.
+				osu! commands are powered by <a href="https://github.com/tosuapp/tosu" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 {strong}">tosu</a> and the osu! api v2.
 			</p>
-            <div class="flex gap-3 flex-wrap">
-                <a
-                    href="https://twitch.tv/sundeiiii_"
-                    target="_blank"
-                    rel="noopener"
-                    class="inline-flex items-center gap-2 px-4 py-2 bg-ocean-600 hover:bg-ocean-700 dark:bg-ocean-700 dark:hover:bg-ocean-600 text-white rounded transition-colors text-sm font-medium"
-                >
-                    <span>📺</span> watch stream
-                </a>
-                <a
-                    href="https://osu.ppy.sh/users/sodanator"
-                    target="_blank"
-                    rel="noopener"
-                    class="inline-flex items-center gap-2 px-4 py-2 border border-ocean-300 dark:border-ocean-700 hover:border-ocean-500 dark:hover:border-ocean-500 text-ocean-800 dark:text-ocean-200 rounded transition-colors text-sm font-medium"
-                >
-                    <span>🎵</span> osu! profile
-                </a>
-            </div>
 		</div>
-
-		<!-- Features -->
-		<div class="flex flex-col gap-5">
-			<h2 class="text-ocean-900 dark:text-ocean-100">features</h2>
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-				{#each features as f}
-					<div class="border border-ocean-200 dark:border-ocean-800 rounded-lg p-5 bg-ocean-50 dark:bg-ocean-900 flex flex-col gap-2">
-						<div class="flex items-center gap-2">
-							<span class="text-xl">{f.icon}</span>
-							<span class="font-medium text-ocean-900 dark:text-ocean-100">{f.title}</span>
-						</div>
-						<p class="text-sm text-ocean-600 dark:text-ocean-400 leading-relaxed">{f.desc}</p>
-					</div>
-				{/each}
-			</div>
+		<div class="flex gap-2 flex-wrap text-sm">
+			<a href="https://twitch.tv/sundeiiii_" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-full accent-bg transition-opacity hover:opacity-90">📺 watch the stream</a>
+			<a href="https://osu.ppy.sh/users/sodanator" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-full {card} {strong} hover:opacity-90">osu! profile</a>
 		</div>
+	</header>
 
-		<!-- Commands -->
-		<div class="flex flex-col gap-5">
-			<h2 class="text-ocean-900 dark:text-ocean-100">commands</h2>
-
-			<!-- Category tabs -->
-			<div class="flex gap-1 flex-wrap border-b border-ocean-200 dark:border-ocean-800">
-				{#each categories as cat}
-					<button
-						on:click={() => activeCategory = cat.id}
-						class="px-4 py-2 text-sm font-medium transition-colors {activeCategory === cat.id
-							? 'text-ocean-900 dark:text-ocean-100 border-b-2 border-ocean-600 dark:border-ocean-400 -mb-px'
-							: 'text-ocean-500 dark:text-ocean-500 hover:text-ocean-800 dark:hover:text-ocean-300'}"
-					>
-						{cat.label}
-					</button>
-				{/each}
-			</div>
-
-			{#if activeCategory === 'mod'}
-				<p class="text-xs text-ocean-500 dark:text-ocean-500">mod, broadcaster and VIP only.</p>
-			{/if}
-
-			<!-- Command table -->
-			<div class="flex flex-col gap-0 border border-ocean-200 dark:border-ocean-800 rounded-lg overflow-hidden">
-				{#each commands[activeCategory] as cmd, i}
-					<div class="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-6 px-5 py-4 {i % 2 === 0 ? 'bg-white dark:bg-ocean-900' : 'bg-ocean-50 dark:bg-ocean-950'}">
-                        <div class="flex-shrink-0 w-full sm:w-64">
-                            <code class="text-sm text-ocean-800 dark:text-ocean-200 font-cascadia">
-                                {@html cmd.cmd + (cmd.args ? ` <span class="text-ocean-500 dark:text-ocean-500">${cmd.args}</span>` : '')}
-                            </code>
-                        </div>
-						<div class="flex-1 flex flex-col gap-1">
-							<p class="text-sm text-ocean-700 dark:text-ocean-400">{cmd.desc}</p>
-							{#if cmd.example}
-								<code class="text-xs text-ocean-400 dark:text-ocean-600">{cmd.example}</code>
-							{/if}
-						</div>
-					</div>
-				{/each}
-			</div>
+	<div class="flex flex-col gap-3" in:fly={rise(1)}>
+		<span class={label}>features</span>
+		<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+			{#each features as f}
+				<div class="{card} p-4 flex flex-col gap-2">
+					<span class="text-sm {strong}"><span class="mr-1.5">{f.icon}</span>{f.title}</span>
+					<p class="text-sm {muted} leading-relaxed">{f.desc}</p>
+				</div>
+			{/each}
 		</div>
-
-		<!-- Footer note -->
-		<p class="text-xs text-ocean-400 dark:text-ocean-600">
-			jashinbot is a custom node.js bot — not a public service. running locally during streams.
-		</p>
-
 	</div>
+
+	<div class="flex flex-col gap-4" in:fly={rise(2)}>
+		<span class={label}>commands</span>
+		<div class={segment}>
+			{#each categories as cat}<button on:click={() => (activeCategory = cat.id)} class={segBtn(activeCategory === cat.id)}>{cat.label}</button>{/each}
+		</div>
+		{#if activeCategory === 'mod'}<p class="text-xs {muted}">mods, the broadcaster and VIPs only.</p>{/if}
+		<dl class="{card} px-4">
+			{#each commands[activeCategory] as cmd, i}
+				<div class="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-6 py-3 {i ? 'border-t border-ocean-300/50 dark:border-ocean-700/50' : ''}">
+					<dt class="sm:w-64 shrink-0 text-sm"><code class={strong}>{cmd.cmd}</code>{#if cmd.args}<code class="text-ocean-500"> {cmd.args}</code>{/if}</dt>
+					<dd class="flex-1 min-w-0 flex flex-col gap-0.5">
+						<span class="text-sm {muted}">{cmd.desc}</span>
+						{#if cmd.example}<code class="text-xs text-ocean-500">{cmd.example}</code>{/if}
+					</dd>
+				</div>
+			{/each}
+		</dl>
+	</div>
+
+	<p class="text-xs text-ocean-500">jashinbot is a custom node.js bot, not a public service. it runs on my pc during streams.</p>
 </section>

@@ -326,6 +326,9 @@
 
 	let clockId: ReturnType<typeof setInterval>;
 
+	// Today's most played song from the play log, once it's had 3+ plays.
+	let onRepeat: { name: string; artist: string; image: string | null; url: string; plays: number } | null = null;
+
 	onMount(async () => {
 		clockId = setInterval(() => { now = new Date(); }, 500);
 
@@ -333,6 +336,10 @@
 		fetch('/api/recent-tracks')
 			.then((r) => (r.ok ? r.json() : null))
 			.then((t) => t && (lastPlayedTrack = t))
+			.catch(() => {});
+		fetch('/api/plays/insights')
+			.then((r) => (r.ok ? r.json() : null))
+			.then((d) => (onRepeat = d?.repeat ?? null))
 			.catch(() => {});
 
 		// start now-playing polling and timer
@@ -520,6 +527,20 @@
 								<div class="min-w-0">
 									<a href={lastTrack.track?.external_urls?.spotify} target="_blank" rel="noopener noreferrer" class="block truncate {strong} hover:underline">{romanizedLastSong || lastTrack.track?.name}</a>
 									<div class="truncate text-sm text-ocean-700 dark:text-ocean-300">{romanizedLastArtist || artistNames(lastTrack.track?.artists)}</div>
+								</div>
+							</div>
+						</li>
+					{/if}
+
+					{#if onRepeat}
+						<li class="relative pl-7" transition:slide|local={grow}>
+							<span class="absolute -left-[6px] top-1 w-[11px] h-[11px] rounded-full bg-ocean-400 dark:bg-ocean-600" />
+							<div class="{label} mb-2">on repeat · {onRepeat.plays} plays today</div>
+							<div class="flex items-center gap-4 min-w-0">
+								{#if onRepeat.image}<img src={onRepeat.image} alt="" class="w-14 h-14 rounded-lg shrink-0" />{/if}
+								<div class="min-w-0">
+									<a href={onRepeat.url || undefined} target="_blank" rel="noopener noreferrer" class="block truncate {strong} hover:underline">{onRepeat.name}</a>
+									<div class="truncate text-sm text-ocean-700 dark:text-ocean-300">{onRepeat.artist}</div>
 								</div>
 							</div>
 						</li>

@@ -90,3 +90,96 @@ export async function playStats(period: keyof typeof periodDays, isHiddenName: (
 		return null;
 	}
 }
+
+// ── insights: "on repeat" on the home page, the listening clock and monthly recaps on /music ──
+
+// Days, hours and months are counted in my own time zone, so "today" and "at 23:00" are mine.
+const TZ = 'Europe/Tallinn';
+const local = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' });
+function localParts(iso: string) {
+	const p = Object.fromEntries(local.formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
+	return { day: `${p.year}-${p.month}-${p.day}`, month: `${p.year}-${p.month}`, hour: Number(p.hour) };
+}
+// Last.fm scrobbles have no length; count those as an average song.
+const AVERAGE_SONG_MS = 210_000;
+
+export interface MonthRecap {
+	month: string; // YYYY-MM
+	partial: boolean; // the month isn't over yet
+	plays: number;
+	minutes: number;
+	days: number; // days with at least one play
+	topTrack: { name: string; artist: string; plays: number; image: string | null; url: string } | null;
+	topArtist: { name: string; plays: number } | null;
+	/** Artists first heard this month (null when the log doesn't reach back before it). */
+	newArtists: string[] | null;
+	busiestDay: { day: string; plays: number } | null;
+}
+
+export async function playInsights(isHiddenName: (name: string) => boolean) {
+	const since = new Date(Date.now() - 92 * DAY).toISOString();
+	const [rows, [{ first }], firsts] = await Promise.all([
+		sql('SELECT played_at, track, track_id, artist, artists, image, duration_ms FROM plays WHERE played_at >= ? ORDER BY played_at', [since]),
+		sql('SELECT MIN(played_at) AS first FROM plays'),
+		sql('SELECT MAX(artist) AS artist, MIN(played_at) AS first FROM plays GROUP BY lower(artist) HAVING MIN(played_at) >= ?', [since])
+	]);
+	const plays = rows
+		.filter((r: any) => !String(r.artists).split(', ').some(isHiddenName))
+		.map((r: any) => ({ ...r, ...localParts(r.played_at) }));
+	const trackKey = (p: any) => `${p.artist.toLowerCase()}|${p.track.toLowerCase()}`;
+	const trackInfo = (p: any) => ({
+		name: p.track,
+		artist: p.artists,
+		image: p.image ?? null,
+		url: p.track_id.startsWith('lastfm:') ? '' : `https://open.spotify.com/track/${p.track_id}`
+	});
+	function top<T>(list: T[], key: (x: T) => string) {
+		const counts = new Map<string, { item: T; plays: number }>();
+		for (const x of list) {
+			const k = key(x);
+			const c = counts.get(k);
+			if (c) c.plays++;
+			else counts.set(k, { item: x, plays: 1 });
+		}
+		return [...counts.values()].sort((a, b) => b.plays - a.plays);
+	}
+
+	// Today's most played song, if it's been on repeat (3+ plays).
+	const today = localParts(new Date().toISOString()).day;
+	const [repeat] = top(plays.filter((p) => p.day === today), trackKey);
+
+	// Plays per hour of the day over the last ~3 months.
+	const clock = Array.from({ length: 24 }, () => 0);
+	for (const p of plays) clock[p.hour]++;
+
+	const thisMonth = localParts(new Date().toISOString()).month;
+	const logStart = first ? localParts(first).month : thisMonth;
+	const months = [...new Set(plays.map((p) => p.month))].sort().reverse().slice(0, 2);
+	const recaps: MonthRecap[] = months.map((month) => {
+		const inMonth = plays.filter((p) => p.month === month);
+		const [tt] = top(inMonth, trackKey);
+		const [ta] = top(inMonth, (p) => p.artist.toLowerCase());
+		const [bd] = top(inMonth, (p) => p.day);
+		return {
+			month,
+			partial: month === thisMonth,
+			plays: inMonth.length,
+			minutes: Math.round(inMonth.reduce((n, p) => n + Number(p.duration_ms ?? AVERAGE_SONG_MS), 0) / 60000),
+			days: new Set(inMonth.map((p) => p.day)).size,
+			topTrack: tt ? { ...trackInfo(tt.item), plays: tt.plays } : null,
+			topArtist: ta ? { name: ta.item.artist, plays: ta.plays } : null,
+			newArtists:
+				logStart < month
+					? firsts.filter((a: any) => localParts(a.first).month === month && !isHiddenName(a.artist)).map((a: any) => a.artist)
+					: null,
+			busiestDay: bd ? { day: bd.item.day, plays: bd.plays } : null
+		};
+	});
+
+	return {
+		repeat: repeat && repeat.plays >= 3 ? { ...trackInfo(repeat.item), plays: repeat.plays } : null,
+		clock,
+		clockPlays: plays.length,
+		recaps
+	};
+}
