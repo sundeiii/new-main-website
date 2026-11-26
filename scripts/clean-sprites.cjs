@@ -10,7 +10,9 @@ const fs = require('fs');
 const path = require('path');
 
 const DIR = path.join(__dirname, '..', 'static', 'companion', 'ryo');
-const MAX_DEPTH = 14; // pixels; enough for a sticker border, small enough not to eat clothes
+// pixels; enough for a thin halo, small enough not to eat clothes. A thick sticker border needs
+// more: DEPTH=28 node scripts/clean-sprites.cjs sad.webp (that's what sad.webp got).
+const MAX_DEPTH = +process.env.DEPTH || 14;
 const RIM = 4; // how deep the pale-blue-rim rule reaches
 
 async function clean(file) {

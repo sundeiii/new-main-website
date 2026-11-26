@@ -121,7 +121,7 @@ export const DEFAULT_DIALOGUE: DialogueEntry[] = [
 		'{money}. this changes nothing. thank you anyway.'
 	]),
 	...lines('purchase', 'happy', ["i bought a new bass. don't ask how much.", 'my financial situation has changed.', 'i appear to be broke again.', 'i spent it on {item}. worth it.'], { cooldown: 0 }),
-	...lines('grass', 'hungry', ['grass is surprisingly versatile.', 'this grass has a surprisingly complex flavour.', "unfortunately, bass guitars aren't edible.", 'i spent my food money again.']),
+	...lines('grass', 'eating', ['grass is surprisingly versatile.', 'this grass has a surprisingly complex flavour.', "unfortunately, bass guitars aren't edible.", 'i spent my food money again.']),
 	...lines('headpat', 'headpat', ['what are you doing.', 'acceptable.', "i'll allow it.", "don't tell nijika.", 'hm.', 'this is surprisingly tolerable.', 'headpats are accepted. money is preferred.'], {
 		cooldown: 60
 	}),

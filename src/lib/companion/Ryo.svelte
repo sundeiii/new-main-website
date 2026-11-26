@@ -124,7 +124,9 @@
 		const pool = trans ? [...s.dialogue, ...TRANS_LINES.map((text, i) => transEntry(text, i))] : s.dialogue;
 		const picked = pickLine(pool, trigger, context(extra), memory, s.behaviour.rareChance);
 		if (!picked) return null;
-		show(picked.text, picked.entry.expression);
+		// Grass lines play the eating animation, also for lines saved before it existed (with "hungry").
+		const expr = trigger === 'grass' && picked.entry.expression === 'hungry' ? 'eating' : picked.entry.expression;
+		show(picked.text, expr);
 		if (preview) dispatch('said', picked.entry.id);
 		if (picked.entry.category === 'rare') stamp('ryo-sincere');
 		return picked;
@@ -184,7 +186,7 @@
 				persist();
 				burst('leaf', 4);
 				mood('eating_grass', 5000);
-				say('grass') ?? show('grass. thank you.', 'hungry');
+				say('grass') ?? show('grass. thank you.', 'eating');
 				if (memory.grass >= (s.achievements.grass ?? 10)) stamp('ryo-grass');
 				break;
 			case 'song':
