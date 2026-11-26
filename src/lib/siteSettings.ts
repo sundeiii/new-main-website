@@ -224,6 +224,20 @@ export interface WeatherSettings {
 	units: 'c' | 'f';
 }
 
+/** One link on /links. */
+export interface LinkItem {
+	label: string;
+	href: string;
+	/** Username or short address shown next to the label, like @sundeiii. */
+	handle: string;
+	note: string;
+}
+/** The /links page: all my profiles in one place, in groups. */
+export interface LinksSettings {
+	intro: string;
+	groups: { title: string; items: LinkItem[] }[];
+}
+
 export interface SiteSettings {
 	home: HomeSettings;
 	now: NowSettings;
@@ -240,9 +254,43 @@ export interface SiteSettings {
 	status: StatusSettings;
 	live: LiveTournamentSettings;
 	seasonal: SeasonalSettings;
+	links: LinksSettings;
 }
 
 export const settingDefaults: SiteSettings = {
+	links: {
+		intro: "everywhere you can find me, in one place.",
+		groups: [
+			{
+				title: 'socials',
+				items: [
+					{ label: 'twitter', href: 'https://twitter.com/deprivedsundei', handle: '@deprivedsundei', note: '' },
+					{ label: 'twitch', href: 'https://twitch.tv/sundeiiii_', handle: 'sundeiiii_', note: 'osu! and tournament streams' },
+					{ label: 'github', href: 'https://github.com/sundeiii', handle: 'sundeiii', note: '' },
+					{ label: 'email', href: 'mailto:sundei@sundei.ee', handle: 'sundei@sundei.ee', note: '' }
+				]
+			},
+			{
+				title: 'osu!',
+				items: [
+					{ label: 'osu! profile', href: 'https://osu.ppy.sh/users/sodanator', handle: 'sodanator', note: '' },
+					{ label: 'reprise', href: 'https://osu.reprise.pw', handle: 'osu.reprise.pw', note: 'my osu! server' },
+					{ label: 'centaurea', href: 'https://centaurea.ee', handle: 'centaurea.ee', note: 'estonian osu! tournaments' }
+				]
+			},
+			{
+				title: 'music',
+				items: [{ label: 'last.fm', href: 'https://www.last.fm/user/sundeii', handle: 'sundeii', note: '' }]
+			},
+			{
+				title: 'on this site',
+				items: [
+					{ label: 'rss feed', href: '/rss.xml', handle: '', note: 'new posts and events' },
+					{ label: 'guestbook', href: '/guestbook', handle: '', note: 'leave a message' }
+				]
+			}
+		]
+	},
 	themes: themeDefaults,
 	weather: { show: true, city: 'Tartu', label: '', units: 'c' },
 	live: { show: false, name: '', link: '', banner: '', stage: '', twitch: '', role: '', note: '', matches: [] },

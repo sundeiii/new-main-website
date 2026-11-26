@@ -9,7 +9,7 @@
 	import GalleryEditor from './GalleryEditor.svelte';
 	import ThemesEditor from './ThemesEditor.svelte';
 	import type { ThemesSettings } from '$lib/themes';
-	import type { AboutAltSettings, AboutSettings, ButtonsSettings, GallerySettings, HomeSettings, MusicSettings, NowSettings, OsuSettings, SkinsSettings, WeatherSettings, LiveTournamentSettings, StatusSettings, SeasonalSettings } from '$lib/siteSettings';
+	import type { AboutAltSettings, AboutSettings, ButtonsSettings, GallerySettings, HomeSettings, MusicSettings, NowSettings, OsuSettings, SkinsSettings, WeatherSettings, LiveTournamentSettings, StatusSettings, SeasonalSettings, LinksSettings } from '$lib/siteSettings';
 
 	export let onUnauthorized: () => void;
 	import type { PageSection } from './sections';
@@ -31,6 +31,7 @@
 	let live: LiveTournamentSettings | null = null;
 	let status: StatusSettings | null = null;
 	let seasonal: SeasonalSettings | null = null;
+	let links: LinksSettings | null = null;
 	let changelog: { id: number; date: string; text: string }[] = [];
 
 	let error = '';
@@ -42,7 +43,7 @@
 	async function load() {
 		error = '';
 		try {
-			[home, now, osu, music, skins, gallery, buttons, about, aboutAlt, themes, weather, live, status, seasonal, changelog] = await Promise.all([
+			[home, now, osu, music, skins, gallery, buttons, about, aboutAlt, themes, weather, live, status, seasonal, links, changelog] = await Promise.all([
 				api('/api/admin/site/home', 'GET'),
 				api('/api/admin/site/now', 'GET'),
 				api('/api/admin/site/osu', 'GET'),
@@ -57,6 +58,7 @@
 				api('/api/admin/site/live', 'GET'),
 				api('/api/admin/site/status', 'GET'),
 				api('/api/admin/site/seasonal', 'GET'),
+				api('/api/admin/site/links', 'GET'),
 				api('/api/admin/changelog', 'GET')
 			]);
 		} catch (e) {
@@ -64,7 +66,7 @@
 		}
 	}
 
-	async function save(key: 'home' | 'now' | 'osu' | 'music' | 'skins' | 'gallery' | 'buttons' | 'about' | 'aboutAlt' | 'themes' | 'weather' | 'live' | 'status' | 'seasonal', value: unknown) {
+	async function save(key: 'home' | 'now' | 'osu' | 'music' | 'skins' | 'gallery' | 'buttons' | 'about' | 'aboutAlt' | 'themes' | 'weather' | 'live' | 'status' | 'seasonal' | 'links', value: unknown) {
 		busy = true;
 		error = saved = '';
 		try {
@@ -83,6 +85,7 @@
 			if (key === 'live') live = result;
 			if (key === 'status') status = result;
 			if (key === 'seasonal') seasonal = result;
+			if (key === 'links') links = result;
 			saved = 'saved';
 			setTimeout(() => (saved = ''), 2000);
 		} catch (e) {
@@ -625,6 +628,35 @@
 			<div><button on:click={() => status && (status.items = [...status.items, { name: '', link: '', check: '', players: '', note: '' }])} class={subtle}>+ server</button></div>
 			<p class="text-xs text-ocean-500">checked from this site's server about once a minute. cards without a name or check address are dropped when you save.</p>
 			<div><button on:click={() => save('status', status)} class={primary} disabled={busy}>save</button></div>
+		</div>
+
+	<!-- LINKS -->
+	{:else if active === 'links' && links}
+		<div class="flex flex-col gap-4">
+			<div><label for="l-intro" class={fieldLabel}>intro</label><input id="l-intro" bind:value={links.intro} maxlength="300" class={field} /></div>
+			{#each links.groups as g, gi}
+				<div class="rounded-2xl border border-ocean-300/60 dark:border-ocean-700/60 p-4 flex flex-col gap-3">
+					<div class="flex gap-2 items-end">
+						<div class="flex-1"><label for="l-group-{gi}" class={fieldLabel}>group</label><input id="l-group-{gi}" bind:value={g.title} maxlength="60" class={field} /></div>
+						<button on:click={() => links && (links.groups = move(links.groups, gi, -1))} class={subtle} aria-label="move group up">▲</button>
+						<button on:click={() => links && (links.groups = links.groups.filter((_, j) => j !== gi))} class={danger} aria-label="remove group">✕</button>
+					</div>
+					{#each g.items as l, li}
+						<div class="flex flex-wrap sm:flex-nowrap gap-2 items-center">
+							<input bind:value={l.label} placeholder="name" aria-label="link name" class="{field} sm:!w-36" />
+							<input bind:value={l.href} placeholder="https://… or /page or mailto:" aria-label="link address" class={field} />
+							<input bind:value={l.handle} placeholder="@handle (optional)" aria-label="handle" class="{field} sm:!w-44" />
+							<input bind:value={l.note} placeholder="note (optional)" aria-label="note" class={field} />
+							<button on:click={() => (g.items = move(g.items, li, -1))} class={subtle} aria-label="move link up">▲</button>
+							<button on:click={() => (g.items = g.items.filter((_, j) => j !== li))} class={danger} aria-label="remove link">✕</button>
+						</div>
+					{/each}
+					<div><button on:click={() => (g.items = [...g.items, { label: '', href: '', handle: '', note: '' }])} class={subtle}>+ link</button></div>
+				</div>
+			{/each}
+			<div><button on:click={() => links && (links.groups = [...links.groups, { title: '', items: [] }])} class={subtle}>+ group</button></div>
+			<p class="text-xs text-ocean-500">links without a name or a valid address are dropped when you save.</p>
+			<div><button on:click={() => save('links', links)} class={primary} disabled={busy}>save</button></div>
 		</div>
 
 	<!-- SEASONAL -->

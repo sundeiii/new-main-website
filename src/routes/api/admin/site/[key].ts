@@ -149,6 +149,18 @@ const clean: { [K in keyof SiteSettings]: (v: any) => SiteSettings[K] } = {
 		birthdayText: str(v?.birthdayText, 120),
 		newYear: v?.newYear !== false
 	}),
+	links: (v) => ({
+		intro: str(v?.intro, 300),
+		groups: list(v?.groups, 12, (g: any) => {
+			const items = list(g?.items, 30, (l: any) => {
+				const href = str(l?.href, 500);
+				return str(l?.label, 60) && /^(https?:\/\/|mailto:|\/(?!\/))/.test(href)
+					? { label: str(l.label, 60), href, handle: str(l?.handle, 80), note: str(l?.note, 150) }
+					: null;
+			});
+			return str(g?.title, 60) || items.length ? { title: str(g?.title, 60), items } : null;
+		})
+	}),
 	status: (v) => ({
 		show: v?.show !== false,
 		title: str(v?.title, 60) || 'running right now',

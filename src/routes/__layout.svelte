@@ -65,6 +65,7 @@
 		{ href: '/now', label: 'now' },
 		{ href: '/projects', label: 'projects' },
 		{ href: '/uses', label: 'uses' },
+		{ href: '/links', label: 'links' },
 		{ href: '/changelog', label: 'changelog' },
 		{ href: '/rss.xml', label: 'rss' }
 	];
