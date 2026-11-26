@@ -4,11 +4,13 @@ import { PERIODS, type Period, lastfmConfigured, lastfmStats } from '$lib/server
 import { hiddenArtistFilter } from '$lib/server/hiddenArtists';
 import { loadCached, saveCached } from '$lib/server/apiCache';
 import { getSpotifyAccessToken } from '$lib/server/spotify';
+import { playStats, syncPlays } from '$lib/server/plays';
 
 // Stats for /music: ?period=7day|1month|12month|overall. Last.fm first (scrobble counts and
 // top lists). If it's down, or the key stops working (Last.fm needs Pro for API keys from
-// December 2026), Spotify's top artists/tracks are used instead (source: 'spotify', no counts).
-// If both fail, the last Last.fm stats that loaded are served with staleSince set.
+// December 2026), the site's own play log is used once it covers the period (source: 'log'),
+// then Spotify's top artists/tracks (source: 'spotify', no counts). If all of that fails, the
+// last Last.fm stats that loaded are served with staleSince set.
 
 // Spotify only has three ranges: about 4 weeks, 6 months and a year.
 const spotifyRange = { '7day': 'short_term', '1month': 'short_term', '12month': 'medium_term', overall: 'long_term' } as const;
@@ -51,6 +53,10 @@ export const GET: RequestHandler = async ({ url, platform }) => {
 			console.error('Last.fm stats failed, trying Spotify:', error);
 		}
 	}
+
+	await syncPlays(platform).catch((error) => console.error('Play sync failed:', error));
+	const logged = await playStats(period, isHiddenName);
+	if (logged) return json(logged, { headers: { 'Cache-Control': 'public, max-age=0, s-maxage=600, stale-while-revalidate=3600' } });
 
 	try {
 		return json(await spotifyStats(period, platform, isHidden, isHiddenName), {

@@ -116,6 +116,18 @@ export const SCHEMA = [
 		day TEXT PRIMARY KEY,
 		views INTEGER NOT NULL DEFAULT 0
 	)`,
+	// Every Spotify play, copied from Spotify's last-50 list by /api/plays/sync (see plays.ts).
+	`CREATE TABLE IF NOT EXISTS plays (
+		played_at TEXT PRIMARY KEY,
+		track_id TEXT NOT NULL,
+		track TEXT NOT NULL,
+		artist TEXT NOT NULL,
+		artist_id TEXT,
+		artists TEXT NOT NULL,
+		album TEXT,
+		image TEXT,
+		duration_ms INTEGER
+	)`,
 	// Last good responses from outside services, shown while the service is down.
 	`CREATE TABLE IF NOT EXISTS api_cache (
 		k TEXT PRIMARY KEY,

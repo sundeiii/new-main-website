@@ -1,0 +1,15 @@
+# Every hour, copy Spotify's recent plays into the site's play log (/api/plays/sync).
+# Spotify only remembers the last 50 plays, and nobody plays 50 songs in an hour.
+name: sync plays
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: curl -fsS --max-time 60 https://sundei.ee/api/plays/sync

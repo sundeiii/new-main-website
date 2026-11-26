@@ -315,7 +315,7 @@
 					{#if s.source !== 'spotify'}
 					<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
 						{#each [
-							{ label: 'scrobbles', value: num(s.total), sub: `since ${new Date(s.since).getFullYear()}` },
+							{ label: s.source === 'log' ? 'plays' : 'scrobbles', value: num(s.total), sub: `since ${new Date(s.since).getFullYear()}` },
 							{ label: 'last 24 hours', value: num(s.last24h), sub: 'songs' },
 							{ label: 'last 7 days', value: num(s.last7d), sub: `~${Math.round(s.last7d / 7)} a day` },
 							{ label: 'per day', value: num(Math.round(s.total / Math.max(1, (Date.now() - s.since) / 864e5))), sub: 'on average' }
@@ -350,6 +350,8 @@
 					</div>
 					{#if s.source === 'spotify'}
 						<p class="text-xs text-ocean-500">from spotify, over {s.span} · last.fm isn't available right now, so there are no play counts</p>
+					{:else if s.source === 'log'}
+						<p class="text-xs text-ocean-500">from my own spotify play log, kept since {new Date(s.since).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · updates every hour</p>
 					{:else}
 						<p class="text-xs text-ocean-500">from <a href={s.url} target="_blank" rel="noopener noreferrer" class="underline">last.fm</a> · updates every ~10 minutes</p>
 					{/if}
