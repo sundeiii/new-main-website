@@ -7,6 +7,7 @@ import { getSpotifyAccessToken } from '$lib/server/spotify';
 // into the plays table (GitHub Actions calls it every hour, see .github/workflows/sync-plays.yml).
 // Plays are keyed by their timestamp, so syncing the same ones again changes nothing.
 // From that log, /music can show play counts and top lists without last.fm.
+// Older history comes from last.fm (scripts/import-lastfm.cjs); those rows have track_id 'lastfm:…'.
 
 const MIN_GAP = 60_000; // don't ask Spotify more than once a minute, however often sync is called
 
@@ -61,8 +62,13 @@ export async function playStats(period: keyof typeof periodDays, isHiddenName: (
 		const [[{ day }], [{ week }], artists, tracks] = await Promise.all([
 			sql('SELECT COUNT(*) AS day FROM plays WHERE played_at >= ?', [iso(DAY)]),
 			sql('SELECT COUNT(*) AS week FROM plays WHERE played_at >= ?', [iso(7 * DAY)]),
-			sql('SELECT artist, artist_id, COUNT(*) AS plays FROM plays WHERE played_at >= ? GROUP BY artist ORDER BY plays DESC LIMIT 30', [from]),
-			sql('SELECT track, track_id, artists, artist, COUNT(*) AS plays FROM plays WHERE played_at >= ? GROUP BY track_id ORDER BY plays DESC LIMIT 40', [from])
+			// Grouped by name, so imported last.fm scrobbles (no Spotify ids) count together with Spotify plays.
+			sql('SELECT MAX(artist) AS artist, MAX(artist_id) AS artist_id, COUNT(*) AS plays FROM plays WHERE played_at >= ? GROUP BY lower(artist) ORDER BY plays DESC LIMIT 30', [from]),
+			sql(
+				`SELECT MAX(track) AS track, MAX(CASE WHEN track_id NOT LIKE 'lastfm:%' THEN track_id END) AS track_id, MAX(artists) AS artists, COUNT(*) AS plays
+				FROM plays WHERE played_at >= ? GROUP BY lower(artist), lower(track) ORDER BY plays DESC LIMIT 40`,
+				[from]
+			)
 		]);
 		return {
 			source: 'log' as const,
@@ -77,7 +83,7 @@ export async function playStats(period: keyof typeof periodDays, isHiddenName: (
 			topTracks: tracks
 				.filter((t: any) => !t.artists.split(', ').some(isHiddenName))
 				.slice(0, 10)
-				.map((t: any) => ({ name: t.track, artist: t.artists, plays: Number(t.plays), url: `https://open.spotify.com/track/${t.track_id}` }))
+				.map((t: any) => ({ name: t.track, artist: t.artists, plays: Number(t.plays), url: t.track_id ? `https://open.spotify.com/track/${t.track_id}` : '' }))
 		};
 	} catch (error: any) {
 		if (!isMissingTable(error)) console.error('Failed to load play log stats:', error);

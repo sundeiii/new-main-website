@@ -333,7 +333,7 @@
 							<div class="flex flex-col gap-2">
 								<span class={label}>{list.title}</span>
 								{#each list.rows as row, i}
-									<a href={row.url} target="_blank" rel="noopener noreferrer" class="group relative block rounded-lg overflow-hidden text-sm">
+									<a href={row.url || undefined} target="_blank" rel="noopener noreferrer" class="group relative block rounded-lg overflow-hidden text-sm">
 										{#if row.plays !== undefined}<span class="absolute inset-y-0 left-0 accent-soft transition-all duration-500" style="width: {(row.plays / (list.rows[0]?.plays || 1)) * 100}%" />{/if}
 										<span class="relative flex items-baseline gap-2 px-3 py-1.5">
 											<span class="text-ocean-500 w-5 text-right shrink-0 tabular-nums">{i + 1}</span>
