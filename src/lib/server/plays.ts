@@ -63,10 +63,10 @@ export async function playStats(period: keyof typeof periodDays, isHiddenName: (
 			sql('SELECT COUNT(*) AS day FROM plays WHERE played_at >= ?', [iso(DAY)]),
 			sql('SELECT COUNT(*) AS week FROM plays WHERE played_at >= ?', [iso(7 * DAY)]),
 			// Grouped by name, so imported last.fm scrobbles (no Spotify ids) count together with Spotify plays.
-			sql('SELECT MAX(artist) AS artist, MAX(artist_id) AS artist_id, COUNT(*) AS plays FROM plays WHERE played_at >= ? GROUP BY lower(artist) ORDER BY plays DESC LIMIT 30', [from]),
+			sql('SELECT MAX(artist) AS artist, MAX(artist_id) AS artist_id, COUNT(*) AS plays FROM plays WHERE played_at >= ? GROUP BY lower(artist) ORDER BY plays DESC LIMIT 100', [from]),
 			sql(
 				`SELECT MAX(track) AS track, MAX(CASE WHEN track_id NOT LIKE 'lastfm:%' THEN track_id END) AS track_id, MAX(artists) AS artists, COUNT(*) AS plays
-				FROM plays WHERE played_at >= ? GROUP BY lower(artist), lower(track) ORDER BY plays DESC LIMIT 40`,
+				FROM plays WHERE played_at >= ? GROUP BY lower(artist), lower(track) ORDER BY plays DESC LIMIT 300`,
 				[from]
 			)
 		]);

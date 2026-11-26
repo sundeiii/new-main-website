@@ -22,7 +22,7 @@ const json = (body: unknown, init: ResponseInit = {}) =>
 async function spotifyStats(period: Period, platform: unknown, isHidden: (track: any) => boolean, isHiddenName: (name: string) => boolean) {
 	const range = spotifyRange[period];
 	const api = SpotifyApi.withAccessToken(process.env.SPOTIFY_CLIENT_ID || '', await getSpotifyAccessToken({ platform }));
-	const [artists, tracks] = await Promise.all([api.currentUser.topItems('artists', range, 20), api.currentUser.topItems('tracks', range, 30)]);
+	const [artists, tracks] = await Promise.all([api.currentUser.topItems('artists', range, 50), api.currentUser.topItems('tracks', range, 50)]);
 	return {
 		source: 'spotify' as const,
 		span: spotifySpan[range],

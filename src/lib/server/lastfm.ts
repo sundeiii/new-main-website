@@ -64,6 +64,7 @@ export async function recentScrobbles({ before, limit }: { before: number; limit
 export const PERIODS = ['7day', '1month', '12month', 'overall'] as const;
 export type Period = typeof PERIODS[number];
 
+// (Top lists are fetched long so hiding artists still leaves 8 artists / 10 tracks.)
 // Last.fm's "please try again" errors (backend failed, temporarily unavailable, rate limit).
 const RETRYABLE = [8, 11, 16, 29];
 
@@ -93,8 +94,8 @@ export async function lastfmStats(period: Period, isHidden: (artist: string) => 
 		lastfm('user.getinfo'),
 		scrobblesSince(now - 864e5),
 		scrobblesSince(now - 7 * 864e5),
-		lastfm('user.gettopartists', { period, limit: '20' }),
-		lastfm('user.gettoptracks', { period, limit: '25' })
+		lastfm('user.gettopartists', { period, limit: '100' }),
+		lastfm('user.gettoptracks', { period, limit: '300' })
 	]);
 	return {
 		user: info.user?.name,
