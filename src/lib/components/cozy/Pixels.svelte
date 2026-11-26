@@ -20,5 +20,6 @@
 	class="block"
 	style={flip ? 'transform: scaleX(-1)' : ''}
 >
-	{#each rects as r}<rect x={r.x} y={r.y} width={r.w} height="1" fill={r.fill} />{/each}
+	<!-- style, not the fill attribute, so colours can be CSS variables (like the cat's --bell) -->
+	{#each rects as r}<rect x={r.x} y={r.y} width={r.w} height="1" style="fill: {r.fill}" />{/each}
 </svg>

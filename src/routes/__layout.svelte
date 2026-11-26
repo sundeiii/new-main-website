@@ -12,10 +12,14 @@
 	import CommandPalette from '$lib/components/site/CommandPalette.svelte';
 	import Backdrop from '$lib/components/site/Backdrop.svelte';
 	import { app } from '$lib/components/site/app';
-	import Companion from '$lib/components/cozy/Companion.svelte';
-	import { companionClosed, isNight, loadCozy, nightSkyOff, restoreCompanionClosed, restoreNightSky, setCompanionClosed, toggleNightSky } from '$lib/components/cozy/cozy';
+	import Ryo from '$lib/companion/Ryo.svelte';
+	import { loadCompanion, visitsNow, weatherNow } from '$lib/companion/store';
+	import { companionClosed, isNight, loadCozy, nightSkyOff, restoreCompanionClosed, restoreNightSky, setCompanionClosed, themeName, toggleNightSky } from '$lib/components/cozy/cozy';
 	import NightSky from '$lib/components/cozy/NightSky.svelte';
 	let nightNow = false;
+	// Ryo reacts to the weather and the visit count; she gets them from here instead of fetching.
+	$: weatherNow.set(weather);
+	$: visitsNow.set(visits);
 	import { collect, loadPassport } from '$lib/components/cozy/collect';
 	import StampToast from '$lib/components/cozy/StampToast.svelte';
 	import Secrets from '$lib/components/cozy/Secrets.svelte';
@@ -153,6 +157,10 @@
 	function applyTheme(t: Theme, dark: boolean, ready: boolean) {
 		const root = document.documentElement;
 		const bg = dark ? t.dark : t.light;
+		// Lets components and CSS add touches for one theme (like the trans one).
+		root.dataset.theme = t.id;
+		themeName.set(t.id);
+		if (t.id === 'trans' && ready) collect('pride');
 		root.classList.toggle('dark', dark);
 		root.style.setProperty('--accent', t.accent);
 		root.style.setProperty('--accent-fg', textOn(t.accent));
@@ -376,6 +384,7 @@
 		ready = true;
 		app.hydrated = true;
 		loadCozy();
+		loadCompanion();
 		restoreCompanionClosed();
 		loadPassport();
 		restoreNightSky();
@@ -456,7 +465,7 @@
 <CursorTrail />
 <Seasonal />
 {#if ready}<NightSky />{/if}
-{#if ready && $page.url.pathname === '/'}<Companion />{/if}
+{#if ready}<Ryo path={$page.url.pathname} />{/if}
 {#if ready}<StampToast />{/if}
 
 {#if progressVisible}
@@ -466,7 +475,7 @@
 {/if}
 
 {#if theme.stripe}
-	<div class="fixed top-0 left-0 right-0 h-[3px] z-[60] pointer-events-none" style="background: {theme.stripe}" aria-hidden="true" />
+	<div class="stripe fixed top-0 left-0 right-0 z-[60] pointer-events-none {theme.id === 'trans' ? 'h-1 trans-stripe' : 'h-[3px]'}" style="background: {theme.stripe}" aria-hidden="true" />
 {/if}
 
 {#if konamiActivated}
@@ -607,6 +616,62 @@
 		:global(::view-transition-old(*)),
 		:global(::view-transition-new(*)) {
 			animation: none !important;
+		}
+	}
+
+	/* ── trans theme touches ── */
+	/* the flag stripe on top: a soft glow, and a sheen that passes over it now and then */
+	.trans-stripe {
+		box-shadow: 0 0 12px rgb(91 206 250 / 0.45), 0 0 18px rgb(245 169 184 / 0.35);
+		overflow: hidden;
+	}
+	.trans-stripe::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		width: 30%;
+		background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.85), transparent);
+		animation: sheen 7s ease-in-out infinite;
+	}
+	@keyframes sheen {
+		0% {
+			transform: translateX(-120%);
+		}
+		45%,
+		100% {
+			transform: translateX(420%);
+		}
+	}
+	/* page titles in the flag's colours */
+	:global(html[data-theme='trans'] main h1) {
+		background: linear-gradient(90deg, #5bcefa, #f5a9b8 35%, #ffffff 50%, #f5a9b8 65%, #5bcefa) 0 0 / 200% 100%;
+		-webkit-background-clip: text;
+		background-clip: text;
+		-webkit-text-fill-color: transparent;
+		animation: flag-flow 8s linear infinite;
+	}
+	:global(html[data-theme='trans']:not(.dark) main h1) {
+		background-image: linear-gradient(90deg, #2f9fd0, #d9738c 35%, #8f86b5 50%, #d9738c 65%, #2f9fd0);
+	}
+	:global(html[data-theme='trans'] main h1 > *) {
+		-webkit-text-fill-color: initial;
+	}
+	@keyframes flag-flow {
+		to {
+			background-position: 200% 0;
+		}
+	}
+	:global(html[data-theme='trans']) {
+		--bell: #f5a9b8;
+	}
+	:global(html[data-theme='trans'] ::-webkit-scrollbar-thumb) {
+		background: linear-gradient(#5bcefa, #f5a9b8, #ffffff, #f5a9b8, #5bcefa);
+		border-radius: 999px;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.trans-stripe::after,
+		:global(html[data-theme='trans'] main h1) {
+			animation: none;
 		}
 	}
 

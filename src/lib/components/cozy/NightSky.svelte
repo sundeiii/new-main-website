@@ -68,6 +68,16 @@
 		background: #e9eef8;
 		opacity: 0.35;
 	}
+	/* trans theme: stars in the flag's colours */
+	:global(html[data-theme='trans']) .star:nth-child(3n) {
+		background: #5bcefa;
+	}
+	:global(html[data-theme='trans']) .star:nth-child(3n + 1) {
+		background: #f5a9b8;
+	}
+	:global(html[data-theme='trans']) .star:nth-child(3n + 2) {
+		background: #ffffff;
+	}
 	.twinkle {
 		animation: twinkle ease-in-out infinite;
 	}

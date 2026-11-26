@@ -3,19 +3,21 @@
 	import { fade } from 'svelte/transition';
 	import FooterCat from '$lib/components/cozy/FooterCat.svelte';
 	import MusicBox from '$lib/components/cozy/MusicBox.svelte';
-	import { cozy, pickOne } from '$lib/components/cozy/cozy';
+	import { cozy, pickOne, themeName, TRANS_THOUGHTS } from '$lib/components/cozy/cozy';
 	import { collect } from '$lib/components/cozy/collect';
 
 	// A little thought from /admin → cozy, picked in the browser; click it for another one.
 	let thought = '';
 	let ready = false;
 	onMount(() => (ready = true));
-	$: if (ready && !thought && $cozy?.thoughts.length) thought = pickOne($cozy.thoughts);
+	// With the trans theme, a few affirming ones join in.
+	$: pool = [...($cozy?.thoughts ?? []), ...($themeName === 'trans' ? TRANS_THOUGHTS : [])];
+	$: if (ready && !thought && pool.length) thought = pickOne(pool);
 	// Reading five in a row earns a passport stamp.
 	let read = 1;
 	function another() {
-		if (!$cozy) return;
-		thought = pickOne($cozy.thoughts, thought);
+		if (!pool.length) return;
+		thought = pickOne(pool, thought);
 		if (++read >= 5) collect('thinker');
 	}
 

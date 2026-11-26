@@ -21,6 +21,10 @@
 	});
 
 	$: have = mounted ? $passport.stamps : {};
+	const sections = [
+		{ id: 'site', title: 'around the site', items: COLLECTIBLES.filter((c) => c.group !== 'ryo') },
+		{ id: 'ryo', title: 'ryo', items: COLLECTIBLES.filter((c) => c.group === 'ryo') }
+	];
 	$: got = COLLECTIBLES.filter((c) => have[c.id]).length;
 	$: everything = got === COLLECTIBLES.length;
 
@@ -55,8 +59,11 @@
 		{#if everything}<p class="text-sm {strong}">✦ every stamp. you've seen everything this site has to hide. thank you for looking so closely.</p>{/if}
 	</header>
 
-	<div class="booklet rounded-2xl p-5 sm:p-8 grid gap-x-6 gap-y-8 grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] justify-items-center" in:fly={rise(1)}>
-		{#each COLLECTIBLES as stamp, i (stamp.id)}
+	{#each sections as section, si}
+	<div class="flex flex-col gap-3" in:fly={rise(1 + si)}>
+	<span class="text-[11px] uppercase tracking-widest text-ocean-500">{section.title} · {section.items.filter((c) => have[c.id]).length} / {section.items.length}</span>
+	<div id={section.id} class="booklet rounded-2xl p-5 sm:p-8 grid gap-x-6 gap-y-8 grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] justify-items-center scroll-mt-24">
+		{#each section.items as stamp, i (stamp.id)}
 			<div class="flex flex-col items-center gap-2 text-center" style="--r: {((i * 37) % 9) - 4}deg">
 				<div class="tilt"><PassportStamp {stamp} found={have[stamp.id] ?? null} /></div>
 				<p class="text-[11px] leading-snug max-w-[9rem] text-[#2a3248] dark:text-ocean-200 {have[stamp.id] ? 'opacity-90' : 'opacity-60 italic'}">
@@ -66,6 +73,8 @@
 			</div>
 		{/each}
 	</div>
+	</div>
+	{/each}
 
 	{#if got > 1}
 		<button on:click={forget} class="w-fit text-xs text-ocean-500 hover:text-red-500 transition-colors">forget my stamps</button>

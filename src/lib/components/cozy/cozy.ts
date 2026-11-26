@@ -15,22 +15,29 @@ export function loadCozy() {
 		.catch(() => cozy.set(settingDefaults.cozy));
 }
 
-/** Ryo closed with her ✕, for this tab. She peeks from the corner, and ctrl+k can bring her back. */
+/** Ryo hidden by this visitor (remembered in this browser). She peeks from the corner, and ctrl+k can bring her back. */
 export const companionClosed = writable(false);
 export function setCompanionClosed(closed: boolean) {
 	companionClosed.set(closed);
 	try {
-		if (closed) sessionStorage.setItem('companion-closed', '1');
-		else sessionStorage.removeItem('companion-closed');
+		if (closed) localStorage.setItem('companion-closed', '1');
+		else localStorage.removeItem('companion-closed');
 	} catch {}
 }
 export function restoreCompanionClosed() {
 	try {
-		companionClosed.set(sessionStorage.getItem('companion-closed') === '1');
+		companionClosed.set(localStorage.getItem('companion-closed') === '1');
 	} catch {}
 }
 
 export const prefersReducedMotion = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** The active theme's id (set by the layout), for theme-specific touches like the trans flag. */
+export const themeName = writable('');
+
+/** Extra lines and thoughts while the trans theme is on. */
+export const TRANS_LINES = ['trans rights. obviously.', "you're valid. now lend me 1000 yen.", 'nice flag. it goes with my hair, kind of.', "protect trans people. that one's not a bit."];
+export const TRANS_THOUGHTS = ["you're valid, exactly as you are.", 'your name is your name.', 'trans rights are human rights.', 'be gentle with yourself today.', "you're allowed to take up space."];
 
 /** Visitors can turn the night sky off from ctrl+k. */
 export const nightSkyOff = writable(false);

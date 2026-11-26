@@ -3,6 +3,7 @@ import { json, requireAdmin } from '$lib/server/adminAuth';
 import { getSetting, setSetting } from '$lib/server/settings';
 import { isSettingKey, type SiteSettings } from '$lib/siteSettings';
 import { isSafeGradient, themeDefaults, type Theme } from '$lib/themes';
+import { cleanCompanion } from '$lib/server/companionSettings';
 
 const str = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const url = (v: unknown) => {
@@ -59,6 +60,7 @@ function cleanTheme(t: any, used: Set<string>): Theme | null {
 
 // Coerces admin input into the exact shape each page expects, with length limits.
 const clean: { [K in keyof SiteSettings]: (v: any) => SiteSettings[K] } = {
+	companion: cleanCompanion,
 	themes: (v) => {
 		const used = new Set<string>();
 		const items = list(v?.items, 30, (t) => cleanTheme(t, used));

@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import BlogAdmin from '$lib/components/admin/BlogAdmin.svelte';
 	import GuestbookAdmin from '$lib/components/admin/GuestbookAdmin.svelte';
+	import CompanionAdmin from '$lib/components/admin/companion/CompanionAdmin.svelte';
 	import MediaAdmin from '$lib/components/admin/MediaAdmin.svelte';
 	import PagesAdmin from '$lib/components/admin/PagesAdmin.svelte';
 	import TournamentsAdmin from '$lib/components/admin/TournamentsAdmin.svelte';
@@ -152,6 +153,8 @@
 					<TournamentsAdmin onUnauthorized={sessionExpired} />
 				{:else if active === 'guestbook'}
 					<GuestbookAdmin onUnauthorized={sessionExpired} />
+				{:else if active === 'ryo'}
+					<CompanionAdmin onUnauthorized={sessionExpired} />
 				{:else if active === 'media'}
 					<MediaAdmin onUnauthorized={sessionExpired} />
 				{/if}

@@ -3,7 +3,7 @@
 	// depends on the visitor's clock; it says "welcome back" to people who've been here before.
 	import { onDestroy, onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
-	import { cozy, seasonGlyph } from './cozy';
+	import { cozy, seasonGlyph, themeName } from './cozy';
 
 	let text = '';
 	let timer: ReturnType<typeof setInterval>;
@@ -32,7 +32,7 @@
 
 {#if text && ($cozy?.greeting ?? true)}
 	<p class="text-xs text-ocean-500 mb-1 flex items-center gap-1.5" in:fade={{ duration: 400 }}>
-		<span class="sparkle" aria-hidden="true">{$cozy?.seasonalTouches ?? true ? seasonGlyph() : '✦'}</span>{text}
+		<span class="sparkle" aria-hidden="true">{$themeName === 'trans' ? '⚧' : $cozy?.seasonalTouches ?? true ? seasonGlyph() : '✦'}</span>{text}
 	</p>
 {/if}
 

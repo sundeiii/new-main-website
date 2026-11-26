@@ -15,7 +15,8 @@
 		l: '#eef2f8',
 		e: '#E6C255',
 		n: '#c98b8b',
-		g: '#E6C255'
+		// the bell: gold, or the theme's own (pink with the trans theme)
+		g: 'var(--bell, #E6C255)'
 	};
 	const sprites = {
 		sleep: [

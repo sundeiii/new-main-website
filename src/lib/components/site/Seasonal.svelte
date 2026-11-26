@@ -30,6 +30,7 @@
 	let reduced = false;
 
 	const pad = (n: number) => String(n).padStart(2, '0');
+	const TRANS_FLAKES = ['rgba(91, 206, 250, 0.85)', 'rgba(245, 169, 184, 0.85)', 'rgba(255, 255, 255, 0.8)'];
 
 	onMount(() => {
 		reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -99,8 +100,11 @@
 			const dt = Math.min(50, t - last) / 16.7;
 			last = t;
 			ctx.clearRect(0, 0, w, h);
+			// With the trans theme the flakes come in the flag's colours.
+			const trans = document.documentElement.dataset.theme === 'trans';
 			ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-			for (const f of flakes) {
+			for (const [i, f] of flakes.entries()) {
+				if (trans) ctx.fillStyle = TRANS_FLAKES[i % 3];
 				f.drift += 0.01 * dt;
 				f.y += f.speed * dt;
 				f.x += Math.sin(f.drift) * 0.35 * dt;

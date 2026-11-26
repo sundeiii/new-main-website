@@ -95,11 +95,12 @@ export const themeDefaults: ThemesSettings = {
 			trail: ['#6F8FBF', '#E6C255']
 		},
 		{
-			...base('trans', 'trans', '#fdf1f5', '#1f1c2a', '#F5A9B8'),
+			...base('trans', 'trans', '#fbf3f7', '#161729', '#F5A9B8'),
 			secret: true,
 			swatch: 'linear-gradient(#5BCEFA 0 20%, #F5A9B8 20% 40%, #FFFFFF 40% 60%, #F5A9B8 60% 80%, #5BCEFA 80%)',
-			mesh: ['#5BCEFA', '#F5A9B8', '#5BCEFA', '#F5A9B8', '#FFFFFF', '#5BCEFA'],
-			meshStrength: 28,
+			// Blues and pinks only: white in the mesh turns the dark version a muddy grey.
+			mesh: ['#5BCEFA', '#F5A9B8', '#3f9fd6', '#e98aa3', '#F5A9B8', '#5BCEFA'],
+			meshStrength: 34,
 			stripe: 'linear-gradient(90deg, #5bcefa 0 20%, #f5a9b8 20% 40%, #ffffff 40% 60%, #f5a9b8 60% 80%, #5bcefa 80%)',
 			trail: ['#5BCEFA', '#F5A9B8']
 		}

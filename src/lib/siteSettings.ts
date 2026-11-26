@@ -1,4 +1,6 @@
 import { themeDefaults, type ThemesSettings } from '$lib/themes';
+import { companionDefaults } from '$lib/companion/defaults';
+import type { CompanionSettings } from '$lib/companion/types';
 
 // Editable page content, stored as JSON in the site_settings table and edited in /admin → pages.
 // Each key has defaults, so pages work before anything is saved.
@@ -299,6 +301,8 @@ export interface ScrapbookSettings {
 }
 
 export interface SiteSettings {
+	/** Ryo, the companion (see $lib/companion). */
+	companion: CompanionSettings;
 	cozy: CozySettings;
 	scrapbook: ScrapbookSettings;
 	home: HomeSettings;
@@ -357,6 +361,7 @@ export const settingDefaults: SiteSettings = {
 	weather: { show: true, city: 'Tartu', label: '', units: 'c' },
 	live: { show: false, name: '', link: '', banner: '', stage: '', twitch: '', role: '', note: '', matches: [] },
 	seasonal: { snow: 'auto', birthday: '', birthdayText: "it's my birthday today :)", newYear: true },
+	companion: companionDefaults,
 	scrapbook: {
 		intro: 'bits and pieces i wanted to keep. photos, notes, tickets, little things.',
 		pages: [

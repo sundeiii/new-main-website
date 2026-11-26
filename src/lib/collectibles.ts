@@ -12,13 +12,25 @@ export interface Collectible {
 	glyph: string;
 	/** Stamp colour. */
 	color: string;
+	/** Ryo's own stamps get their own section on /passport and in her stats. */
+	group?: 'ryo';
 }
 
 export const COLLECTIBLES: Collectible[] = [
 	{ id: 'hello', name: 'first steps', hint: 'just show up.', note: 'you found the place. welcome in.', glyph: '⌂', color: '#4A6A9C' },
 	{ id: 'passport', name: 'passport', hint: "you're holding it.", note: 'every collection starts somewhere.', glyph: '✈', color: '#5D7FC0' },
-	{ id: 'headpat', name: 'headpat', hint: 'someone in a corner likes headpats.', note: 'ryo accepted your headpat. money still preferred.', glyph: '♡', color: '#D79AAA' },
-	{ id: 'ryoback', name: 'she came back', hint: 'some people always come back.', note: 'you closed her and still wanted her back.', glyph: '↺', color: '#8FB3E0' },
+	{ id: 'headpat', name: 'headpat', hint: 'someone in a corner likes headpats.', note: 'ryo accepted your headpat. money still preferred.', glyph: '♡', color: '#D79AAA', group: 'ryo' },
+	{ id: 'ryoback', name: 'she came back', hint: 'some people always come back.', note: 'you closed her and still wanted her back.', glyph: '↺', color: '#8FB3E0', group: 'ryo' },
+	{ id: 'ryo-broke', name: 'financially irresponsible', hint: "she'll spend it all anyway.", note: 'you gave ryo a small fortune in fictional yen.', glyph: '¥', color: '#c9a63c', group: 'ryo' },
+	{ id: 'ryo-bass', name: 'bass enthusiast', hint: 'fund her next mistake.', note: 'you paid for her first (fictional) bass.', glyph: '♩', color: '#3b5584', group: 'ryo' },
+	{ id: 'ryo-grass', name: 'grass enthusiast', hint: 'someone is always hungry.', note: 'you fed ryo grass ten times. she is thriving.', glyph: '❦', color: '#79a97f', group: 'ryo' },
+	{ id: 'ryo-pats', name: 'professional headpatter', hint: 'fifty is a nice round number.', note: 'fifty headpats. she has stopped protesting.', glyph: '♡', color: '#b0748a', group: 'ryo' },
+	{ id: 'ryo-space', name: 'personal space violation', hint: 'there is such a thing as too many clicks.', note: 'you clicked her twenty times in a row. she remembers.', glyph: '!', color: '#c96a6a', group: 'ryo' },
+	{ id: 'ryo-night', name: 'night shift', hint: 'visit her after 3am.', note: 'you kept ryo company in the middle of the night.', glyph: '☾', color: '#2A3A5C', group: 'ryo' },
+	{ id: 'ryo-taste', name: 'good taste', hint: 'a certain band is playing.', note: 'kessoku band was playing. she approved, quietly.', glyph: '♫', color: '#5D7FC0', group: 'ryo' },
+	{ id: 'ryo-sincere', name: 'unexpected sincerity', hint: 'sometimes she means it.', note: 'ryo said something she actually meant.', glyph: '✧', color: '#A596D6', group: 'ryo' },
+	{ id: 'ryo-familiar', name: 'familiar face', hint: 'come back on a few different days.', note: "you visited on seven different days. she noticed.", glyph: '⌂', color: '#6F8FBF', group: 'ryo' },
+	{ id: 'ryo-company', name: 'quiet company', hint: 'just stay a while.', note: 'you spent fifteen minutes here with ryo around.', glyph: '◷', color: '#4A6A9C', group: 'ryo' },
 	{ id: 'cat', name: 'cat person', hint: 'something sleeps at the bottom of every page.', note: 'you woke the cat. it forgives you.', glyph: 'ᓚ', color: '#9fabc2' },
 	{ id: 'catmad', name: 'MROW', hint: "don't poke the cat. or do.", note: 'the cat has had enough of you.', glyph: '!', color: '#E0936F' },
 	{ id: 'stargazer', name: 'stargazer', hint: 'stars hide on some pages. look up.', note: 'you found a hidden star.', glyph: '✦', color: '#E6C255' },
@@ -32,6 +44,7 @@ export const COLLECTIBLES: Collectible[] = [
 	{ id: 'closer', name: 'look closer', hint: 'polaroids have more to say up close.', note: 'you looked at a scrapbook photo up close.', glyph: '◫', color: '#b08f6a' },
 	{ id: 'theme', name: 'new look', hint: 'try on a different outfit. ctrl+k helps.', note: 'you changed the theme.', glyph: '◐', color: '#6F8FBF' },
 	{ id: 'terminal', name: 'shell user', hint: "not everything shows up in 'help'.", note: 'you ran a hidden terminal command.', glyph: '$', color: '#3b5584' },
+	{ id: 'pride', name: 'trans rights', hint: 'two letters, a whole new look.', note: 'you tried the trans theme. trans rights are human rights.', glyph: '⚧', color: '#e893a8' },
 	{ id: 'konami', name: 'old code', hint: 'an old cheat code still works here.', note: '↑↑↓↓←→←→ba. respect.', glyph: '↑', color: '#E6C255' }
 ];
 

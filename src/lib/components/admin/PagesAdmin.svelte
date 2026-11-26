@@ -689,24 +689,7 @@
 				<div class="max-w-xs"><label for="cz-cat" class={fieldLabel}>cat's name</label><input id="cz-cat" bind:value={cozy.catName} maxlength="30" class={field} /></div>
 			</div>
 
-			<div class="flex flex-col gap-3">
-				<label class="flex items-center gap-2 text-sm text-ocean-700 dark:text-ocean-300"><input type="checkbox" bind:checked={cozy.companion} /> companion in the corner of the home page (desktop only)</label>
-				<div class="grid gap-4 sm:grid-cols-[10rem_1fr]">
-					<div><label for="cz-name" class={fieldLabel}>name</label><input id="cz-name" bind:value={cozy.companionName} maxlength="30" class={field} /></div>
-					<div>
-						<label for="cz-img" class={fieldLabel}>picture</label>
-						<div class="flex gap-2 items-center">
-							{#if cozy.companionImage}<img src={cozy.companionImage} alt="" class="w-10 h-10 rounded-full object-cover shrink-0" />{/if}
-							<input id="cz-img" bind:value={cozy.companionImage} maxlength="500" placeholder="https://…" class={field} />
-						</div>
-					</div>
-				</div>
-				<p class="text-xs text-ocean-500">shown as a round sticker. upload one in media and paste its address here. without a picture she doesn't show.</p>
-				<label for="cz-lines" class={fieldLabel}>what she says when clicked (one per line)</label>
-				<textarea id="cz-lines" rows="10" value={cozy.companionLines.join('\n')} on:input={(e) => cozy && (cozy.companionLines = linesOf(e.currentTarget.value))} class={field} />
-				<p class="text-xs text-ocean-500">{'{song}'} and {'{artist}'} become what i'm listening to; those lines only come up while something is playing.</p>
-				<label class="flex items-center gap-2 text-sm text-ocean-700 dark:text-ocean-300"><input type="checkbox" bind:checked={cozy.headpats} /> count headpats (one total, shared by every visitor)</label>
-			</div>
+			<p class="text-sm text-ocean-600 dark:text-ocean-400">ryo (pictures, dialogue, behaviour) has her own section now: admin → ryo.</p>
 
 			<div class="flex flex-col gap-2">
 				<span class={fieldLabel}>hidden letters</span>
