@@ -8,7 +8,7 @@
 	import { app } from '$lib/components/site/app';
 	import { BUILD_TIMESTAMP } from '$lib/buildtime';
 	import commits from '$lib/commits.json';
-	import type { HitStats } from '$lib/server/hits';
+	import type { HitStats } from '$lib/hitStats';
 
 	const joinArtists = (artists: { name: string }[] | undefined) => (artists ?? []).map((a) => a.name).join(', ');
 	const fmt = (n: number | null | undefined, suffix = '') => (typeof n === 'number' && isFinite(n) ? Math.round(n).toLocaleString() + suffix : '—');

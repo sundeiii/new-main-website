@@ -135,11 +135,12 @@
 				d.topArtists.forEach((a: any) => romanize(a.name));
 				d.topTracks.forEach((t: any) => (romanize(t.name), romanize(t.artist)));
 			})
-			.catch(() => (statsError = "last.fm isn't responding right now, so the stats can't load"));
+			.catch(() => (statsError = "neither last.fm nor spotify is responding right now, so the stats can't load"));
 	}
 	$: if (browser && activeTab === 'stats') loadStats(period);
 	$: s = stats[period];
-	type StatRow = { name: string; sub: string; plays: number; url: string };
+	// Spotify (used when last.fm is down) has no play counts, so rows may come without plays.
+	type StatRow = { name: string; sub: string; plays?: number; url: string };
 	$: statLists = s
 		? [
 				{ title: 'top artists', rows: s.topArtists.map((a: any): StatRow => ({ name: a.name, sub: '', plays: a.plays, url: a.url })) },
@@ -311,6 +312,7 @@
 					<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">{#each Array(4) as _}<div class="h-20 {skeleton}" />{/each}</div>
 				{:else}
 					{#if s.staleSince}<p class="text-xs text-ocean-600 dark:text-ocean-400">last.fm isn't responding right now, so these are the stats from {new Date(s.staleSince).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}.</p>{/if}
+					{#if s.source !== 'spotify'}
 					<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
 						{#each [
 							{ label: 'scrobbles', value: num(s.total), sub: `since ${new Date(s.since).getFullYear()}` },
@@ -325,18 +327,19 @@
 							</div>
 						{/each}
 					</div>
+					{/if}
 					<div class="grid md:grid-cols-2 gap-8">
 						{#each statLists as list}
 							<div class="flex flex-col gap-2">
 								<span class={label}>{list.title}</span>
 								{#each list.rows as row, i}
 									<a href={row.url} target="_blank" rel="noopener noreferrer" class="group relative block rounded-lg overflow-hidden text-sm">
-										<span class="absolute inset-y-0 left-0 accent-soft transition-all duration-500" style="width: {(row.plays / (list.rows[0]?.plays || 1)) * 100}%" />
+										{#if row.plays !== undefined}<span class="absolute inset-y-0 left-0 accent-soft transition-all duration-500" style="width: {(row.plays / (list.rows[0]?.plays || 1)) * 100}%" />{/if}
 										<span class="relative flex items-baseline gap-2 px-3 py-1.5">
 											<span class="text-ocean-500 w-5 text-right shrink-0 tabular-nums">{i + 1}</span>
 											<span class="truncate {strong}">{r(row.name)}</span>
 											{#if row.sub}<span class="truncate text-xs {muted}">{r(row.sub)}</span>{/if}
-											<span class="ml-auto text-xs {muted} shrink-0 tabular-nums">{num(row.plays)}</span>
+											{#if row.plays !== undefined}<span class="ml-auto text-xs {muted} shrink-0 tabular-nums">{num(row.plays)}</span>{/if}
 										</span>
 									</a>
 								{:else}
@@ -345,7 +348,11 @@
 							</div>
 						{/each}
 					</div>
-					<p class="text-xs text-ocean-500">from <a href={s.url} target="_blank" rel="noopener noreferrer" class="underline">last.fm</a> · updates every ~10 minutes</p>
+					{#if s.source === 'spotify'}
+						<p class="text-xs text-ocean-500">from spotify, over {s.span} · last.fm isn't available right now, so there are no play counts</p>
+					{:else}
+						<p class="text-xs text-ocean-500">from <a href={s.url} target="_blank" rel="noopener noreferrer" class="underline">last.fm</a> · updates every ~10 minutes</p>
+					{/if}
 				{/if}
 			</div>
 		{/if}

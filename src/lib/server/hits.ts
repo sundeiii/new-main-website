@@ -1,12 +1,5 @@
 import { db, ensureSchema, isMissingTable, sql } from '$lib/server/db';
-
-export interface HitStats {
-	total: number;
-	today: number;
-	/** The last 30 days, oldest first, including days with no views. */
-	days: { day: string; views: number }[];
-	top: { path: string; views: number }[];
-}
+import type { HitStats } from '$lib/hitStats';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
