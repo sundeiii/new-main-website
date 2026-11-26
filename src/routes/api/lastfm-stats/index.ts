@@ -28,7 +28,7 @@ async function spotifyStats(period: Period, platform: unknown, isHidden: (track:
 		span: spotifySpan[range],
 		topArtists: artists.items
 			.filter((a) => !isHiddenName(a.name))
-			.slice(0, 8)
+			.slice(0, 10)
 			.map((a) => ({ name: a.name, url: a.external_urls.spotify })),
 		topTracks: tracks.items
 			.filter((t) => !isHidden(t))

@@ -78,7 +78,7 @@ export async function playStats(period: keyof typeof periodDays, isHiddenName: (
 			last7d: Number(week),
 			topArtists: artists
 				.filter((a: any) => !isHiddenName(a.artist))
-				.slice(0, 8)
+				.slice(0, 10)
 				.map((a: any) => ({ name: a.artist, plays: Number(a.plays), url: a.artist_id ? `https://open.spotify.com/artist/${a.artist_id}` : '' })),
 			topTracks: tracks
 				.filter((t: any) => !t.artists.split(', ').some(isHiddenName))
