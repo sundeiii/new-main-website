@@ -192,7 +192,7 @@
 			"states": [
 				"eating_grass"
 			],
-			"description": "animated: ryo chewing grass, holding a twig (frames 26-44 of the gif, background removed per frame with rembg isnet-anime, 50 ms per frame)",
+			"description": "animated: ryo chewing grass, holding a twig. Frames 34-43 of the gif (a seamless loop), background removed per frame with rembg isnet-anime, frames showing the same drawing merged so the edges stay still, stray bits and the bass case above her head removed. 4 drawings, 500 ms loop.",
 			"source": "https://klipy.com/gifs/yamada-ryou-ryo-yamada",
 			"sourceSite": "klipy.com gif of a Bocchi the Rock! scene",
 			"added": "2026-11-26"
