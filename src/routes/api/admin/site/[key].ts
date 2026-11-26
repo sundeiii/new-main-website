@@ -143,6 +143,43 @@ const clean: { [K in keyof SiteSettings]: (v: any) => SiteSettings[K] } = {
 			).sort((a, b) => a.time.localeCompare(b.time))
 		};
 	},
+	scrapbook: (v) => ({
+		intro: str(v?.intro, 400),
+		pages: list(v?.pages, 60, (p: any) => {
+			const items = list(p?.items, 40, (i: any) => {
+				const kind = pick(i?.kind, ['photo', 'note', 'ticket', 'sticker'] as const, 'note');
+				const item = {
+					kind,
+					image: urlOrPath(i?.image),
+					text: str(i?.text, 400),
+					sub: str(i?.sub, 120),
+					date: str(i?.date, 30),
+					color: pick(i?.color, ['cream', 'blue', 'gold', 'mint', 'lavender'] as const, 'cream'),
+					tilt: typeof i?.tilt === 'number' && isFinite(i.tilt) ? Math.max(-15, Math.min(15, Math.round(i.tilt))) : null,
+					tape: pick(i?.tape, ['auto', 'none', 'top', 'corners', 'side'] as const, 'auto'),
+					size: pick(i?.size, ['s', 'm', 'l'] as const, 'm')
+				};
+				// Photos need a picture; notes, tickets and built-in stickers need text.
+				return kind === 'photo' ? (item.image ? item : null) : item.image || item.text ? item : null;
+			});
+			return str(p?.title, 80) || items.length ? { title: str(p?.title, 80), date: str(p?.date, 30), note: str(p?.note, 200), items } : null;
+		})
+	}),
+	cozy: (v) => ({
+		greeting: v?.greeting !== false,
+		thoughts: list(v?.thoughts, 60, (t) => str(t, 160) || null),
+		cat: v?.cat !== false,
+		catName: str(v?.catName, 30) || 'mochi',
+		companion: v?.companion !== false,
+		companionName: str(v?.companionName, 30) || 'ryo',
+		companionImage: urlOrPath(v?.companionImage),
+		companionLines: list(v?.companionLines, 60, (t) => str(t, 200) || null),
+		headpats: v?.headpats !== false,
+		letters: [0, 1, 2].map((i) => str(v?.letters?.[i], 600)),
+		nightSky: v?.nightSky !== false,
+		musicBox: v?.musicBox !== false,
+		seasonalTouches: v?.seasonalTouches !== false
+	}),
 	seasonal: (v) => ({
 		snow: pick(v?.snow, ['auto', 'on', 'off'] as const, 'auto'),
 		birthday: /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(str(v?.birthday, 5)) ? str(v.birthday, 5) : '',

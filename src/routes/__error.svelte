@@ -17,6 +17,10 @@
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { app } from '$lib/components/site/app';
+	import { onMount } from 'svelte';
+	import { collect } from '$lib/components/cozy/collect';
+
+	onMount(() => status === 404 && collect('lost'));
 
 	export let title: string;
 	export let status: number;
@@ -50,6 +54,8 @@
 		{ href: '/music', label: 'music' },
 		{ href: '/gallery', label: 'gallery' },
 		{ href: '/guestbook', label: 'guestbook' },
+		{ href: '/scrapbook', label: 'scrapbook' },
+		{ href: '/passport', label: 'passport' },
 		{ href: '/events', label: 'events' },
 		{ href: '/now', label: 'now' },
 		{ href: '/uses', label: 'uses' },

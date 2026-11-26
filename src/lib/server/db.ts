@@ -128,6 +128,11 @@ export const SCHEMA = [
 		image TEXT,
 		duration_ms INTEGER
 	)`,
+	// Small shared counters, like ryo's headpats.
+	`CREATE TABLE IF NOT EXISTS counters (
+		k TEXT PRIMARY KEY,
+		n INTEGER NOT NULL DEFAULT 0
+	)`,
 	// For the artist pages on /music.
 	`CREATE INDEX IF NOT EXISTS plays_artist ON plays (lower(artist))`,
 	// Last good responses from outside services, shown while the service is down.

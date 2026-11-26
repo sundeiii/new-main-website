@@ -238,7 +238,69 @@ export interface LinksSettings {
 	groups: { title: string; items: LinkItem[] }[];
 }
 
+/** The little things: greetings, thoughts in the footer, the footer cat and ryo on the home page. */
+export interface CozySettings {
+	/** "good evening" and the time here, above my name on the home page. */
+	greeting: boolean;
+	/** One of these shows in the footer of every page (click it for another). */
+	thoughts: string[];
+	/** The pixel cat asleep in the footer. */
+	cat: boolean;
+	catName: string;
+	/** The little companion in the corner of the home page (desktop only). */
+	companion: boolean;
+	companionName: string;
+	/** Her picture: a see-through png/webp/gif is shown cut out with a white sticker edge, anything else as a round sticker. Without one she doesn't show. */
+	companionImage: string;
+	/** What she says when clicked. {song} and {artist} use the song i'm playing; lines with them only show while something plays. */
+	companionLines: string[];
+	/** Patting her head counts towards a total shared by every visitor. */
+	headpats: boolean;
+	/** The three hidden letters (in envelopes on /projects, /now and /uses, in that order). */
+	letters: string[];
+	/** Faint twinkling stars over the page at night (visitor's time, 22–6). Visitors can turn it off in ctrl+k. */
+	nightSky: boolean;
+	/** The little music box on the footer line, open while i'm listening to something. */
+	musicBox: boolean;
+	/** Seasonal hats on the footer cat and a seasonal mark in the greeting. */
+	seasonalTouches: boolean;
+}
+
+/** One thing stuck on a scrapbook page. */
+export interface ScrapItem {
+	/** photo: a polaroid · note: handwritten paper · ticket: a stub · sticker: a picture or a built-in one. */
+	kind: 'photo' | 'note' | 'ticket' | 'sticker';
+	/** photo / sticker picture. */
+	image: string;
+	/** photo caption, note text, ticket title, or a built-in sticker's name (heart, star, note, moon, flower, cat, ryo). */
+	text: string;
+	/** note signature or ticket line under the title. */
+	sub: string;
+	/** YYYY-MM-DD or any short text, optional. */
+	date: string;
+	/** paper / ticket colour: cream, blue, gold, mint, lavender. */
+	color: string;
+	/** degrees; null = a little random. */
+	tilt: number | null;
+	tape: 'auto' | 'none' | 'top' | 'corners' | 'side';
+	size: 's' | 'm' | 'l';
+}
+export interface ScrapPage {
+	title: string;
+	date: string;
+	/** A line under the title. */
+	note: string;
+	items: ScrapItem[];
+}
+/** The scrapbook on /scrapbook: pages of polaroids, notes, tickets and stickers. */
+export interface ScrapbookSettings {
+	intro: string;
+	pages: ScrapPage[];
+}
+
 export interface SiteSettings {
+	cozy: CozySettings;
+	scrapbook: ScrapbookSettings;
 	home: HomeSettings;
 	now: NowSettings;
 	osu: OsuSettings;
@@ -295,6 +357,77 @@ export const settingDefaults: SiteSettings = {
 	weather: { show: true, city: 'Tartu', label: '', units: 'c' },
 	live: { show: false, name: '', link: '', banner: '', stage: '', twitch: '', role: '', note: '', matches: [] },
 	seasonal: { snow: 'auto', birthday: '', birthdayText: "it's my birthday today :)", newYear: true },
+	scrapbook: {
+		intro: 'bits and pieces i wanted to keep. photos, notes, tickets, little things.',
+		pages: [
+			{
+				title: 'a few good days',
+				date: '2026',
+				note: "a sample page. swap it for real ones in admin → scrapbook.",
+				items: [
+					{ kind: 'photo', image: 'https://cdn.doitforjanice.eu/gallery/img-3599-7a75f3.webp', text: 'september', sub: '', date: '2026-09-18', color: 'cream', tilt: null, tape: 'auto', size: 'm' },
+					{ kind: 'note', image: '', text: 'remember to write down the small stuff too. it ends up being the stuff you miss.', sub: '- me', date: '', color: 'cream', tilt: null, tape: 'top', size: 'm' },
+					{ kind: 'sticker', image: '', text: 'ryo', sub: '', date: '', color: 'cream', tilt: null, tape: 'none', size: 's' },
+					{ kind: 'photo', image: 'https://cdn.doitforjanice.eu/gallery/img-1975-cd40ec.webp', text: 'summer', sub: '', date: '2026-08-14', color: 'cream', tilt: null, tape: 'corners', size: 'l' },
+					{ kind: 'ticket', image: '', text: 'estonian duo cup', sub: 'grand finals · stream booth', date: '2026', color: 'gold', tilt: null, tape: 'none', size: 'm' },
+					{ kind: 'sticker', image: '', text: 'star', sub: '', date: '', color: 'cream', tilt: null, tape: 'none', size: 's' },
+					{ kind: 'photo', image: 'https://cdn.doitforjanice.eu/gallery/img-2469-5fa423.webp', text: 'old one', sub: '', date: '2025-04-22', color: 'cream', tilt: null, tape: 'side', size: 's' },
+					{ kind: 'note', image: '', text: 'fc on the first try. nobody saw. it still counts.', sub: '', date: '', color: 'blue', tilt: null, tape: 'auto', size: 's' },
+					{ kind: 'sticker', image: '', text: 'cat', sub: '', date: '', color: 'cream', tilt: null, tape: 'none', size: 's' }
+				]
+			}
+		]
+	},
+	cozy: {
+		greeting: true,
+		thoughts: [
+			'drink some water, okay?',
+			"you're doing better than you think.",
+			"it's okay to log off for a bit.",
+			'go stretch. your back will thank you.',
+			'thanks for stopping by :)',
+			"remember to eat something that isn't instant noodles.",
+			'most of this site was made at 3am.',
+			'be nice to the people who ref your matches.',
+			'sleep is a buff. take it.',
+			'somewhere, someone just got their first full combo.',
+			'you can leave a note in the guestbook, if you want.',
+			'the cat in the footer has no name tag. it just showed up one day.'
+		],
+		cat: true,
+		catName: 'mochi',
+		companion: true,
+		companionName: 'ryo',
+		companionImage: '/ryo.png',
+		companionLines: [
+			'...',
+			'do you have money?',
+			'i spent everything on a new bass.',
+			"grass doesn't taste that bad.",
+			'leave me alone... actually, stay.',
+			"bass is the most important part of a band. don't look that up.",
+			"can you lend me 1000 yen. i'll pay it back. probably.",
+			'i ate some grass today. it was fine.',
+			'sundei made this site. i just live here.',
+			'headpats are accepted. money is preferred.',
+			"i'm not lazy. i'm saving energy.",
+			"i'd play a tournament, but that sounds like effort.",
+			'you found me. congratulations, i guess.',
+			'nap time is a state of mind.',
+			"the guestbook is that way. i won't read it, though.",
+			'{song}... decent bassline.',
+			'is this {artist}? sundei has taste. sometimes.'
+		],
+		headpats: true,
+		letters: [
+			"hi. if you're reading this, you clicked a tiny envelope on a random website. i respect that.\nhope your day is going okay.",
+			"a secret: half of these projects started as 'i'll just do it quickly'. none of them were quick.\nkeep making things anyway.",
+			"thanks for poking around. the internet used to be full of little places like this.\nmake one too, if you want. i'll visit."
+		],
+		nightSky: true,
+		musicBox: true,
+		seasonalTouches: true
+	},
 	status: {
 		show: true,
 		title: 'running right now',

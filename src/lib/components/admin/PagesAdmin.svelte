@@ -7,9 +7,10 @@
 	import AboutEditor from './AboutEditor.svelte';
 	import ButtonsEditor from './ButtonsEditor.svelte';
 	import GalleryEditor from './GalleryEditor.svelte';
+	import ScrapbookEditor from './ScrapbookEditor.svelte';
 	import ThemesEditor from './ThemesEditor.svelte';
 	import type { ThemesSettings } from '$lib/themes';
-	import type { AboutAltSettings, AboutSettings, ButtonsSettings, GallerySettings, HomeSettings, MusicSettings, NowSettings, OsuSettings, SkinsSettings, WeatherSettings, LiveTournamentSettings, StatusSettings, SeasonalSettings, LinksSettings } from '$lib/siteSettings';
+	import type { AboutAltSettings, AboutSettings, ButtonsSettings, GallerySettings, HomeSettings, MusicSettings, NowSettings, OsuSettings, SkinsSettings, WeatherSettings, LiveTournamentSettings, StatusSettings, SeasonalSettings, LinksSettings, CozySettings, ScrapbookSettings } from '$lib/siteSettings';
 
 	export let onUnauthorized: () => void;
 	import type { PageSection } from './sections';
@@ -31,6 +32,10 @@
 	let live: LiveTournamentSettings | null = null;
 	let status: StatusSettings | null = null;
 	let seasonal: SeasonalSettings | null = null;
+	let cozy: CozySettings | null = null;
+	let scrapbook: ScrapbookSettings | null = null;
+	// One per line in the textareas.
+	const linesOf = (text: string) => text.split('\n').map((l) => l.trim()).filter(Boolean);
 	let links: LinksSettings | null = null;
 	let changelog: { id: number; date: string; text: string }[] = [];
 
@@ -43,7 +48,9 @@
 	async function load() {
 		error = '';
 		try {
-			[home, now, osu, music, skins, gallery, buttons, about, aboutAlt, themes, weather, live, status, seasonal, links, changelog] = await Promise.all([
+			[scrapbook, cozy, home, now, osu, music, skins, gallery, buttons, about, aboutAlt, themes, weather, live, status, seasonal, links, changelog] = await Promise.all([
+				api('/api/admin/site/scrapbook', 'GET'),
+				api('/api/admin/site/cozy', 'GET'),
 				api('/api/admin/site/home', 'GET'),
 				api('/api/admin/site/now', 'GET'),
 				api('/api/admin/site/osu', 'GET'),
@@ -66,11 +73,13 @@
 		}
 	}
 
-	async function save(key: 'home' | 'now' | 'osu' | 'music' | 'skins' | 'gallery' | 'buttons' | 'about' | 'aboutAlt' | 'themes' | 'weather' | 'live' | 'status' | 'seasonal' | 'links', value: unknown) {
+	async function save(key: 'scrapbook' | 'cozy' | 'home' | 'now' | 'osu' | 'music' | 'skins' | 'gallery' | 'buttons' | 'about' | 'aboutAlt' | 'themes' | 'weather' | 'live' | 'status' | 'seasonal' | 'links', value: unknown) {
 		busy = true;
 		error = saved = '';
 		try {
 			const result = await api(`/api/admin/site/${key}`, 'PUT', value);
+			if (key === 'cozy') cozy = result;
+			if (key === 'scrapbook') scrapbook = result;
 			if (key === 'home') home = result;
 			if (key === 'now') now = result;
 			if (key === 'osu') osu = result;
@@ -479,6 +488,9 @@
 	{:else if active === 'gallery' && gallery}
 		<GalleryEditor bind:gallery on:error={(e) => (error = e.detail)} />
 		<div><button on:click={() => save('gallery', gallery)} class={primary} disabled={busy}>save</button></div>
+	{:else if active === 'scrapbook' && scrapbook}
+		<ScrapbookEditor bind:scrapbook on:error={(e) => (error = e.detail)} />
+		<div><button on:click={() => save('scrapbook', scrapbook)} class={primary} disabled={busy}>save</button></div>
 	{:else if active === 'themes' && themes}
 		<ThemesEditor bind:themes on:error={(e) => (error = e.detail)} />
 		<div><button on:click={() => save('themes', themes)} class={primary} disabled={busy}>save</button></div>
@@ -657,6 +669,62 @@
 			<div><button on:click={() => links && (links.groups = [...links.groups, { title: '', items: [] }])} class={subtle}>+ group</button></div>
 			<p class="text-xs text-ocean-500">links without a name or a valid address are dropped when you save.</p>
 			<div><button on:click={() => save('links', links)} class={primary} disabled={busy}>save</button></div>
+		</div>
+
+	<!-- COZY -->
+	{:else if active === 'cozy' && cozy}
+		<div class="flex flex-col gap-6 max-w-xl">
+			<div class="flex flex-col gap-2">
+				<label class="flex items-center gap-2 text-sm text-ocean-700 dark:text-ocean-300"><input type="checkbox" bind:checked={cozy.greeting} /> greeting above my name on the home page ("good evening · it's 21:04 for me")</label>
+			</div>
+
+			<div class="flex flex-col gap-2">
+				<label for="cz-thoughts" class={fieldLabel}>little thoughts (one per line)</label>
+				<textarea id="cz-thoughts" rows="8" value={cozy.thoughts.join('\n')} on:input={(e) => cozy && (cozy.thoughts = linesOf(e.currentTarget.value))} class={field} />
+				<p class="text-xs text-ocean-500">one of these shows in the footer of every page. clicking it shows another.</p>
+			</div>
+
+			<div class="flex flex-col gap-2">
+				<label class="flex items-center gap-2 text-sm text-ocean-700 dark:text-ocean-300"><input type="checkbox" bind:checked={cozy.cat} /> the pixel cat in the footer</label>
+				<div class="max-w-xs"><label for="cz-cat" class={fieldLabel}>cat's name</label><input id="cz-cat" bind:value={cozy.catName} maxlength="30" class={field} /></div>
+			</div>
+
+			<div class="flex flex-col gap-3">
+				<label class="flex items-center gap-2 text-sm text-ocean-700 dark:text-ocean-300"><input type="checkbox" bind:checked={cozy.companion} /> companion in the corner of the home page (desktop only)</label>
+				<div class="grid gap-4 sm:grid-cols-[10rem_1fr]">
+					<div><label for="cz-name" class={fieldLabel}>name</label><input id="cz-name" bind:value={cozy.companionName} maxlength="30" class={field} /></div>
+					<div>
+						<label for="cz-img" class={fieldLabel}>picture</label>
+						<div class="flex gap-2 items-center">
+							{#if cozy.companionImage}<img src={cozy.companionImage} alt="" class="w-10 h-10 rounded-full object-cover shrink-0" />{/if}
+							<input id="cz-img" bind:value={cozy.companionImage} maxlength="500" placeholder="https://…" class={field} />
+						</div>
+					</div>
+				</div>
+				<p class="text-xs text-ocean-500">shown as a round sticker. upload one in media and paste its address here. without a picture she doesn't show.</p>
+				<label for="cz-lines" class={fieldLabel}>what she says when clicked (one per line)</label>
+				<textarea id="cz-lines" rows="10" value={cozy.companionLines.join('\n')} on:input={(e) => cozy && (cozy.companionLines = linesOf(e.currentTarget.value))} class={field} />
+				<p class="text-xs text-ocean-500">{'{song}'} and {'{artist}'} become what i'm listening to; those lines only come up while something is playing.</p>
+				<label class="flex items-center gap-2 text-sm text-ocean-700 dark:text-ocean-300"><input type="checkbox" bind:checked={cozy.headpats} /> count headpats (one total, shared by every visitor)</label>
+			</div>
+
+			<div class="flex flex-col gap-2">
+				<span class={fieldLabel}>hidden letters</span>
+				{#each ['/projects', '/now', '/uses'] as where, i}
+					<label for="cz-letter-{i}" class="text-xs text-ocean-500">the envelope on {where}</label>
+					<textarea id="cz-letter-{i}" rows="3" maxlength="600" bind:value={cozy.letters[i]} class={field} />
+				{/each}
+				<p class="text-xs text-ocean-500">an empty letter hides its envelope. opening them collects passport stamps.</p>
+			</div>
+
+			<div class="flex flex-col gap-2">
+				<span class={fieldLabel}>atmosphere</span>
+				<label class="flex items-center gap-2 text-sm text-ocean-700 dark:text-ocean-300"><input type="checkbox" bind:checked={cozy.nightSky} /> faint stars over the page at night (22:00–6:00 visitor time)</label>
+				<label class="flex items-center gap-2 text-sm text-ocean-700 dark:text-ocean-300"><input type="checkbox" bind:checked={cozy.musicBox} /> music box on the footer line, open while i'm listening</label>
+				<label class="flex items-center gap-2 text-sm text-ocean-700 dark:text-ocean-300"><input type="checkbox" bind:checked={cozy.seasonalTouches} /> seasonal hats on the cat and a seasonal mark in the greeting</label>
+			</div>
+
+			<div><button on:click={() => save('cozy', cozy)} class={primary} disabled={busy}>save</button></div>
 		</div>
 
 	<!-- SEASONAL -->

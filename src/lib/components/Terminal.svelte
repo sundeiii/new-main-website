@@ -2,6 +2,10 @@
 	import { goto } from '$app/navigation';
 	import { fly, fade } from 'svelte/transition';
 	import { eventTiming, today as todayDate } from '$lib/dates';
+	import { collect, passport } from '$lib/components/cozy/collect';
+	import { cozy, pickOne, setCompanionClosed } from '$lib/components/cozy/cozy';
+	import { COLLECTIBLES } from '$lib/collectibles';
+	import { get } from 'svelte/store';
 
 	let input = '';
 	let history: { command: string; output: string; isHtml?: boolean }[] = [];
@@ -11,7 +15,7 @@
 	type Output = string | { text: string; html: boolean };
 
 	// Pages `random`, `ls` and `cd` know about.
-	const PAGES = ['about', 'blog', 'tournaments', 'gallery', 'music', 'guestbook', 'events', 'projects', 'osu', 'now', 'changelog', 'skins', 'uses'];
+	const PAGES = ['about', 'blog', 'tournaments', 'gallery', 'music', 'guestbook', 'events', 'projects', 'osu', 'now', 'changelog', 'skins', 'uses', 'scrapbook', 'passport', 'links'];
 
 	const getJson = async (url: string) => {
 		const res = await fetch(url);
@@ -109,7 +113,10 @@
 		},
 		whoami: {
 			description: 'display current user',
-			action: () => 'visitor@kwanmindset'
+			action: () => {
+				const have = Object.keys(get(passport).stamps).length;
+				return `visitor@kwanmindset · ${have} / ${COLLECTIBLES.length} passport stamps${have >= COLLECTIBLES.length ? '. a legend, honestly.' : ''}`;
+			}
 		},
 		date: {
 			description: 'show current date',
@@ -347,6 +354,68 @@
 					: 'back to the regular theme. the trans theme stays in the theme picker :3';
 			}
 		},
+		pat: {
+			description: 'headpat',
+			hidden: true,
+			action: () => {
+				setCompanionClosed(false);
+				collect('headpat');
+				return '*pat pat*\nryo: ...thanks. you can also do that by clicking me, you know.';
+			}
+		},
+		passport: {
+			description: 'your stamps',
+			hidden: true,
+			action: () => {
+				const have = Object.keys(get(passport).stamps).length;
+				setTimeout(() => goto('/passport'), 900);
+				return `${have} / ${COLLECTIBLES.length} stamps. opening your passport...`;
+			}
+		},
+		stamps: { description: 'your stamps', hidden: true, action: () => commands.passport.action() },
+		meow: {
+			description: 'meow',
+			hidden: true,
+			action: () => ` /\\_/\\\n( o.o )  mrrp?\n > ^ <   (${get(cozy)?.catName || 'mochi'} is asleep in the footer. go say hi.)`
+		},
+		fortune: {
+			description: 'a little thought',
+			hidden: true,
+			action: () => `✧ ${pickOne(get(cozy)?.thoughts?.length ? get(cozy)!.thoughts : ['drink some water.'])}`
+		},
+		bass: {
+			description: 'the most important instrument',
+			hidden: true,
+			action: () => "  ___\n |   |=================o\n |___|   ♪\nryo: finally, someone with taste. the bass is the backbone of every band. don't fact-check that."
+		},
+		grass: {
+			description: 'touch it',
+			hidden: true,
+			action: () => pickOne(['you touch grass. +1 wisdom.', 'ryo is eating the grass. please do not do that.', 'the grass says hi back.'])
+		},
+		stars: {
+			description: 'look up',
+			hidden: true,
+			action: () => {
+				const found = get(passport).stars.length;
+				return found >= 5 ? '✦ ✧ ✦ ✧ ✦  you found all five. the sky is yours.' : `✦ ${found} / 5 hidden stars found. they're tiny, and they like to sit near the top of a page.`;
+			}
+		},
+		konami: {
+			description: 'cheat codes',
+			hidden: true,
+			action: () => 'not here. try it on your keyboard, anywhere on the site.'
+		},
+		sleep: {
+			description: 'zzz',
+			hidden: true,
+			action: () => {
+				document.documentElement.style.transition = 'filter 0.8s';
+				document.documentElement.style.filter = 'brightness(0.35)';
+				setTimeout(() => (document.documentElement.style.filter = ''), 2500);
+				return 'zzz... (lights back on in a second)';
+			}
+		},
 		reaction: {
 			description: 'reaction time test',
 			action: () => {
@@ -365,6 +434,7 @@
 		const args = parts.slice(1).join(' ');
 
 		const command = commands[cmd === 'hi' ? 'hello' : cmd];
+		if (command?.hidden) collect('terminal');
 		if (command) {
 			const toEntry = (result: Output) =>
 				typeof result === 'object' ? { command: trimmed, output: result.text, isHtml: result.html && !!result.text } : { command: trimmed, output: result || '' };

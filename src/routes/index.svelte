@@ -86,6 +86,7 @@
 	import Language from '$lib/components/Language.svelte';
 	import Workspace from '$lib/components/Workspace.svelte';
 	import Terminal from '$lib/components/Terminal.svelte';
+	import Greeting from '$lib/components/cozy/Greeting.svelte';
 	import OsuTooltip from '$lib/components/OsuTooltip.svelte';
 	import { getCodeData } from '$lib/rpcUtils';
 	import { lanyard } from '$lib/lanyard';
@@ -405,6 +406,7 @@
 					<div class="w-20 h-20 rounded-full ring-[3px] ring-offset-4 ring-offset-transparent {ringMap.offline} bg-ocean-300/30 dark:bg-ocean-700/30" />
 				{/if}
 				<div>
+					<Greeting />
 					<h1 class="text-3xl {strong} flex items-center gap-2 flex-wrap">
 						sundei
 						{#if clanBadge && d?.discord_user?.primary_guild?.tag}
@@ -460,9 +462,9 @@
 			<div class="flex flex-col gap-2">
 				<span class={label}>{homeSettings.titles.friends}</span>
 				<div class="flex flex-wrap gap-1">
-					{#each buttonWall.items as b}
+					{#each buttonWall.items as b, bi}
 						{#if b.href}
-							<a href={b.href} target="_blank" rel="noopener noreferrer" title={b.alt} class="transition-transform duration-200 hover:-translate-y-0.5">
+							<a href={b.href} target="_blank" rel="noopener noreferrer" title={b.alt} class="transition-transform duration-200 hover:-translate-y-0.5 hover:scale-105 {bi % 2 ? 'hover:-rotate-3' : 'hover:rotate-3'}">
 								<img src={b.image} alt={b.alt} width="88" height="31" class="h-[31px] w-[88px] {b.pixelated ? 'image-pixelated' : ''}" />
 							</a>
 						{:else}
@@ -470,7 +472,7 @@
 						{/if}
 					{/each}
 					{#if buttonWall.mine.image}
-						<button on:click={copyButtonCode} title={copied ? 'copied!' : 'my button: click to copy the embed code'} class="transition-transform duration-200 hover:-translate-y-0.5">
+						<button on:click={copyButtonCode} title={copied ? 'copied!' : 'my button: click to copy the embed code'} class="transition-transform duration-200 hover:-translate-y-0.5 hover:scale-105 hover:rotate-2">
 							<img src={buttonWall.mine.image} alt={buttonWall.mine.alt} width="88" height="31" class="h-[31px] w-[88px] image-pixelated" />
 						</button>
 					{/if}

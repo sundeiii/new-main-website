@@ -18,6 +18,7 @@
 	import { app } from '$lib/components/site/app';
 	import OsuPill from '$lib/components/OsuPill.svelte';
 	import { lookupOsuMaps } from '$lib/osuMaps';
+	import { collect } from '$lib/components/cozy/collect';
 
 	type Track = { name: string; plays: number; first: string; last: string; image: string | null; url: string };
 	export let artist: {
@@ -49,6 +50,7 @@
 	$: r = (text: string) => romaji[text] || text;
 
 	onMount(() => {
+		collect('artist');
 		[artist.name, ...artist.topTracks.map((t) => t.name), artist.first.track ?? ''].forEach(romanize);
 		lookupOsuMaps(artist.topTracks.map((t) => ({ artist: artist.name, title: t.name })));
 	});

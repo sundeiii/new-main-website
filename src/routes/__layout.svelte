@@ -12,6 +12,29 @@
 	import CommandPalette from '$lib/components/site/CommandPalette.svelte';
 	import Backdrop from '$lib/components/site/Backdrop.svelte';
 	import { app } from '$lib/components/site/app';
+	import Companion from '$lib/components/cozy/Companion.svelte';
+	import { companionClosed, isNight, loadCozy, nightSkyOff, restoreCompanionClosed, restoreNightSky, setCompanionClosed, toggleNightSky } from '$lib/components/cozy/cozy';
+	import NightSky from '$lib/components/cozy/NightSky.svelte';
+	let nightNow = false;
+	import { collect, loadPassport } from '$lib/components/cozy/collect';
+	import StampToast from '$lib/components/cozy/StampToast.svelte';
+	import Secrets from '$lib/components/cozy/Secrets.svelte';
+
+	// ↑↑↓↓←→←→ b a: a passport stamp, and the page does a barrel roll.
+	const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+	let konamiAt = 0;
+	let rolling = false;
+	function konami(e: KeyboardEvent) {
+		const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+		konamiAt = key === KONAMI[konamiAt] ? konamiAt + 1 : key === KONAMI[0] ? 1 : 0;
+		if (konamiAt < KONAMI.length) return;
+		konamiAt = 0;
+		collect('konami');
+		if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+			rolling = true;
+			setTimeout(() => (rolling = false), 1100);
+		}
+	}
 	import { textOn, themeDefaults, withAlpha, type Theme } from '$lib/themes';
 	import { BUILD_TIMESTAMP } from '$lib/buildtime';
 
@@ -62,6 +85,8 @@
 	// Smaller pages that only get a spot in the footer (and the command palette).
 	const footerLinks = [
 		...navLinks,
+		{ href: '/scrapbook', label: 'scrapbook' },
+		{ href: '/passport', label: 'passport' },
 		{ href: '/now', label: 'now' },
 		{ href: '/projects', label: 'projects' },
 		{ href: '/uses', label: 'uses' },
@@ -350,6 +375,13 @@
 	onMount(() => {
 		ready = true;
 		app.hydrated = true;
+		loadCozy();
+		restoreCompanionClosed();
+		loadPassport();
+		restoreNightSky();
+		nightNow = isNight() || new URLSearchParams(location.search).has('night');
+		collect('hello');
+		if (new Date().getHours() < 4) collect('night');
 
 		transUnlocked = localStorage.getItem('trans-unlocked') === '1';
 		themeId = localStorage.getItem('site-theme') ?? '';
@@ -402,7 +434,7 @@
 	});
 </script>
 
-<svelte:window on:click|capture={onLinkClick} on:keydown={handleKeydown} on:mouseover={onHover} on:touchstart|passive={onHover} on:focusin={onHover} />
+<svelte:window on:click|capture={onLinkClick} on:keydown={(e) => (handleKeydown(e), konami(e))} on:mouseover={onHover} on:touchstart|passive={onHover} on:focusin={onHover} />
 
 <!-- Link preview defaults (Discord, Twitter, …). Pages add their own og:title/description; the
      picture is a card made for each page by /og, or a post's own banner. -->
@@ -423,6 +455,9 @@
 <Backdrop {theme} {dark} />
 <CursorTrail />
 <Seasonal />
+{#if ready}<NightSky />{/if}
+{#if ready && $page.url.pathname === '/'}<Companion />{/if}
+{#if ready}<StampToast />{/if}
 
 {#if progressVisible}
 	<div class="fixed top-0 left-0 right-0 z-[100] h-[2px]">
@@ -473,7 +508,7 @@
 	currentTheme={pickerCurrent}
 	{weather}
 	on:toggleDark={toggleDarkMode}
-	on:setTheme={(e) => setTheme(e.detail.id)}
+	on:setTheme={(e) => (setTheme(e.detail.id), collect('theme'))}
 	on:logoClick={handleLogoClick}
 	on:openPalette={() => (paletteOpen = true)}
 />
@@ -485,17 +520,22 @@
 	on:navigate={(e) => navigate(e.detail)}
 	on:toggleDark={toggleDarkMode}
 	on:setDark={(e) => setDarkMode(e.detail)}
-	extraActions={$snowSeason ? [{ label: $snowOff ? 'turn the snow on' : 'turn the snow off', hint: 'snow', icon: '❄', run: toggleSnow }] : []}
-	on:setTheme={(e) => setTheme(e.detail)}
+	extraActions={[
+		...($snowSeason ? [{ label: $snowOff ? 'turn the snow on' : 'turn the snow off', hint: 'snow', icon: '❄', run: toggleSnow }] : []),
+		...(nightNow ? [{ label: $nightSkyOff ? 'turn the night sky on' : 'turn the night sky off', hint: 'stars', icon: '☾', run: toggleNightSky }] : []),
+		...($companionClosed ? [{ label: 'bring ryo back', hint: 'ryo', icon: '✦', run: () => (setCompanionClosed(false), $page.url.pathname !== '/' && goto('/')) }] : [])
+	]}
+	on:setTheme={(e) => (setTheme(e.detail), collect('theme'))}
 />
 
 {#key $page.url.pathname}
 	<!-- flex-1: fills the leftover height so the footer stays at the bottom of short pages -->
 	<main
-		class="flex-1"
+		class="flex-1 relative {rolling ? 'barrel-roll' : ''}"
 		in:fly={{ y: 12, duration: ready && !viewTransition ? 450 : 0, delay: ready && !viewTransition ? 100 : 0, easing: cubicOut }}
 		out:leave={{ duration: ready && !viewTransition ? 150 : 0 }}
 	>
+		{#if ready}<Secrets path={$page.url.pathname} />{/if}
 		<slot />
 	</main>
 {/key}
@@ -567,6 +607,16 @@
 		:global(::view-transition-old(*)),
 		:global(::view-transition-new(*)) {
 			animation: none !important;
+		}
+	}
+
+	/* konami code */
+	.barrel-roll {
+		animation: barrel-roll 1s ease-in-out;
+	}
+	@keyframes barrel-roll {
+		to {
+			transform: rotate(360deg);
 		}
 	}
 
