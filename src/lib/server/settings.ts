@@ -18,7 +18,10 @@ export async function getSetting<K extends keyof SiteSettings>(key: K, { createT
 		// Nested groups get their new fields too.
 		if (key === 'companion') {
 			const d = defaults as SiteSettings['companion'];
-			return { ...d, ...saved, sprites: { ...d.sprites, ...saved.sprites }, credits: { ...d.credits, ...saved.credits }, behaviour: { ...d.behaviour, ...saved.behaviour }, interactions: { ...d.interactions, ...saved.interactions }, achievements: { ...d.achievements, ...saved.achievements } };
+			// An empty picture slot means "the standard picture for that mood", so moods that got
+			// pictures later show them even if the settings were saved before.
+			const filled = (def: Record<string, string>, own: Record<string, string> = {}) => Object.fromEntries(Object.keys(def).map((k) => [k, own[k] || def[k]]));
+			return { ...d, ...saved, sprites: filled(d.sprites, saved.sprites), credits: filled(d.credits, saved.credits), behaviour: { ...d.behaviour, ...saved.behaviour }, interactions: { ...d.interactions, ...saved.interactions }, achievements: { ...d.achievements, ...saved.achievements } };
 		}
 		return { ...defaults, ...saved };
 	} catch (error: any) {

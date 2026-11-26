@@ -1,9 +1,21 @@
 {
-	"note": "Ryo Yamada sprites for the site companion. All artwork © Aki Hamaji / Houbunsha / Bocchi the Rock! production committee; used as fan art on a personal, non-commercial site. None of these came with a reuse licence. Backgrounds were removed and the images trimmed and resized; nothing else was changed.",
+	"note": "Ryo Yamada sprites for the site companion. All artwork © Aki Hamaji / Houbunsha / Bocchi the Rock! production committee; used as fan art on a personal, non-commercial site. None of these came with a reuse licence. Backgrounds were removed and the images trimmed and resized; nothing else was changed. Edges of the cut-outs were tidied with scripts/clean-sprites.cjs.",
 	"sprites": [
 		{
 			"file": "default.png",
-			"states": ["idle", "talking", "happy", "sleepy", "sleeping", "annoyed", "thinking", "embarrassed", "surprised", "receiving_headpat", "receiving_money"],
+			"states": [
+				"idle",
+				"talking",
+				"happy",
+				"sleepy",
+				"sleeping",
+				"annoyed",
+				"thinking",
+				"embarrassed",
+				"surprised",
+				"receiving_headpat",
+				"receiving_money"
+			],
 			"description": "chibi ryo eating a blade of grass (the original /ryo.png)",
 			"source": "https://i.pinimg.com/736x/05/b6/3c/05b63cb62020ddcffdccde8b4895b822.jpg",
 			"sourceSite": "Pinterest (original artist unknown)",
@@ -11,7 +23,10 @@
 		},
 		{
 			"file": "hungry.webp",
-			"states": ["hungry", "eating_grass"],
+			"states": [
+				"hungry",
+				"eating_grass"
+			],
 			"description": "chibi ryo in a leaf costume, chewing grass",
 			"source": "https://pbs.twimg.com/media/FpTA1RCaIAEvLKw.jpg",
 			"sourceSite": "Twitter/X image (post and artist not identified)",
@@ -19,7 +34,9 @@
 		},
 		{
 			"file": "bass.webp",
-			"states": ["playing_bass"],
+			"states": [
+				"playing_bass"
+			],
 			"description": "chibi ryo standing with her bass (acrylic stand product photo; © line cropped)",
 			"source": "https://image1.shopserve.jp/charaon.jp/pic-labo/AZBTR105_01.jpg",
 			"sourceSite": "charaon.jp shop",
@@ -27,7 +44,10 @@
 		},
 		{
 			"file": "grass.webp",
-			"states": ["eating_grass", "receiving_money"],
+			"states": [
+				"eating_grass",
+				"receiving_money"
+			],
 			"description": "chibi ryo holding a twig and a sign: 草を食べて生きていきます (i'll live by eating grass)",
 			"source": "https://www.cospa.com/images/items/pc/202402/gcF3wnF686KG.jpg",
 			"sourceSite": "cospa.com shop",
@@ -35,10 +55,146 @@
 		},
 		{
 			"file": "listening.webp",
-			"states": ["listening"],
+			"states": [
+				"listening"
+			],
 			"description": "chibi ryo sitting with her bass (acrylic product photo; colours boosted, low resolution source)",
 			"source": "https://st.cdjapan.co.jp/pictures/l/07/24/NEOGDS-742779.jpg",
 			"sourceSite": "cdjapan.co.jp shop",
+			"added": "2026-11-26"
+		},
+		{
+			"file": "explaining.webp",
+			"states": [
+				"talking"
+			],
+			"description": "ryo raising a finger, explaining something",
+			"source": "",
+			"sourceSite": "not recorded (added 2026-11-26)",
+			"added": "2026-11-26"
+		},
+		{
+			"file": "approving.webp",
+			"states": [
+				"happy"
+			],
+			"description": "ryo with a thumbs up",
+			"source": "",
+			"sourceSite": "not recorded (added 2026-11-26)",
+			"added": "2026-11-26"
+		},
+		{
+			"file": "indifferent.webp",
+			"states": [
+				"sleepy"
+			],
+			"description": "ryo in a suit, sitting, unimpressed",
+			"source": "",
+			"sourceSite": "not recorded (added 2026-11-26)",
+			"added": "2026-11-26"
+		},
+		{
+			"file": "sleeping.webp",
+			"states": [
+				"sleeping"
+			],
+			"description": "ryo asleep on a chair",
+			"source": "",
+			"sourceSite": "not recorded (added 2026-11-26)",
+			"added": "2026-11-26"
+		},
+		{
+			"file": "annoyed.webp",
+			"states": [
+				"annoyed"
+			],
+			"description": "chibi ryo, flat stare",
+			"source": "",
+			"sourceSite": "not recorded (added 2026-11-26)",
+			"added": "2026-11-26"
+		},
+		{
+			"file": "eating-leaf.webp",
+			"states": [],
+			"description": "ryo nibbling a leaf (spare; eating uses eating-grass.webp now)",
+			"source": "",
+			"sourceSite": "not recorded (added 2026-11-26)",
+			"added": "2026-11-26"
+		},
+		{
+			"file": "embarrassed.webp",
+			"states": [
+				"embarrassed"
+			],
+			"description": "ryo blushing, hands on her cheeks",
+			"source": "",
+			"sourceSite": "not recorded (added 2026-11-26)",
+			"added": "2026-11-26"
+		},
+		{
+			"file": "embarrassed-2.webp",
+			"states": [
+				"receiving_headpat"
+			],
+			"description": "ryo blushing behind her hands",
+			"source": "",
+			"sourceSite": "not recorded (added 2026-11-26)",
+			"added": "2026-11-26"
+		},
+		{
+			"file": "thinking.webp",
+			"states": [
+				"thinking"
+			],
+			"description": "ryo with her hand on her chin, thinking (anime still; background removed with rembg isnet-anime, gap by her arm cleared by hand)",
+			"source": "https://images.openai.com/static-rsc-4/c-VC0Rr-QJLuixMXo1hTA3bscec6_z8mYp3UBCoyBTmtOWkskF4Oqs-fpANnrhRiGHALtQTgFs620tZt6v_ch1beOxHMrNPKzM3K9S2VGaIh8raydg64q2oIkEvN_QT7b_bEcmJR57QWnD2mji1BRJWwUJHm3Ms1foAd4L_dAfBzZaZE9j4LwFsGVMG4CT50",
+			"sourceSite": "image link from sundei (original source unknown)",
+			"added": "2026-11-26"
+		},
+		{
+			"file": "excited.webp",
+			"states": [
+				"surprised"
+			],
+			"description": "ryo grinning with her fists up",
+			"source": "",
+			"sourceSite": "not recorded (added 2026-11-26)",
+			"added": "2026-11-26"
+		},
+		{
+			"file": "sad.webp",
+			"states": [
+				"sad"
+			],
+			"description": "ryo with her hands at her mouth, teary",
+			"source": "",
+			"sourceSite": "not recorded (added 2026-11-26)",
+			"added": "2026-11-26"
+		},
+		{
+			"file": "bass-2.webp",
+			"states": [],
+			"description": "ryo on stage with her bass (spare, not used yet)",
+			"source": "",
+			"sourceSite": "not recorded (added 2026-11-26)",
+			"added": "2026-11-26"
+		},
+		{
+			"file": "approving-2.webp",
+			"states": [],
+			"description": "smaller copy of approving.webp (not used: too low resolution to cut out cleanly)",
+			"source": "",
+			"sourceSite": "not recorded (added 2026-11-26)",
+			"added": "2026-11-26"
+		},
+		{
+			"file": "eating.webp",
+			"states": [
+				"eating_grass"
+			],
+			"description": "animated: ryo chewing grass, holding a twig (frames 26-44 of the gif, background removed per frame with rembg isnet-anime, 50 ms per frame)",
+			"source": "https://klipy.com/gifs/yamada-ryou-ryo-yamada",
+			"sourceSite": "klipy.com gif of a Bocchi the Rock! scene",
 			"added": "2026-11-26"
 		}
 	]

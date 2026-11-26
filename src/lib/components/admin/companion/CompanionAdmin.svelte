@@ -165,12 +165,12 @@
 					</div>
 					<div class="flex flex-col gap-2">
 						<span class={fieldLabel}>pictures per expression</span>
-						<p class="text-xs text-ocean-500 -mt-1">see-through png/webp/gif work best. empty = the default picture. sources and credits are in static/companion/ryo/manifest.json.</p>
+						<p class="text-xs text-ocean-500 -mt-1">see-through png/webp/gif work best. empty = her standard picture for that mood. new pictures in static/companion/ryo can have their edges tidied with <code>node scripts/clean-sprites.cjs file.webp</code>. sources and credits are in static/companion/ryo/manifest.json.</p>
 						{#each EXPRESSIONS as expr}
 							<div class="flex flex-wrap items-center gap-2">
 								<span class="w-24 text-xs text-ocean-700 dark:text-ocean-300">{expr}</span>
 								<span class="w-10 h-10 grid place-items-center rounded-lg bg-ocean-900/40 shrink-0 overflow-hidden">{#if config.sprites[expr] || config.sprites.default}<img src={config.sprites[expr] || config.sprites.default} alt="" class="max-w-full max-h-full {config.sprites[expr] ? '' : 'opacity-40'}" />{/if}</span>
-								<input bind:value={config.sprites[expr]} placeholder={expr === 'default' ? '/companion/ryo/default.png' : 'uses the default'} class="{field} flex-1 min-w-[180px]" />
+								<input bind:value={config.sprites[expr]} placeholder={expr === 'default' ? '/companion/ryo/default.png' : 'her standard picture'} class="{field} flex-1 min-w-[180px]" />
 								<UploadButton folder="misc" maxSize={600} label="upload" on:uploaded={(e) => config && ((config.sprites[expr] = e.detail), (config = config))} on:error={(e) => (error = e.detail)} />
 								<input bind:value={config.credits[expr]} placeholder="credit / source" class="{field} w-44" />
 							</div>

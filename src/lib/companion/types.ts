@@ -16,18 +16,19 @@ export const STATES = [
 	'surprised',
 	'receiving_headpat',
 	'receiving_money',
-	'eating_grass'
+	'eating_grass',
+	'sad'
 ] as const;
 export type CompanionState = (typeof STATES)[number];
 
 /** Each expression can have its own picture; without one, the default picture is used. */
-export const EXPRESSIONS = ['default', 'happy', 'sleepy', 'sleeping', 'annoyed', 'hungry', 'music', 'listening', 'embarrassed', 'thinking', 'surprised', 'money', 'headpat'] as const;
+export const EXPRESSIONS = ['default', 'talking', 'happy', 'sleepy', 'sleeping', 'annoyed', 'hungry', 'eating', 'music', 'listening', 'embarrassed', 'thinking', 'surprised', 'sad', 'money', 'headpat'] as const;
 export type Expression = (typeof EXPRESSIONS)[number];
 
 /** Which picture each state shows. */
 export const STATE_EXPRESSION: Record<CompanionState, Expression> = {
 	idle: 'default',
-	talking: 'default',
+	talking: 'talking',
 	happy: 'happy',
 	sleepy: 'sleepy',
 	sleeping: 'sleeping',
@@ -40,21 +41,25 @@ export const STATE_EXPRESSION: Record<CompanionState, Expression> = {
 	surprised: 'surprised',
 	receiving_headpat: 'headpat',
 	receiving_money: 'money',
-	eating_grass: 'hungry'
+	eating_grass: 'eating',
+	sad: 'sad'
 };
 /** And the state an expression puts her in while she says a line. */
 export const EXPRESSION_STATE: Record<Expression, CompanionState> = {
 	default: 'talking',
+	talking: 'talking',
 	happy: 'happy',
 	sleepy: 'sleepy',
 	sleeping: 'sleeping',
 	annoyed: 'annoyed',
-	hungry: 'eating_grass',
+	hungry: 'hungry',
+	eating: 'eating_grass',
 	music: 'playing_bass',
 	listening: 'listening',
 	embarrassed: 'embarrassed',
 	thinking: 'thinking',
 	surprised: 'surprised',
+	sad: 'sad',
 	money: 'receiving_money',
 	headpat: 'receiving_headpat'
 };

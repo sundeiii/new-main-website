@@ -534,7 +534,7 @@
 	// ── stats ──
 	$: ryoStamps = COLLECTIBLES.filter((c) => c.group === 'ryo');
 	$: ryoFound = mounted && !preview ? ryoStamps.filter((c) => $passport.stamps[c.id]).length : 0;
-	$: moodWord = { idle: 'indifferent', talking: 'talkative (rare)', happy: 'pleased', sleepy: 'sleepy', sleeping: 'asleep', hungry: 'hungry', annoyed: 'annoyed', thinking: 'thinking', listening: 'listening', playing_bass: 'in the zone', embarrassed: 'embarrassed', surprised: 'surprised', receiving_headpat: 'tolerating it', receiving_money: 'suspiciously happy', eating_grass: 'eating' }[state];
+	$: moodWord = { idle: 'indifferent', talking: 'talkative (rare)', happy: 'pleased', sleepy: 'sleepy', sleeping: 'asleep', hungry: 'hungry', annoyed: 'annoyed', thinking: 'thinking', listening: 'listening', playing_bass: 'in the zone', embarrassed: 'embarrassed', surprised: 'surprised', receiving_headpat: 'tolerating it', receiving_money: 'suspiciously happy', eating_grass: 'eating', sad: 'a little sad' }[state];
 	$: activity = sleeping ? 'sleeping' : song ? `listening to ${song.title}` : state === 'eating_grass' ? 'eating grass' : 'doing nothing, professionally';
 
 	type MenuItem = { key: Action; label: string; on: boolean };
@@ -601,7 +601,8 @@
 					<img bind:this={img} src={sprite} alt="" class="cutout block w-full h-auto" draggable="false" in:fade={{ duration: 220 }} on:error={missing} />
 				{/key}
 			</button>
-			{#if trans && !sleeping}<span class="absolute -left-3 bottom-1 pointer-events-none flag" aria-hidden="true"><Pixels rows={flag.rows} palette={flag.palette} scale={3} /></span>{/if}
+			{#if trans && !sleeping}<!-- In her right hand (our right), pole on the inside and the flag flying outward. -->
+				<span class="absolute left-full -ml-6 bottom-1 pointer-events-none flag" aria-hidden="true"><Pixels rows={flag.rows} palette={flag.palette} scale={3} /></span>{/if}
 			{#each particles as p (p.id)}
 				<span class="particle {p.kind} absolute pointer-events-none" style="left: {p.x}%; bottom: {(imgH || s.size) * 0.7}px; animation-delay: {p.delay}ms" aria-hidden="true">{glyphs[p.kind]}</span>
 			{/each}
@@ -657,6 +658,14 @@
 <style>
 	.cutout {
 		filter: drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff) drop-shadow(0 8px 12px rgb(0 0 0 / 0.35));
+	}
+	/* No browser focus box around her (it framed the whole picture); keyboard focus tints her
+	   outline in the theme colour instead. */
+	.sprite:focus {
+		outline: none;
+	}
+	.sprite:focus-visible :global(.cutout) {
+		filter: drop-shadow(2px 0 0 var(--accent)) drop-shadow(-2px 0 0 var(--accent)) drop-shadow(0 2px 0 var(--accent)) drop-shadow(0 -2px 0 var(--accent)) drop-shadow(0 8px 12px rgb(0 0 0 / 0.35));
 	}
 	.sprite {
 		transform-origin: bottom center;
@@ -783,10 +792,10 @@
 	@keyframes wave {
 		0%,
 		100% {
-			transform: rotate(-14deg);
+			transform: rotate(14deg);
 		}
 		50% {
-			transform: rotate(-6deg);
+			transform: rotate(6deg);
 		}
 	}
 	.peek {
