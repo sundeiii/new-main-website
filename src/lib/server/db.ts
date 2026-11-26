@@ -115,6 +115,12 @@ export const SCHEMA = [
 	`CREATE TABLE IF NOT EXISTS daily_views (
 		day TEXT PRIMARY KEY,
 		views INTEGER NOT NULL DEFAULT 0
+	)`,
+	// Last good responses from outside services, shown while the service is down.
+	`CREATE TABLE IF NOT EXISTS api_cache (
+		k TEXT PRIMARY KEY,
+		v TEXT NOT NULL,
+		updated_at TEXT NOT NULL
 	)`
 ];
 

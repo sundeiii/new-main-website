@@ -64,11 +64,20 @@ export async function recentScrobbles({ before, limit }: { before: number; limit
 export const PERIODS = ['7day', '1month', '12month', 'overall'] as const;
 export type Period = typeof PERIODS[number];
 
-async function lastfm(method: string, extra: Record<string, string> = {}) {
+// Last.fm's "please try again" errors (backend failed, temporarily unavailable, rate limit).
+const RETRYABLE = [8, 11, 16, 29];
+
+async function lastfm(method: string, extra: Record<string, string> = {}, retry = true): Promise<any> {
 	const params = new URLSearchParams({ method, user: process.env.LASTFM_USER!, api_key: process.env.LASTFM_API_KEY!, format: 'json', ...extra });
 	const res = await fetch(`https://ws.audioscrobbler.com/2.0/?${params}`);
-	const data = await res.json();
-	if (!res.ok || data.error) throw new Error(`Last.fm: ${data.message ?? res.status}`);
+	const data = await res.json().catch(() => ({}));
+	if (!res.ok || data.error) {
+		if (retry && (RETRYABLE.includes(data.error) || res.status >= 500)) {
+			await new Promise((r) => setTimeout(r, 800));
+			return lastfm(method, extra, false);
+		}
+		throw new Error(`Last.fm: ${data.message ?? res.status}`);
+	}
 	return data;
 }
 

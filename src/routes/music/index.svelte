@@ -135,7 +135,7 @@
 				d.topArtists.forEach((a: any) => romanize(a.name));
 				d.topTracks.forEach((t: any) => (romanize(t.name), romanize(t.artist)));
 			})
-			.catch(() => (statsError = "couldn't load last.fm stats"));
+			.catch(() => (statsError = "last.fm isn't responding right now, so the stats can't load"));
 	}
 	$: if (browser && activeTab === 'stats') loadStats(period);
 	$: s = stats[period];
@@ -310,6 +310,7 @@
 				{:else if !s}
 					<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">{#each Array(4) as _}<div class="h-20 {skeleton}" />{/each}</div>
 				{:else}
+					{#if s.staleSince}<p class="text-xs text-ocean-600 dark:text-ocean-400">last.fm isn't responding right now, so these are the stats from {new Date(s.staleSince).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}.</p>{/if}
 					<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
 						{#each [
 							{ label: 'scrobbles', value: num(s.total), sub: `since ${new Date(s.since).getFullYear()}` },
