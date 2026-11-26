@@ -183,3 +183,91 @@ export async function playInsights(isHiddenName: (name: string) => boolean) {
 		recaps
 	};
 }
+
+const spotifyTrackUrl = (id: string | null | undefined) => (id && !id.startsWith('lastfm:') ? `https://open.spotify.com/track/${id}` : '');
+// Spotify ids only: imported last.fm rows have made-up 'lastfm:…' ids.
+const SPOTIFY_ID = `MAX(CASE WHEN track_id NOT LIKE 'lastfm:%' THEN track_id END)`;
+
+/**
+ * Everything the log knows about one artist (matched case-insensitively on the main artist),
+ * for /music/artist/[name]. Null if they've never been played, or are hidden.
+ */
+export async function artistStats(name: string, isHiddenName: (name: string) => boolean) {
+	const where = 'WHERE lower(artist) = lower(?)';
+	const [[summary], [firstPlay], tracks, months, [cover], ranking] = await Promise.all([
+		sql(
+			`SELECT MAX(artist) AS name, MAX(artist_id) AS artist_id, COUNT(*) AS plays, MIN(played_at) AS first, MAX(played_at) AS last,
+				COUNT(DISTINCT lower(track)) AS tracks, SUM(COALESCE(duration_ms, ${AVERAGE_SONG_MS})) AS ms FROM plays ${where}`,
+			[name]
+		),
+		sql(`SELECT track, track_id FROM plays ${where} ORDER BY played_at LIMIT 1`, [name]),
+		sql(
+			`SELECT MAX(track) AS track, ${SPOTIFY_ID} AS track_id, MAX(image) AS image, COUNT(*) AS plays, MIN(played_at) AS first, MAX(played_at) AS last
+			FROM plays ${where} GROUP BY lower(track) ORDER BY plays DESC LIMIT 25`,
+			[name]
+		),
+		sql(`SELECT substr(played_at, 1, 7) AS month, COUNT(*) AS plays FROM plays ${where} GROUP BY month ORDER BY month`, [name]),
+		sql(`SELECT image FROM plays ${where} AND image IS NOT NULL ORDER BY played_at DESC LIMIT 1`, [name]),
+		sql('SELECT lower(artist) AS a, MAX(artist) AS artist, COUNT(*) AS plays FROM plays GROUP BY a ORDER BY plays DESC LIMIT 300')
+	]);
+	if (!summary || !Number(summary.plays) || isHiddenName(String(summary.name))) return null;
+	const rank = ranking.filter((r: any) => !isHiddenName(r.artist)).findIndex((r: any) => r.a === String(summary.name).toLowerCase());
+	return {
+		name: String(summary.name),
+		artistId: summary.artist_id ? String(summary.artist_id) : null,
+		image: cover?.image ?? null,
+		rank: rank >= 0 ? rank + 1 : null,
+		plays: Number(summary.plays),
+		minutes: Math.round(Number(summary.ms) / 60000),
+		tracks: Number(summary.tracks),
+		first: { at: String(summary.first), track: firstPlay?.track ?? null, url: spotifyTrackUrl(firstPlay?.track_id) },
+		last: String(summary.last),
+		topTracks: tracks.map((t: any) => ({
+			name: t.track,
+			plays: Number(t.plays),
+			first: t.first,
+			last: t.last,
+			image: t.image ?? null,
+			url: spotifyTrackUrl(t.track_id)
+		})),
+		months: months.map((m: any) => ({ month: m.month, plays: Number(m.plays) }))
+	};
+}
+
+/** Songs (by title or artist) and artists in the log matching `query`, most played first. */
+export async function searchPlays(query: string, isHiddenName: (name: string) => boolean) {
+	const like = `%${query.toLowerCase().replace(/[\\%_]/g, (c) => '\\' + c)}%`;
+	const [tracks, artists] = await Promise.all([
+		sql(
+			`SELECT MAX(track) AS track, ${SPOTIFY_ID} AS track_id, MAX(artist) AS artist, MAX(artists) AS artists, MAX(image) AS image,
+				COUNT(*) AS plays, MIN(played_at) AS first, MAX(played_at) AS last
+			FROM plays WHERE lower(track) LIKE ? ESCAPE '\\' OR lower(artists) LIKE ? ESCAPE '\\'
+			GROUP BY lower(artist), lower(track) ORDER BY plays DESC LIMIT 80`,
+			[like, like]
+		),
+		sql(
+			`SELECT MAX(artist) AS artist, COUNT(*) AS plays FROM plays WHERE lower(artist) LIKE ? ESCAPE '\\'
+			GROUP BY lower(artist) ORDER BY plays DESC LIMIT 12`,
+			[like]
+		)
+	]);
+	return {
+		artists: artists
+			.filter((a: any) => !isHiddenName(a.artist))
+			.slice(0, 5)
+			.map((a: any) => ({ name: a.artist, plays: Number(a.plays) })),
+		tracks: tracks
+			.filter((t: any) => !String(t.artists).split(', ').some(isHiddenName))
+			.slice(0, 30)
+			.map((t: any) => ({
+				name: t.track,
+				artist: t.artist,
+				artists: t.artists,
+				plays: Number(t.plays),
+				first: t.first,
+				last: t.last,
+				image: t.image ?? null,
+				url: spotifyTrackUrl(t.track_id)
+			}))
+	};
+}

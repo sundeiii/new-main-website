@@ -128,6 +128,8 @@ export const SCHEMA = [
 		image TEXT,
 		duration_ms INTEGER
 	)`,
+	// For the artist pages on /music.
+	`CREATE INDEX IF NOT EXISTS plays_artist ON plays (lower(artist))`,
 	// Last good responses from outside services, shown while the service is down.
 	`CREATE TABLE IF NOT EXISTS api_cache (
 		k TEXT PRIMARY KEY,

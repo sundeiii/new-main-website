@@ -22,6 +22,8 @@
 	import { nowPlaying } from '$lib/components/site/presence';
 	import { app } from '$lib/components/site/app';
 	import { stickyAside } from '$lib/components/site/sticky';
+	import OsuPill from '$lib/components/OsuPill.svelte';
+	import { lookupOsuMaps } from '$lib/osuMaps';
 
 	export let music: MusicSettings | null;
 	$: settings = music ?? settingDefaults.music;
@@ -48,9 +50,11 @@
 	const tabs = [
 		{ key: 'top', label: 'top tracks' },
 		{ key: 'history', label: 'history' },
-		{ key: 'stats', label: 'stats' }
+		{ key: 'stats', label: 'stats' },
+		{ key: 'search', label: 'search' }
 	] as const;
-	let activeTab: 'top' | 'history' | 'stats' = 'top';
+	let activeTab: (typeof tabs)[number]['key'] = 'top';
+	const artistHref = (name: string) => `/music/artist/${encodeURIComponent(name)}`;
 
 	// ── romaji for Japanese names (shared) ──
 	let romaji: Record<string, string> = {};
@@ -134,6 +138,7 @@
 				stats = { ...stats, [p]: d };
 				d.topArtists.forEach((a: any) => romanize(a.name));
 				d.topTracks.forEach((t: any) => (romanize(t.name), romanize(t.artist)));
+				lookupOsuMaps(d.topTracks.map((t: any) => ({ artist: t.artist, title: t.name })));
 			})
 			.catch(() => (statsError = "neither last.fm nor spotify is responding right now, so the stats can't load"));
 	}
@@ -162,17 +167,57 @@
 			})
 			.catch(() => (insights = { clock: [], clockPlays: 0, recaps: [] }));
 	let hoverHour: number | null = null;
+
+	// ── song search over the play log (?q= in the address opens it) ──
+	type Found = { name: string; artist: string; artists: string; plays: number; first: string; last: string; image: string | null; url: string };
+	let query = '';
+	let found: { artists: { name: string; plays: number }[]; tracks: Found[] } | null = null;
+	let searching = false;
+	let searchError = '';
+	let searchTimer: ReturnType<typeof setTimeout>;
+	let searchInput: HTMLInputElement;
+	function search(q: string) {
+		clearTimeout(searchTimer);
+		const term = q.trim();
+		if (browser) window.history.replaceState(window.history.state, '',term ? `?q=${encodeURIComponent(term)}` : location.pathname);
+		if (term.length < 2) return ((found = null), (searching = false));
+		searching = true;
+		searchTimer = setTimeout(() => {
+			fetch(`/api/plays/search?q=${encodeURIComponent(term)}`)
+				.then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+				.then((d) => {
+					if (term !== query.trim()) return;
+					found = d;
+					searchError = '';
+					searching = false;
+					d.tracks.forEach((t: Found) => (romanize(t.name), romanize(t.artists)));
+					d.artists.forEach((a: { name: string }) => romanize(a.name));
+					lookupOsuMaps(d.tracks.map((t: Found) => ({ artist: t.artist, title: t.name })));
+				})
+				.catch(() => ((searchError = "search didn't work, try again"), (searching = false)));
+		}, 300);
+	}
+	onMount(() => {
+		const q = new URLSearchParams(location.search).get('q');
+		if (q) (query = q), (activeTab = 'search'), search(q);
+	});
+	$: if (activeTab === 'search' && searchInput) searchInput.focus();
+	const shortDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 	$: clockMax = Math.max(1, ...(insights?.clock ?? []));
 	$: peakHour = insights?.clock.length ? insights.clock.indexOf(Math.max(...insights.clock)) : null;
 	const hh = (h: number) => `${String(h).padStart(2, '0')}:00`;
 	const monthName = (m: string) => new Date(m + '-01T12:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }).toLowerCase();
 	const dayName = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }).toLowerCase();
 	// Spotify (used when last.fm is down) has no play counts, so rows may come without plays.
-	type StatRow = { name: string; sub: string; plays?: number; url: string };
+	// Artists link to their page here; songs to Spotify / last.fm, with an osu! pill when there's a map.
+	type StatRow = { name: string; sub: string; plays?: number; url: string; song?: { artist: string; title: string } };
 	$: statLists = s
 		? [
-				{ title: 'top artists', rows: s.topArtists.map((a: any): StatRow => ({ name: a.name, sub: '', plays: a.plays, url: a.url })) },
-				{ title: 'top tracks', rows: s.topTracks.map((t: any): StatRow => ({ name: t.name, sub: t.artist, plays: t.plays, url: t.url })) }
+				{ title: 'top artists', rows: s.topArtists.map((a: any): StatRow => ({ name: a.name, sub: '', plays: a.plays, url: artistHref(a.name) })) },
+				{
+					title: 'top tracks',
+					rows: s.topTracks.map((t: any): StatRow => ({ name: t.name, sub: t.artist, plays: t.plays, url: t.url, song: { artist: t.artist, title: t.name } }))
+				}
 		  ]
 		: [];
 	const num = (n: number) => n.toLocaleString('en-US');
@@ -329,7 +374,7 @@
 					{#each Array(6) as _}<div class="h-12 {skeleton}" />{/each}
 				{/if}
 			</div>
-		{:else}
+		{:else if activeTab === 'stats'}
 			<div class="flex flex-col gap-6" in:fade={{ duration: 200 }}>
 				<div class={segment}>
 					{#each periods as p}<button on:click={() => (period = p.value)} class={segBtn(period === p.value)}>{p.label}</button>{/each}
@@ -361,15 +406,22 @@
 							<div class="flex flex-col gap-2">
 								<span class={label}>{list.title}</span>
 								{#each list.rows as row, i}
-									<a href={row.url || undefined} target="_blank" rel="noopener noreferrer" class="group relative block rounded-lg overflow-hidden text-sm">
+									<div class="relative rounded-lg overflow-hidden text-sm">
 										{#if row.plays !== undefined}<span class="absolute inset-y-0 left-0 accent-soft transition-all duration-500" style="width: {(row.plays / (list.rows[0]?.plays || 1)) * 100}%" />{/if}
-										<span class="relative flex items-baseline gap-2 px-3 py-1.5">
+										<span class="relative flex items-center gap-2 px-3 py-1.5">
 											<span class="text-ocean-500 w-5 text-right shrink-0 tabular-nums">{i + 1}</span>
-											<span class="truncate {strong}">{r(row.name)}</span>
-											{#if row.sub}<span class="truncate text-xs {muted}">{r(row.sub)}</span>{/if}
+											{#if row.song}
+												<span class="min-w-0 flex-1 flex items-baseline gap-2">
+													<a href={row.url || undefined} target="_blank" rel="noopener noreferrer" class="truncate min-w-[40%] {strong} hover:underline">{r(row.name)}</a>
+													<a href={artistHref(row.song.artist.split(', ')[0])} class="truncate shrink-[4] text-xs {muted} hover:underline">{r(row.sub)}</a>
+												</span>
+												<OsuPill artist={row.song.artist} title={row.song.title} />
+											{:else}
+												<a href={row.url} class="truncate {strong} hover:underline after:absolute after:inset-0">{r(row.name)}</a>
+											{/if}
 											{#if row.plays !== undefined}<span class="ml-auto text-xs {muted} shrink-0 tabular-nums">{num(row.plays)}</span>{/if}
 										</span>
-									</a>
+									</div>
 								{:else}
 									<p class="text-sm {muted}">nothing yet</p>
 								{/each}
@@ -426,12 +478,67 @@
 							</div>
 						{/if}
 						<div class="flex flex-col gap-1 text-sm {muted}">
-							{#if recap.topArtist}<span>most played artist: <span class={strong}>{r(recap.topArtist.name)}</span> ({recap.topArtist.plays} plays)</span>{/if}
+							{#if recap.topArtist}<span>most played artist: <a href={artistHref(recap.topArtist.name)} class="{strong} hover:underline">{r(recap.topArtist.name)}</a> ({recap.topArtist.plays} plays)</span>{/if}
 							{#if recap.busiestDay}<span>busiest day: <span class={strong}>{dayName(recap.busiestDay.day)}</span> ({recap.busiestDay.plays} plays)</span>{/if}
 							{#if recap.newArtists?.length}<span>new artists: <span class={strong}>{recap.newArtists.length}</span> ({recap.newArtists.slice(0, 5).map(r).join(', ')}{recap.newArtists.length > 5 ? ', …' : ''})</span>{/if}
 						</div>
 					</div>
 				{/each}
+			</div>
+		{:else}
+			<div class="flex flex-col gap-6" in:fade={{ duration: 200 }}>
+				<label class="glass rounded-2xl border border-ocean-300/50 dark:border-ocean-700/50 flex items-center gap-3 px-4 py-3 focus-within:border-ocean-500">
+					<span class="text-ocean-500" aria-hidden="true">⌕</span>
+					<input
+						bind:this={searchInput}
+						bind:value={query}
+						on:input={() => search(query)}
+						type="search"
+						placeholder="a song or an artist…"
+						aria-label="search songs and artists i've played"
+						class="flex-1 min-w-0 bg-transparent outline-none text-sm {strong} placeholder:text-ocean-500"
+					/>
+					{#if searching}<span class="text-xs text-ocean-500 animate-pulse">searching</span>{/if}
+				</label>
+
+				{#if searchError}
+					<p class="text-sm text-red-500">{searchError}</p>
+				{:else if !found}
+					<p class="text-sm {muted}">search every song i've played since 2021: how many times, when i first heard it, and when i last played it.</p>
+				{:else if !found.tracks.length && !found.artists.length}
+					<p class="text-sm {muted}">never played anything like “{query.trim()}”.</p>
+				{:else}
+					{#if found.artists.length}
+						<div class="flex flex-wrap gap-2">
+							{#each found.artists as a}
+								<a href={artistHref(a.name)} class="px-3 py-1.5 rounded-full glass border border-ocean-300/50 dark:border-ocean-700/50 text-sm {strong} transition-transform duration-200 hover:-translate-y-0.5">
+									{r(a.name)} <span class="text-xs {muted} tabular-nums">· {num(a.plays)}</span>
+								</a>
+							{/each}
+						</div>
+					{/if}
+					<ol class="flex flex-col gap-1">
+						{#each found.tracks as t (t.artist + '|' + t.name)}
+							<li class="flex items-center gap-3 rounded-xl px-2 py-2 -mx-2 hover:bg-ocean-200/30 dark:hover:bg-ocean-800/30 transition-colors">
+								{#if t.image}<img src={t.image} alt="" loading="lazy" class="w-10 h-10 rounded-md shrink-0" />{:else}<span class="w-10 h-10 rounded-md shrink-0 glass" />{/if}
+								<span class="min-w-0 flex-1">
+									<span class="flex items-center gap-2 min-w-0">
+										<a href={t.url || undefined} target="_blank" rel="noopener noreferrer" class="truncate text-sm {strong} hover:underline">{r(t.name)}</a>
+										<OsuPill artist={t.artist} title={t.name} />
+									</span>
+									<a href={artistHref(t.artist)} class="block truncate text-xs {muted} hover:underline">{r(t.artists)}</a>
+								</span>
+								<span class="text-right shrink-0">
+									<span class="block text-sm tabular-nums {strong}">{num(t.plays)} {t.plays === 1 ? 'play' : 'plays'}</span>
+									<span class="block text-[11px] {muted} tabular-nums" title="first played {shortDate(t.first)}, last played {shortDate(t.last)}">
+										{t.plays === 1 ? shortDate(t.first) : `${shortDate(t.first)} → ${shortDate(t.last)}`}
+									</span>
+								</span>
+							</li>
+						{/each}
+					</ol>
+					{#if found.tracks.length === 30}<p class="text-xs text-ocean-500">the 30 most played matches</p>{/if}
+				{/if}
 			</div>
 		{/if}
 	</div>
